@@ -58,6 +58,7 @@ Function F_SysInfo_DiskFree(Arg:Array of PValue):PValue;
 Function F_SysInfo_DiskTotal(Arg:Array of PValue):PValue;
 Function F_SysInfo_DiskUsed(Arg:Array of PValue):PValue;
 Function F_SysInfo_Procnum(Arg:Array of PValue):PValue;
+Function F_SysInfo_Thermal(Arg:Array of PValue):PValue;
 Function F_SysInfo_Hostname(Arg:Array of PValue):PValue;
 Function F_SysInfo_DomainName(Arg:Array of PValue):PValue;
 
@@ -120,7 +121,7 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('sneq',@F_SNEq);
    FT^.SetVal('floatprec',@F_SetPrecision);
    FT^.SetVal('perc',@F_Perc);
-   FT^.SetVal('get:process',@F_GetProcess);
+   FT^.SetVal('get:prepare',@F_GetProcess);
    FT^.SetVal('get:is',@F_GetIs_);
    FT^.SetVal('get:val',@F_GetVal);
    FT^.SetVal('get:key',@F_GetKey);
@@ -141,6 +142,7 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('sysinfo:disk:total',@F_SysInfo_DiskTotal);
    FT^.SetVal('sysinfo:disk:free',@F_SysInfo_DiskFree);
    FT^.SetVal('sysinfo:disk:used',@F_SysInfo_DiskUsed);
+   FT^.SetVal('sysinfo:thermal',@F_SysInfo_Thermal);
    FT^.SetVal('sysinfo:domainname',@F_SysInfo_DomainName);
    FT^.SetVal('sysinfo:hostname',@F_SysInfo_Hostname);
    FT^.SetVal('trim',@F_Trim);
@@ -911,6 +913,31 @@ Function F_SysInfo_DiskUsed(Arg:Array of PValue):PValue;
       For C:=Low(Arg) to High(Arg) do
           If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
    Exit(NewVal(VT_INT,(DiskSize(ROOTDISK) - DiskFree(ROOTDISK))))
+   end;
+
+///sys/class/thermal/thermal_zone0/temp
+Function F_SysInfo_Thermal(Arg:Array of PValue):PValue;
+   Var C:LongWord; V:PValue; Z,T:Int64; F:Text;
+   begin
+   If (Length(Arg)=0) then Z:=0 else begin
+      For C:=High(Arg) downto 1 do
+          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+      If (Arg[0]^.Typ >= VT_INT) and (Arg[0]^.Typ <= VT_BIN)
+         then Z:=PQInt(Arg[0]^.Ptr)^
+         else begin
+         V:=ValToInt(Arg[0]);
+         Z:=PQInt(V^.Ptr)^;
+         FreeVal(V)
+         end
+      end;
+   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   If (Z < 0) then Z:=0;
+   Assign(F,'/sys/class/thermal/thermal_zone'+IntToStr(Z)+'/temp');
+   {$I-} Reset(F); {$I+};
+   If (IOResult = 0) then begin
+      Readln(F,T); Close(F)
+      end else T:=0;
+   Exit(NewVal(VT_FLO,T/1000))
    end;
 
 Function F_SysInfo_Hostname(Arg:Array of PValue):PValue;
