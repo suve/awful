@@ -65,11 +65,20 @@ Function ValMul(A,B:PValue):PValue;
 Function ValDiv(A,B:PValue):PValue;
 Function ValMod(A,B:PValue):PValue;
 Function ValPow(A,B:PValue):PValue;
-//Function ValCut(A,B:PValue):PValue;
+
+Function ValSeq(A,B:PValue):PValue;
+Function ValSNeq(A,B:PValue):PValue;
+Function ValEq(A,B:PValue):PValue;
+Function ValNeq(A,B:PValue):PValue;
+{Function ValGt(A,B:PValue):PValue;
+Function ValGe(A,B:PValue):PValue;
+Function ValLt(A,B:PValue):PValue;
+Function ValLe(A,B:PValue):PValue;}
 
 Function  NilVal():PValue;
 Procedure FreeVal(Var Val:PValue);
 Function  CopyVal(V:PValue):PValue;
+Function  CopyTyp(V:PValue):PValue;
 Procedure SwapPtrs(A,B:PValue);
 
 Function NewVal(T:TValueType;V:Double):PValue;
@@ -110,6 +119,14 @@ Function OctToStr(Int:QInt;Digs:LongWord=0):TStr;
 
 Function BinToStr(Int:QInt;Digs:LongWord=0):TStr; 
    begin Exit(NumToStr(Int,2,Digs)) end;
+
+Function NumToStr(Num:QInt;Tp:TValueType):TStr; 
+   begin Case Tp of
+      VT_INT: Exit(IntToStr(Num));
+      VT_HEX: Exit(HexToStr(Num));
+      VT_OCT: Exit(OctToStr(Num));
+      VT_BIN: Exit(BinToStr(Num));
+   end end;
 
 Function RealToStr(Val:Extended;Prec:LongWord):TStr;
    Var Res:TStr;
@@ -183,10 +200,13 @@ Function StrToReal(Str:TStr):Double;
       Res:=StrToInt(Copy(Str,1,P-1));
       Delete(Str,1,P);
       If (Res>=0)
-         then Exit(Res+(StrToInt(Str)/IntPower(10,Length(Str)-1)))
-         else Exit(Res-(StrToInt(Str)/IntPower(10,Length(Str)-1)))
+         then Exit(Res+(StrToInt(Str)/IntPower(10,Length(Str))))
+         else Exit(Res-(StrToInt(Str)/IntPower(10,Length(Str))))
       end else Exit(StrToInt(Str))
    end;
+
+Function BoolToInt(B:Bool):LongWord; Inline;
+   begin If (B) then Exit(1) else Exit(0) end;
 
 Function ValToInt(V:PValue):PValue;
    Var R:PValue; P:PQInt;
@@ -733,7 +753,87 @@ Function ValPow(A,B:PValue):PValue;
    Exit(R)
    end;
 
-//Function ValCut(A,B:PValue):PValue;
+Function ValSeq(A,B:PValue):PValue;
+   begin
+   If (A^.Typ <> B^.Typ) then Exit(NewVal(VT_BOO,False));
+   If (A^.Typ >= VT_INT) and (A^.Typ <= VT_BIN) then
+      Exit(NewVal(VT_BOO, (PQInt(A^.Ptr)^) = (PQInt(B^.Ptr)^))) else
+   If (A^.Typ = VT_FLO) then
+      Exit(NewVal(VT_BOO, (PDouble(A^.Ptr)^) = (PDouble(B^.Ptr)^))) else
+   If (A^.Typ = VT_STR) then
+      Exit(NewVal(VT_BOO, (PStr(A^.Ptr)^) = (PStr(B^.Ptr)^))) else
+   If (A^.Typ = VT_BOO) then
+      Exit(NewVal(VT_BOO, (PBool(A^.Ptr)^) = (PBool(B^.Ptr)^))) else
+      {else} Exit(NewVal(VT_BOO,False))
+   end;
+
+Function ValSNeq(A,B:PValue):PValue;
+   Var R:PValue; P:PBool;
+   begin 
+   R:=ValSeq(A,B); P:=PBool(R^.Ptr); (P^):=Not (P^);
+   Exit(R)
+   end;
+
+Function ValEq(A,B:PValue):PValue;
+   begin
+   If (A^.Typ >= VT_INT) and (A^.Typ <= VT_BIN) then begin
+      If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
+         Exit(NewVal(VT_BOO, (PQInt(A^.Ptr)^) = (PQInt(B^.Ptr)^))) else
+      If (B^.Typ = VT_FLO) then
+         Exit(NewVal(VT_BOO, (PQInt(A^.Ptr)^) = Trunc(PDouble(B^.Ptr)^))) else
+      If (B^.Typ = VT_STR) then
+         Exit(NewVal(VT_BOO, (PQInt(A^.Ptr)^) = StrToNum(PStr(B^.Ptr)^,A^.Typ))) else
+      If (B^.Typ = VT_BOO) then
+         Exit(NewVal(VT_BOO, (PQInt(A^.Ptr)^) = BoolToInt(PBool(B^.Ptr)^))) else
+         {else} Exit(NewVal(VT_BOO, False))
+      end else
+   If (A^.Typ = VT_FLO) then begin
+      If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
+         Exit(NewVal(VT_BOO, Trunc(PDouble(A^.Ptr)^) = (PQInt(B^.Ptr)^))) else
+      If (B^.Typ = VT_FLO) then
+         Exit(NewVal(VT_BOO, (PDouble(A^.Ptr)^) = (PDouble(B^.Ptr)^))) else
+      If (B^.Typ = VT_STR) then
+         Exit(NewVal(VT_BOO, (PDouble(A^.Ptr)^) = StrToReal(PStr(B^.Ptr)^))) else
+      If (B^.Typ = VT_BOO) then
+         Exit(NewVal(VT_BOO, Trunc(PDouble(A^.Ptr)^) = BoolToInt(PBool(B^.Ptr)^))) else
+         {else} Exit(NewVal(VT_BOO, False))
+      end else
+   If (A^.Typ = VT_STR) then begin
+      If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
+         Exit(NewVal(VT_BOO, StrToNum(PStr(A^.Ptr)^,B^.Typ) = (PQInt(B^.Ptr)^))) else
+      If (B^.Typ = VT_FLO) then
+         Exit(NewVal(VT_BOO, StrToReal(PStr(A^.Ptr)^) = (PDouble(B^.Ptr)^))) else
+      If (B^.Typ = VT_STR) then
+         Exit(NewVal(VT_BOO, (PStr(A^.Ptr)^) = (PStr(B^.Ptr)^))) else
+      If (B^.Typ = VT_BOO) then
+         Exit(NewVal(VT_BOO, StrToBoolDef(PStr(A^.Ptr)^,FALSE) = (PBool(B^.Ptr)^))) else
+         {else} Exit(NewVal(VT_BOO, False))
+      end else
+   If (A^.Typ = VT_BOO) then begin
+      If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
+         Exit(NewVal(VT_BOO, (PBool(A^.Ptr)^) = (PQInt(B^.Ptr)^ <> 0))) else
+      If (B^.Typ = VT_FLO) then
+         Exit(NewVal(VT_BOO, (PBool(A^.Ptr)^) = (PDouble(B^.Ptr)^ <> 0.0))) else
+      If (B^.Typ = VT_STR) then
+         Exit(NewVal(VT_BOO, (PBool(A^.Ptr)^) = StrToBoolDef(PStr(B^.Ptr)^,FALSE))) else
+      If (B^.Typ = VT_BOO) then
+         Exit(NewVal(VT_BOO, (PBool(A^.Ptr)^) = (PBool(B^.Ptr)^))) else
+         {else} Exit(NewVal(VT_BOO, False))
+      end else // all other, non-comparable types
+      Exit(NewVal(VT_BOO,False))
+   end;
+
+Function ValNeq(A,B:PValue):PValue;
+   Var R:PValue; P:PBool;
+   begin 
+   R:=ValEq(A,B); P:=PBool(R^.Ptr); (P^):=Not (P^);
+   Exit(R)
+   end;
+
+{Function ValGt(A,B:PValue):PValue;
+Function ValGe(A,B:PValue):PValue;
+Function ValLt(A,B:PValue):PValue;
+Function ValLe(A,B:PValue):PValue;}
 
 Function NilVal():PValue;
    Var R:PValue;
@@ -770,6 +870,23 @@ Function  CopyVal(V:PValue):PValue;
       VT_FLO: begin New(D); (D^):=PDouble(V^.Ptr)^; R^.Ptr:=D end;
       VT_STR: begin New(S); (S^):=PStr(V^.Ptr)^; R^.Ptr:=S end;
       VT_BOO: begin New(B); (B^):=PBool(V^.Ptr)^; R^.Ptr:=B end;
+      end;
+   Exit(R)
+   end;
+
+Function  CopyTyp(V:PValue):PValue;
+   Var R:PValue; I:PQInt; S:PStr; D:PDouble; B:PBoolean;
+   begin
+   New(R); R^.Tmp:=True; R^.Typ:=V^.Typ;
+   Case V^.Typ of 
+      VT_NIL: ;
+      VT_INT: begin New(I); (I^):=0; R^.Ptr:=I end;
+      VT_HEX: begin New(I); (I^):=0; R^.Ptr:=I end;
+      VT_OCT: begin New(I); (I^):=0; R^.Ptr:=I end;
+      VT_BIN: begin New(I); (I^):=0; R^.Ptr:=I end;
+      VT_FLO: begin New(D); (D^):=0.0; R^.Ptr:=D end;
+      VT_STR: begin New(S); (S^):=''; R^.Ptr:=S end;
+      VT_BOO: begin New(B); (B^):=False; R^.Ptr:=B end;
       end;
    Exit(R)
    end;
