@@ -1,5 +1,7 @@
 unit functions;
 
+{$MODE OBJFPC} {$COPERATORS ON}
+
 interface
    uses Values;
 
@@ -31,6 +33,10 @@ Function F_Eq(Arg:Array of PValue):PValue;
 Function F_Seq(Arg:Array of PValue):PValue;
 Function F_Neq(Arg:Array of PValue):PValue;
 Function F_SNeq(Arg:Array of PValue):PValue;
+Function F_Gt(Arg:Array of PValue):PValue;
+Function F_Ge(Arg:Array of PValue):PValue;
+Function F_Lt(Arg:Array of PValue):PValue;
+Function F_Le(Arg:Array of PValue):PValue;
 
 Function F_DecodeURL(Arg:Array of PValue):PValue;
 Function F_EncodeHTML(Arg:Array of PValue):PValue;
@@ -108,17 +114,21 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('filepath',@F_FilePath);
    FT^.SetVal('write',@F_Write);
    FT^.SetVal('writeln',@F_Writeln);
-   FT^.SetVal('set',@F_Set);
-   FT^.SetVal('add',@F_Add);
-   FT^.SetVal('sub',@F_Sub);
-   FT^.SetVal('mul',@F_Mul);
-   FT^.SetVal('div',@F_Div);
-   FT^.SetVal('mod',@F_Mod);
-   FT^.SetVal('pow',@F_Pow);
-   FT^.SetVal('eq',@F_Eq);
-   FT^.SetVal('neq',@F_NEq);
-   FT^.SetVal('seq',@F_SEq);
-   FT^.SetVal('sneq',@F_SNEq);
+   FT^.SetVal('set',@F_Set);   FT^.SetVal('=',@F_Set);
+   FT^.SetVal('add',@F_Add);   FT^.SetVal('+',@F_Add);
+   FT^.SetVal('sub',@F_Sub);   FT^.SetVal('-',@F_Sub);
+   FT^.SetVal('mul',@F_Mul);   FT^.SetVal('*',@F_Mul);
+   FT^.SetVal('div',@F_Div);   FT^.SetVal('/',@F_Div);
+   FT^.SetVal('mod',@F_Mod);   FT^.SetVal('%',@F_Mod);
+   FT^.SetVal('pow',@F_Pow);   FT^.SetVal('^',@F_Pow);
+   FT^.SetVal('eq',@F_Eq);     FT^.SetVal('==',@F_Eq);
+   FT^.SetVal('neq',@F_NEq);   FT^.SetVal('!=',@F_NEq);
+   FT^.SetVal('seq',@F_SEq);   FT^.SetVal('===',@F_SEq);
+   FT^.SetVal('sneq',@F_SNEq); FT^.SetVal('!==',@F_SNEq);
+   FT^.SetVal('gt',@F_gt);     FT^.SetVal('>',@F_Gt);
+   FT^.SetVal('ge',@F_ge);     FT^.SetVal('>=',@F_Ge);
+   FT^.SetVal('lt',@F_lt);     FT^.SetVal('<',@F_Lt);
+   FT^.SetVal('le',@F_le);     FT^.SetVal('<=',@F_Le);
    FT^.SetVal('floatprec',@F_SetPrecision);
    FT^.SetVal('perc',@F_Perc);
    FT^.SetVal('get:prepare',@F_GetProcess);
@@ -237,7 +247,7 @@ Function F_Write(Arg:Array of PValue):PValue;
    If (Length(Arg)=0) then Exit();
    For C:=Low(Arg) to High(Arg) do begin
        Case Arg[C]^.Typ of
-          VT_NIL: Write('&#191;nilvar?');
+          VT_NIL: Write('(nilvar)');
           VT_INT: Write(PQInt(Arg[C]^.Ptr)^);
           VT_HEX: Write(HexToStr(PQInt(Arg[C]^.Ptr)^));
           VT_OCT: Write(OctToStr(PQInt(Arg[C]^.Ptr)^));
@@ -400,99 +410,147 @@ Function F_Pow(Arg:Array of PValue):PValue;
    end;
 
 Function F_Eq(Arg:Array of PValue):PValue;
-   Var C:LongWord; R,V:PValue;
-   begin
+   Var C:LongWord; V:PValue; R:Boolean;
+   begin R:=True;
    If (Length(Arg)=0) then Exit(NewVal(VT_BOO,False));
    If (Length(Arg)=1) then begin
       If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
       Exit(NewVal(VT_BOO,False))
       end;
    For C:=(High(Arg)-1) downto Low(Arg) do begin
-       R:=ValEq(Arg[C],Arg[C+1]);
+       V:=ValEq(Arg[C],Arg[C+1]);
        If (Arg[C+1]^.Tmp) then FreeVal(Arg[C+1]);
-       If (Arg[C]^.Tmp) then FreeVal(Arg[C]) else
-       If (Arg[C]^.Typ = VT_BOO)
-          then PBool(Arg[C]^.Ptr)^:=PBool(R^.Ptr)^
-          else begin
-          V:=ValSet(Arg[C],R);
-          SwapPtrs(Arg[C],V);
-          FreeVal(V);
-          end;
-       Arg[C]:=R
+       If (Not PBool(V^.Ptr)^) then R:=False;
+       FreeVal(V)
        end;
-   Exit(R)
+   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   Exit(NewVal(VT_BOO,R))
    end;
 
 Function F_NEq(Arg:Array of PValue):PValue;
-   Var C:LongWord; R,V:PValue;
-   begin
+   Var C:LongWord; V:PValue; R:Boolean;
+   begin R:=True;
    If (Length(Arg)=0) then Exit(NewVal(VT_BOO,False));
    If (Length(Arg)=1) then begin
       If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
       Exit(NewVal(VT_BOO,False))
       end;
    For C:=(High(Arg)-1) downto Low(Arg) do begin
-       R:=ValNEq(Arg[C],Arg[C+1]);
+       V:=ValNEq(Arg[C],Arg[C+1]);
        If (Arg[C+1]^.Tmp) then FreeVal(Arg[C+1]);
-       If (Arg[C]^.Tmp) then FreeVal(Arg[C]) else
-       If (Arg[C]^.Typ = VT_BOO)
-          then PBool(Arg[C]^.Ptr)^:=PBool(R^.Ptr)^
-          else begin
-          V:=ValSet(Arg[C],R);
-          SwapPtrs(Arg[C],V);
-          FreeVal(V);
-          end;
-       Arg[C]:=R
+       If (Not PBool(V^.Ptr)^) then R:=False;
+       FreeVal(V)
        end;
-   Exit(R)
+   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   Exit(NewVal(VT_BOO,R))
    end;
 
 Function F_SEq(Arg:Array of PValue):PValue;
-   Var C:LongWord; R,V:PValue;
-   begin
+   Var C:LongWord; V:PValue; R:Boolean;
+   begin R:=True;
    If (Length(Arg)=0) then Exit(NewVal(VT_BOO,False));
    If (Length(Arg)=1) then begin
       If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
       Exit(NewVal(VT_BOO,False))
       end;
    For C:=(High(Arg)-1) downto Low(Arg) do begin
-       R:=ValSEq(Arg[C],Arg[C+1]);
+       V:=ValSEq(Arg[C],Arg[C+1]);
        If (Arg[C+1]^.Tmp) then FreeVal(Arg[C+1]);
-       If (Arg[C]^.Tmp) then FreeVal(Arg[C]) else
-       If (Arg[C]^.Typ = VT_BOO)
-          then PBool(Arg[C]^.Ptr)^:=PBool(R^.Ptr)^
-          else begin
-          V:=ValSet(Arg[C],R);
-          SwapPtrs(Arg[C],V);
-          FreeVal(V);
-          end;
-       Arg[C]:=R
+       If (Not PBool(V^.Ptr)^) then R:=False;
+       FreeVal(V)
        end;
-   Exit(R)
+   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   Exit(NewVal(VT_BOO,R))
    end;
 
 Function F_SNEq(Arg:Array of PValue):PValue;
-   Var C:LongWord; R,V:PValue;
-   begin
+   Var C:LongWord; V:PValue; R:Boolean;
+   begin R:=True;
    If (Length(Arg)=0) then Exit(NewVal(VT_BOO,False));
    If (Length(Arg)=1) then begin
       If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
       Exit(NewVal(VT_BOO,False))
       end;
    For C:=(High(Arg)-1) downto Low(Arg) do begin
-       R:=ValSNEq(Arg[C],Arg[C+1]);
+       V:=ValSNEq(Arg[C],Arg[C+1]);
        If (Arg[C+1]^.Tmp) then FreeVal(Arg[C+1]);
-       If (Arg[C]^.Tmp) then FreeVal(Arg[C]) else
-       If (Arg[C]^.Typ = VT_BOO)
-          then PBool(Arg[C]^.Ptr)^:=PBool(R^.Ptr)^
-          else begin
-          V:=ValSet(Arg[C],R);
-          SwapPtrs(Arg[C],V);
-          FreeVal(V);
-          end;
-       Arg[C]:=R
+       If (Not PBool(V^.Ptr)^) then R:=False;
+       FreeVal(V)
        end;
-   Exit(R)
+   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   Exit(NewVal(VT_BOO,R))
+   end;
+
+Function F_Gt(Arg:Array of PValue):PValue;
+   Var C:LongWord; V:PValue; R:Boolean;
+   begin R:=True;
+   If (Length(Arg)=0) then Exit(NewVal(VT_BOO,False));
+   If (Length(Arg)=1) then begin
+      If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+      Exit(NewVal(VT_BOO,False))
+      end;
+   For C:=(High(Arg)-1) downto Low(Arg) do begin
+       V:=ValGt(Arg[C],Arg[C+1]);
+       If (Arg[C+1]^.Tmp) then FreeVal(Arg[C+1]);
+       If (Not PBool(V^.Ptr)^) then R:=False;
+       FreeVal(V)
+       end;
+   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   Exit(NewVal(VT_BOO,R))
+   end;
+
+Function F_Ge(Arg:Array of PValue):PValue;
+   Var C:LongWord; V:PValue; R:Boolean;
+   begin R:=True;
+   If (Length(Arg)=0) then Exit(NewVal(VT_BOO,False));
+   If (Length(Arg)=1) then begin
+      If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+      Exit(NewVal(VT_BOO,False))
+      end;
+   For C:=(High(Arg)-1) downto Low(Arg) do begin
+       V:=ValGe(Arg[C],Arg[C+1]);
+       If (Arg[C+1]^.Tmp) then FreeVal(Arg[C+1]);
+       If (Not PBool(V^.Ptr)^) then R:=False;
+       FreeVal(V)
+       end;
+   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   Exit(NewVal(VT_BOO,R))
+   end;
+
+Function F_Lt(Arg:Array of PValue):PValue;
+   Var C:LongWord; V:PValue; R:Boolean;
+   begin R:=True;
+   If (Length(Arg)=0) then Exit(NewVal(VT_BOO,False));
+   If (Length(Arg)=1) then begin
+      If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+      Exit(NewVal(VT_BOO,False))
+      end;
+   For C:=(High(Arg)-1) downto Low(Arg) do begin
+       V:=ValLt(Arg[C],Arg[C+1]);
+       If (Arg[C+1]^.Tmp) then FreeVal(Arg[C+1]);
+       If (Not PBool(V^.Ptr)^) then R:=False;
+       FreeVal(V)
+       end;
+   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   Exit(NewVal(VT_BOO,R))
+   end;
+
+Function F_Le(Arg:Array of PValue):PValue;
+   Var C:LongWord; V:PValue; R:Boolean;
+   begin R:=True;
+   If (Length(Arg)=0) then Exit(NewVal(VT_BOO,False));
+   If (Length(Arg)=1) then begin
+      If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+      Exit(NewVal(VT_BOO,False))
+      end;
+   For C:=(High(Arg)-1) downto Low(Arg) do begin
+       V:=ValLe(Arg[C],Arg[C+1]);
+       If (Arg[C+1]^.Tmp) then FreeVal(Arg[C+1]);
+       If (Not PBool(V^.Ptr)^) then R:=False;
+       FreeVal(V)
+       end;
+   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   Exit(NewVal(VT_BOO,R))
    end;
 
 Function DecodeURL(Str:AnsiString):AnsiString;
@@ -915,7 +973,6 @@ Function F_SysInfo_DiskUsed(Arg:Array of PValue):PValue;
    Exit(NewVal(VT_INT,(DiskSize(ROOTDISK) - DiskFree(ROOTDISK))))
    end;
 
-///sys/class/thermal/thermal_zone0/temp
 Function F_SysInfo_Thermal(Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; Z,T:Int64; F:Text;
    begin
@@ -928,9 +985,9 @@ Function F_SysInfo_Thermal(Arg:Array of PValue):PValue;
          V:=ValToInt(Arg[0]);
          Z:=PQInt(V^.Ptr)^;
          FreeVal(V)
-         end
+         end;
+      If (Arg[0]^.Tmp) then FreeVal(Arg[0])
       end;
-   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
    If (Z < 0) then Z:=0;
    Assign(F,'/sys/class/thermal/thermal_zone'+IntToStr(Z)+'/temp');
    {$I-} Reset(F); {$I+};
@@ -1139,8 +1196,9 @@ Function F_DateTime_Encode(Arg:Array of PValue):PValue;
           end;
        If (Arg[C]^.Tmp) then FreeVal(Arg[C])
        end;
-   R:=SysUtils.EncodeDate(dt[0],dt[1],dt[2]);
-   R+=SysUtils.EncodeTime(dt[3],dt[4],dt[5],dt[6]);
+   Try R:=SysUtils.EncodeDate(dt[0],dt[1],dt[2]);
+       R+=SysUtils.EncodeTime(dt[3],dt[4],dt[5],dt[6]);
+   Except Exit(NilVal) end;
    Exit(NewVal(VT_FLO,R))
    end;
 

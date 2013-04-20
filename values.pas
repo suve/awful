@@ -70,10 +70,10 @@ Function ValSeq(A,B:PValue):PValue;
 Function ValSNeq(A,B:PValue):PValue;
 Function ValEq(A,B:PValue):PValue;
 Function ValNeq(A,B:PValue):PValue;
-{Function ValGt(A,B:PValue):PValue;
+Function ValGt(A,B:PValue):PValue;
 Function ValGe(A,B:PValue):PValue;
 Function ValLt(A,B:PValue):PValue;
-Function ValLe(A,B:PValue):PValue;}
+Function ValLe(A,B:PValue):PValue;
 
 Function  NilVal():PValue;
 Procedure FreeVal(Var Val:PValue);
@@ -830,10 +830,201 @@ Function ValNeq(A,B:PValue):PValue;
    Exit(R)
    end;
 
-{Function ValGt(A,B:PValue):PValue;
+Function ValGt(A,B:PValue):PValue;
+   begin
+   If (A^.Typ >= VT_INT) and (A^.Typ <= VT_BIN) then begin
+      If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
+         Exit(NewVal(VT_BOO, (PQInt(A^.Ptr)^) > (PQInt(B^.Ptr)^))) else
+      If (B^.Typ = VT_FLO) then
+         Exit(NewVal(VT_BOO, (PQInt(A^.Ptr)^) > Trunc(PDouble(B^.Ptr)^))) else
+      If (B^.Typ = VT_STR) then
+         Exit(NewVal(VT_BOO, (PQInt(A^.Ptr)^) > StrToNum(PStr(B^.Ptr)^,A^.Typ))) else
+      If (B^.Typ = VT_BOO) then
+         Exit(NewVal(VT_BOO, (PQInt(A^.Ptr)^) > BoolToInt(PBool(B^.Ptr)^))) else
+         {else} Exit(NewVal(VT_BOO, False))
+      end else
+   If (A^.Typ = VT_FLO) then begin
+      If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
+         Exit(NewVal(VT_BOO, (PDouble(A^.Ptr)^) > Double(PQInt(B^.Ptr)^))) else
+      If (B^.Typ = VT_FLO) then
+         Exit(NewVal(VT_BOO, (PDouble(A^.Ptr)^) > (PDouble(B^.Ptr)^))) else
+      If (B^.Typ = VT_STR) then
+         Exit(NewVal(VT_BOO, (PDouble(A^.Ptr)^) > StrToReal(PStr(B^.Ptr)^))) else
+      If (B^.Typ = VT_BOO) then
+         Exit(NewVal(VT_BOO, (PDouble(A^.Ptr)^) > Double(BoolToInt(PBool(B^.Ptr)^)))) else
+         {else} Exit(NewVal(VT_BOO, False))
+      end else
+   If (A^.Typ = VT_STR) then begin
+      If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
+         Exit(NewVal(VT_BOO, StrToNum(PStr(A^.Ptr)^,B^.Typ) > (PQInt(B^.Ptr)^))) else
+      If (B^.Typ = VT_FLO) then
+         Exit(NewVal(VT_BOO, StrToReal(PStr(A^.Ptr)^) > (PDouble(B^.Ptr)^))) else
+      If (B^.Typ = VT_STR) then
+         Exit(NewVal(VT_BOO, (PStr(A^.Ptr)^) > (PStr(B^.Ptr)^))) else
+      If (B^.Typ = VT_BOO) then
+         Exit(NewVal(VT_BOO, BoolToInt(StrToBoolDef(PStr(A^.Ptr)^,FALSE)) > BoolToInt(PBool(B^.Ptr)^))) else
+         {else} Exit(NewVal(VT_BOO, False))
+      end else
+   If (A^.Typ = VT_BOO) then begin
+      If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
+         Exit(NewVal(VT_BOO, BoolToInt(PBool(A^.Ptr)^) > (PQInt(B^.Ptr)^))) else
+      If (B^.Typ = VT_FLO) then
+         Exit(NewVal(VT_BOO, BoolToInt(PBool(A^.Ptr)^) > Trunc(PDouble(B^.Ptr)^))) else
+      If (B^.Typ = VT_STR) then
+         Exit(NewVal(VT_BOO, BoolToInt(PBool(A^.Ptr)^) > BoolToInt(StrToBoolDef(PStr(B^.Ptr)^,FALSE)))) else
+      If (B^.Typ = VT_BOO) then
+         Exit(NewVal(VT_BOO, BoolToInt(PBool(A^.Ptr)^) > BoolToInt(PBool(B^.Ptr)^))) else
+         {else} Exit(NewVal(VT_BOO, False))
+      end else // all other, non-comparable types
+      Exit(NewVal(VT_BOO,False))
+   end;
+
 Function ValGe(A,B:PValue):PValue;
+   begin
+   If (A^.Typ >= VT_INT) and (A^.Typ <= VT_BIN) then begin
+      If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
+         Exit(NewVal(VT_BOO, (PQInt(A^.Ptr)^) >= (PQInt(B^.Ptr)^))) else
+      If (B^.Typ = VT_FLO) then
+         Exit(NewVal(VT_BOO, (PQInt(A^.Ptr)^) >= Trunc(PDouble(B^.Ptr)^))) else
+      If (B^.Typ = VT_STR) then
+         Exit(NewVal(VT_BOO, (PQInt(A^.Ptr)^) >= StrToNum(PStr(B^.Ptr)^,A^.Typ))) else
+      If (B^.Typ = VT_BOO) then
+         Exit(NewVal(VT_BOO, (PQInt(A^.Ptr)^) >= BoolToInt(PBool(B^.Ptr)^))) else
+         {else} Exit(NewVal(VT_BOO, False))
+      end else
+   If (A^.Typ = VT_FLO) then begin
+      If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
+         Exit(NewVal(VT_BOO, (PDouble(A^.Ptr)^) >= Double(PQInt(B^.Ptr)^))) else
+      If (B^.Typ = VT_FLO) then
+         Exit(NewVal(VT_BOO, (PDouble(A^.Ptr)^) >= (PDouble(B^.Ptr)^))) else
+      If (B^.Typ = VT_STR) then
+         Exit(NewVal(VT_BOO, (PDouble(A^.Ptr)^) >= StrToReal(PStr(B^.Ptr)^))) else
+      If (B^.Typ = VT_BOO) then
+         Exit(NewVal(VT_BOO, (PDouble(A^.Ptr)^) >= Double(BoolToInt(PBool(B^.Ptr)^)))) else
+         {else} Exit(NewVal(VT_BOO, False))
+      end else
+   If (A^.Typ = VT_STR) then begin
+      If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
+         Exit(NewVal(VT_BOO, StrToNum(PStr(A^.Ptr)^,B^.Typ) >= (PQInt(B^.Ptr)^))) else
+      If (B^.Typ = VT_FLO) then
+         Exit(NewVal(VT_BOO, StrToReal(PStr(A^.Ptr)^) >= (PDouble(B^.Ptr)^))) else
+      If (B^.Typ = VT_STR) then
+         Exit(NewVal(VT_BOO, (PStr(A^.Ptr)^) >= (PStr(B^.Ptr)^))) else
+      If (B^.Typ = VT_BOO) then
+         Exit(NewVal(VT_BOO, BoolToInt(StrToBoolDef(PStr(A^.Ptr)^,FALSE)) >= BoolToInt(PBool(B^.Ptr)^))) else
+         {else} Exit(NewVal(VT_BOO, False))
+      end else
+   If (A^.Typ = VT_BOO) then begin
+      If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
+         Exit(NewVal(VT_BOO, BoolToInt(PBool(A^.Ptr)^) >= (PQInt(B^.Ptr)^))) else
+      If (B^.Typ = VT_FLO) then
+         Exit(NewVal(VT_BOO, BoolToInt(PBool(A^.Ptr)^) >= Trunc(PDouble(B^.Ptr)^))) else
+      If (B^.Typ = VT_STR) then
+         Exit(NewVal(VT_BOO, BoolToInt(PBool(A^.Ptr)^) >= BoolToInt(StrToBoolDef(PStr(B^.Ptr)^,FALSE)))) else
+      If (B^.Typ = VT_BOO) then
+         Exit(NewVal(VT_BOO, BoolToInt(PBool(A^.Ptr)^) >= BoolToInt(PBool(B^.Ptr)^))) else
+         {else} Exit(NewVal(VT_BOO, False))
+      end else // all other, non-comparable types
+      Exit(NewVal(VT_BOO,False))
+   end;
+
 Function ValLt(A,B:PValue):PValue;
-Function ValLe(A,B:PValue):PValue;}
+   begin
+   If (A^.Typ >= VT_INT) and (A^.Typ <= VT_BIN) then begin
+      If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
+         Exit(NewVal(VT_BOO, (PQInt(A^.Ptr)^) < (PQInt(B^.Ptr)^))) else
+      If (B^.Typ = VT_FLO) then
+         Exit(NewVal(VT_BOO, (PQInt(A^.Ptr)^) < Trunc(PDouble(B^.Ptr)^))) else
+      If (B^.Typ = VT_STR) then
+         Exit(NewVal(VT_BOO, (PQInt(A^.Ptr)^) < StrToNum(PStr(B^.Ptr)^,A^.Typ))) else
+      If (B^.Typ = VT_BOO) then
+         Exit(NewVal(VT_BOO, (PQInt(A^.Ptr)^) < BoolToInt(PBool(B^.Ptr)^))) else
+         {else} Exit(NewVal(VT_BOO, False))
+      end else
+   If (A^.Typ = VT_FLO) then begin
+      If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
+         Exit(NewVal(VT_BOO, (PDouble(A^.Ptr)^) < Double(PQInt(B^.Ptr)^))) else
+      If (B^.Typ = VT_FLO) then
+         Exit(NewVal(VT_BOO, (PDouble(A^.Ptr)^) < (PDouble(B^.Ptr)^))) else
+      If (B^.Typ = VT_STR) then
+         Exit(NewVal(VT_BOO, (PDouble(A^.Ptr)^) < StrToReal(PStr(B^.Ptr)^))) else
+      If (B^.Typ = VT_BOO) then
+         Exit(NewVal(VT_BOO, (PDouble(A^.Ptr)^) < Double(BoolToInt(PBool(B^.Ptr)^)))) else
+         {else} Exit(NewVal(VT_BOO, False))
+      end else
+   If (A^.Typ = VT_STR) then begin
+      If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
+         Exit(NewVal(VT_BOO, StrToNum(PStr(A^.Ptr)^,B^.Typ) < (PQInt(B^.Ptr)^))) else
+      If (B^.Typ = VT_FLO) then
+         Exit(NewVal(VT_BOO, StrToReal(PStr(A^.Ptr)^) < (PDouble(B^.Ptr)^))) else
+      If (B^.Typ = VT_STR) then
+         Exit(NewVal(VT_BOO, (PStr(A^.Ptr)^) < (PStr(B^.Ptr)^))) else
+      If (B^.Typ = VT_BOO) then
+         Exit(NewVal(VT_BOO, BoolToInt(StrToBoolDef(PStr(A^.Ptr)^,FALSE)) < BoolToInt(PBool(B^.Ptr)^))) else
+         {else} Exit(NewVal(VT_BOO, False))
+      end else
+   If (A^.Typ = VT_BOO) then begin
+      If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
+         Exit(NewVal(VT_BOO, BoolToInt(PBool(A^.Ptr)^) < (PQInt(B^.Ptr)^))) else
+      If (B^.Typ = VT_FLO) then
+         Exit(NewVal(VT_BOO, BoolToInt(PBool(A^.Ptr)^) < Trunc(PDouble(B^.Ptr)^))) else
+      If (B^.Typ = VT_STR) then
+         Exit(NewVal(VT_BOO, BoolToInt(PBool(A^.Ptr)^) < BoolToInt(StrToBoolDef(PStr(B^.Ptr)^,FALSE)))) else
+      If (B^.Typ = VT_BOO) then
+         Exit(NewVal(VT_BOO, BoolToInt(PBool(A^.Ptr)^) < BoolToInt(PBool(B^.Ptr)^))) else
+         {else} Exit(NewVal(VT_BOO, False))
+      end else // all other, non-comparable types
+      Exit(NewVal(VT_BOO,False))
+   end;
+
+Function ValLe(A,B:PValue):PValue;
+   begin
+   If (A^.Typ >= VT_INT) and (A^.Typ <= VT_BIN) then begin
+      If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
+         Exit(NewVal(VT_BOO, (PQInt(A^.Ptr)^) <= (PQInt(B^.Ptr)^))) else
+      If (B^.Typ = VT_FLO) then
+         Exit(NewVal(VT_BOO, (PQInt(A^.Ptr)^) <= Trunc(PDouble(B^.Ptr)^))) else
+      If (B^.Typ = VT_STR) then
+         Exit(NewVal(VT_BOO, (PQInt(A^.Ptr)^) <= StrToNum(PStr(B^.Ptr)^,A^.Typ))) else
+      If (B^.Typ = VT_BOO) then
+         Exit(NewVal(VT_BOO, (PQInt(A^.Ptr)^) <= BoolToInt(PBool(B^.Ptr)^))) else
+         {else} Exit(NewVal(VT_BOO, False))
+      end else
+   If (A^.Typ = VT_FLO) then begin
+      If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
+         Exit(NewVal(VT_BOO, (PDouble(A^.Ptr)^) <= Double(PQInt(B^.Ptr)^))) else
+      If (B^.Typ = VT_FLO) then
+         Exit(NewVal(VT_BOO, (PDouble(A^.Ptr)^) <= (PDouble(B^.Ptr)^))) else
+      If (B^.Typ = VT_STR) then
+         Exit(NewVal(VT_BOO, (PDouble(A^.Ptr)^) <= StrToReal(PStr(B^.Ptr)^))) else
+      If (B^.Typ = VT_BOO) then
+         Exit(NewVal(VT_BOO, (PDouble(A^.Ptr)^) <= Double(BoolToInt(PBool(B^.Ptr)^)))) else
+         {else} Exit(NewVal(VT_BOO, False))
+      end else
+   If (A^.Typ = VT_STR) then begin
+      If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
+         Exit(NewVal(VT_BOO, StrToNum(PStr(A^.Ptr)^,B^.Typ) <= (PQInt(B^.Ptr)^))) else
+      If (B^.Typ = VT_FLO) then
+         Exit(NewVal(VT_BOO, StrToReal(PStr(A^.Ptr)^) <= (PDouble(B^.Ptr)^))) else
+      If (B^.Typ = VT_STR) then
+         Exit(NewVal(VT_BOO, (PStr(A^.Ptr)^) <= (PStr(B^.Ptr)^))) else
+      If (B^.Typ = VT_BOO) then
+         Exit(NewVal(VT_BOO, BoolToInt(StrToBoolDef(PStr(A^.Ptr)^,FALSE)) <= BoolToInt(PBool(B^.Ptr)^))) else
+         {else} Exit(NewVal(VT_BOO, False))
+      end else
+   If (A^.Typ = VT_BOO) then begin
+      If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
+         Exit(NewVal(VT_BOO, BoolToInt(PBool(A^.Ptr)^) <= (PQInt(B^.Ptr)^))) else
+      If (B^.Typ = VT_FLO) then
+         Exit(NewVal(VT_BOO, BoolToInt(PBool(A^.Ptr)^) <= Trunc(PDouble(B^.Ptr)^))) else
+      If (B^.Typ = VT_STR) then
+         Exit(NewVal(VT_BOO, BoolToInt(PBool(A^.Ptr)^) <= BoolToInt(StrToBoolDef(PStr(B^.Ptr)^,FALSE)))) else
+      If (B^.Typ = VT_BOO) then
+         Exit(NewVal(VT_BOO, BoolToInt(PBool(A^.Ptr)^) <= BoolToInt(PBool(B^.Ptr)^))) else
+         {else} Exit(NewVal(VT_BOO, False))
+      end else // all other, non-comparable types
+      Exit(NewVal(VT_BOO,False))
+   end;
 
 Function NilVal():PValue;
    Var R:PValue;

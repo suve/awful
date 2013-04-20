@@ -461,10 +461,6 @@ GLOB_dt:=Now(); GLOB_ms:=TimeStampToMSecs(DateTimeToTimeStamp(GLOB_dt));
 IfSta:=NIL; RepSta:=NIL; WhiSta:=NIL;
 
 New(Func,Create('!','~'));
-Func^.SetVal('ticks',@F_Ticks);
-Func^.SetVal('filepath',@F_FilePath);
-Func^.SetVal('filename',@F_FileName);
-Func^.SetVal('datetime:start',@F_DateTime_Start);
 Functions.Register(Func);
 
 New(Vars,Create('A','z'));

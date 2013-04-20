@@ -55,7 +55,7 @@ Function  GenericStack.Peek():Tp;
    begin
    If (Ptr<>NIL)
       then Exit(Ptr^.Val)
-      else Raise ExEmptyStack.Create('Called Peek() on an empty stack!')
+      else Raise ExEmptyStack.Create('Called GenericStack.Peek() on an empty stack!')
    end;
 
 Function  GenericStack.Pop():Tp;
@@ -66,7 +66,7 @@ Function  GenericStack.Pop():Tp;
       M:=Ptr; Ptr:=Ptr^.Nxt;
       V:=M^.Val; Dispose(M);
       Size-=1; Exit(V)
-      end else Raise ExEmptyStack.Create('Called Pop() on an empty stack!')
+      end else Raise ExEmptyStack.Create('Called GenericStack.Pop() on an empty stack!')
    end;
 
 Procedure GenericStack.Flush();
