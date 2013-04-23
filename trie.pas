@@ -39,6 +39,8 @@ Type ExNotSet = class(Exception);
         Function  IsVal(Const K:AnsiString;P:LongWord;N:PNode):Boolean;
         Function  GetVal(Const K:AnsiString;P:LongWord;N:PNode):Tp;
         
+        Function  GetVal(N:PNode):Tp;
+        Function  RemVal(N:PNode):Tp;
         Procedure FreeNode(N:PNode);
      Public
         Procedure SetVal(Key:AnsiString;Val:Tp);
@@ -46,6 +48,9 @@ Type ExNotSet = class(Exception);
         
         Function  IsVal(Key:AnsiString):Boolean;
         Function  GetVal(Key:AnsiString):Tp;
+        
+        Function  GetVal():Tp;
+        Function  RemVal():Tp;
         
         Function Empty() : Boolean;
         Property Count   : LongWord read Vals;
@@ -146,6 +151,41 @@ Constructor GenericTrie.Create(argMin, argMax : Char);
    For C:=Low(Root^.Nxt) to High(Root^.Nxt) do Root^.Nxt[C]:=NIL;
    Vals:=0
    end;
+
+Function GenericTrie.GetVal(N:PNode):Tp;
+   Var C:LongWord;
+   begin
+   If (N^.Val <> NIL) Then Exit(N^.Val^);
+   If (N^.Chi = 0) then
+      Raise ExNotSet.Create('Called GenericTrie.GetVal() on an empty trie!');
+   For C:=Low(N^.Nxt) to High(N^.Nxt) do
+       If (N^.Nxt[C]<>NIL) then Exit(GetVal(N^.Nxt[C]))
+   end;
+
+Function GenericTrie.GetVal():Tp;
+   begin Exit(GetVal(Root)) end;
+
+Function GenericTrie.RemVal(N:PNode):Tp;
+   Var C:LongWord; R:Tp;
+   begin
+   If (N^.Val <> NIL) Then begin
+      R:=N^.Val^; Dispose(N^.Val); N^.Val:=NIL; Vals-=1;
+      Exit(R)
+      end;
+   If (N^.Chi = 0) then
+      Raise ExNotSet.Create('Called GenericTrie.GetVal() on an empty trie!');
+   For C:=Low(N^.Nxt) to High(N^.Nxt) do
+       If (N^.Nxt[C]<>NIL) then begin
+          R:=GetVal(N^.Nxt[C]);
+          If (N^.Nxt[C]^.Val = NIL) and (N^.Nxt[C]^.Chi = 0) then begin
+             Dispose(N^.Nxt[C]); N^.Nxt[C]:=NIL; N^.Chi-=1
+             end;
+          Exit(R)
+          end
+   end;
+
+Function GenericTrie.RemVal():Tp;
+   begin Exit(RemVal(Root)) end;
 
 Procedure GenericTrie.FreeNode(N:PNode);
    Var I:LongWord;

@@ -85,6 +85,7 @@ Function NewVal(T:TValueType;V:Double):PValue;
 Function NewVal(T:TValueType;V:Int64):PValue;
 Function NewVal(T:TValueType;V:Bool):PValue;
 Function NewVal(T:TValueType;V:TStr):PValue;
+Function NewVal(T:TValueType):PValue;
 
 implementation
    uses Math, SysUtils;
@@ -509,7 +510,7 @@ Function ValSub(A,B:PValue):PValue;
    end;
 
 Function ValMul(A,B:PValue):PValue;
-   Var R:PValue; I:PQInt; S:PStr; L:PBoolean; D:PDouble;
+   Var R:PValue; I:PQInt; S,O:PStr; L:PBoolean; D:PDouble; C,T:LongWord;
    begin
    New(R); R^.Typ:=A^.Typ; R^.Tmp:=True;
    If (A^.Typ = VT_NIL) then begin 
@@ -538,21 +539,24 @@ Function ValMul(A,B:PValue):PValue;
          then If (Not PBoolean(B^.Ptr)^) then (D^):=0
       end else
    If (A^.Typ = VT_STR) then begin
-      New(S); R^.Ptr:=S; (S^):=PStr(A^.Ptr)^;
-      {If (B^.Typ = VT_INT)
-         then (S^)+=IntToStr(PQInt(B^.Ptr)^) else
+      New(S); R^.Ptr:=S; (S^):=PStr(A^.Ptr)^; O:=PStr(A^.Ptr);
+      If (B^.Typ = VT_INT)
+         then T:=Abs(PQInt(B^.Ptr)^) else
       If (B^.Typ = VT_HEX)
-         then (S^)+=HexToStr(PQInt(B^.Ptr)^) else
+         then T:=Abs(PQInt(B^.Ptr)^) else
       If (B^.Typ = VT_OCT)
-         then (S^)+=OctToStr(PQInt(B^.Ptr)^) else
+         then T:=Abs(PQInt(B^.Ptr)^) else
       If (B^.Typ = VT_BIN)
-         then (S^)+=BinToStr(PQInt(B^.Ptr)^) else
+         then T:=Abs(PQInt(B^.Ptr)^) else
       If (B^.Typ = VT_FLO)
-         then (S^):=RealToStr(PDouble(B^.Ptr)^,RealPrec) else
+         then T:=Abs(Trunc(PDouble(B^.Ptr)^)) else
       If (B^.Typ = VT_STR)
-         then (S^)+=(PStr(B^.Ptr)^) else
+         then T:=StrToInt(PStr(B^.Ptr)^) else
       If (B^.Typ = VT_BOO)
-         then If (PBoolean(B^.Ptr)^) then (S^)+='TRUE' else (S^)+='FALSE'}
+         then T:=BoolToInt(PBool(B^.Ptr)^);
+      T*=Length(O^); SetLength(S^,T);
+      For C:=1 to T do 
+          (S^)[C]:=(O^)[((C-1) mod Length(O^))+1]
       end else
    If (A^.Typ = VT_BOO) then begin
       New(L); R^.Ptr:=L; (L^):=PBoolean(A^.Ptr)^;
@@ -1034,6 +1038,7 @@ Function NilVal():PValue;
    end;
 
 Procedure FreeVal(Var Val:PValue);
+   Var V:PValue; T:PValTrie;
    begin
    Case Val^.Typ of
       VT_NIL: ;
@@ -1044,6 +1049,15 @@ Procedure FreeVal(Var Val:PValue);
       VT_FLO: Dispose(PDouble(Val^.Ptr));
       VT_BOO: Dispose(PBoolean(Val^.Ptr));
       VT_STR: Dispose(PAnsiString(Val^.Ptr));
+      VT_REC: begin
+              T:=PValTrie(Val^.Ptr);
+              While (Not T^.Empty()) do begin
+                 V:=T^.GetVal();
+                 FreeVal(V);
+                 T^.RemVal()
+                 end;
+              Dispose(T,Destroy())
+              end;
       end;
    Dispose(Val)
    end;
@@ -1112,6 +1126,15 @@ Function NewVal(T:TValueType;V:TStr):PValue;
    begin
    New(R); R^.Typ:=VT_STR; New(P); R^.Ptr:=P; R^.Tmp:=True;
    P^:=V; Exit(R)
+   end;
+
+Function NewVal(T:TValueType):PValue;
+   Var R:PValue; P:PValTrie;
+   begin
+   If (T<>VT_REC) then Exit(NilVal);
+   New(R); R^.Typ:=VT_REC; New(P,Create('A','z'));
+   R^.Ptr:=P; R^.Tmp:=True;
+   Exit(R)
    end;
 
 end.

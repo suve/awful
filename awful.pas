@@ -2,7 +2,9 @@ program awful;
 
 {$MODE OBJFPC} {$COPERATORS ON} {$LONGSTRINGS ON}
 
-uses Trie, Values, Functions, SysUtils, Stack;
+uses SysUtils, Trie, Values, Functions, Stack;
+
+const AWFUL_REVISION = '5';
 
 Type TTokenType = (
      TK_CONS, TK_VARI, TK_REFE, TK_EXPR, TK_BADT);
@@ -32,6 +34,7 @@ Type TTokenType = (
 
 Var Func : PFunTrie;
     Vars : PValTrie;
+    Cons : PValTrie;
 
     IfArr : Array of TIf;
     RepArr, WhiArr : Array of TLoop;
@@ -135,18 +138,25 @@ Function GetFunc(Name:AnsiString):PFunc;
        Exit(Nil)
    end end;
 
+Procedure Fatal(Ln:LongWord;Msg:AnsiString);
+   begin
+   Writeln(StdErr,ExtractFileName(YukPath),'(',Ln,'): Fatal: ',Msg);
+   Halt(1)
+   end;
+
 Function MakeExpr(Var Tk:Array of AnsiString;Ln,En,T:LongInt):PExpr;
+   
+   Function ConstPrefix(C:Char):Boolean;
+      begin Exit(Pos(C,'sflihob=')<>0) end;
+   
    Var E:PExpr; FPtr:PFunc; sex:PExpr; oT,A:LongWord;
-       Tok:PToken; V:PValue; PS:PStr; Nest:LongWord;
+       Tok:PToken; V:PValue; PS:PStr; Nest:LongWord; CName:TStr;
    begin
    New(E); oT:=T;
    If (Tk[T][1]=':') then begin
       FPtr:=GetFunc(Copy(Tk[T],2,Length(Tk[T])));
-      If (FPtr = NIL) then begin
-         Writeln(StdErr,ExtractFileName(YukPath),'(',Ln,'): ',
-                        'Fatal: Unknown function: "',Tk[T],'".');
-         Halt(1)
-      end end else
+      If (FPtr = NIL) then Fatal(Ln,'Unknown function: "'+Tk[T]+'".')
+      end else
    If (Tk[T][1]='!') then begin
       If (Tk[T]='!if') then begin
          SetLength(IfArr,Length(IfArr)+1);
@@ -158,24 +168,15 @@ Function MakeExpr(Var Tk:Array of AnsiString;Ln,En,T:LongInt):PExpr;
          FPtr:=@(F_If)
          end else
       If (Tk[T]='!else') then begin
-         If (IfSta^.Empty) then begin
-            Writeln(StdErr,ExtractFileName(YukPath),'(',Ln,'): ',
-                           'Fatal: !else without corresponding !if.');
-            Halt(1) end;
+         If (IfSta^.Empty) then Fatal(Ln,'!else without corresponding !if.');
          A:=IfSta^.Peek();
-         If (IfArr[A][1]>=0) then begin
-            Writeln(StdErr,ExtractFileName(YukPath),'(',Ln,'): ',
-                           'Fatal: !if from line ',IfArr[A][0],' has a second !else.');
-            Halt(1) end;
+         If (IfArr[A][1]>=0) then Fatal(Ln,'!if from line '+IntToStr(IfArr[A][0])+' has a second !else.');
          IfArr[A][1]:=En;
          Tk[T]:='i'+IntToStr(A); T-=1;
          FPtr:=@(F_Else)
          end else
       If (Tk[T]='!fi') then begin
-         If (IfSta^.Empty()) then begin
-            Writeln(StdErr,ExtractFileName(YukPath),'(',Ln,'): ',
-                           'Fatal: !fi without corresponding !if.');
-            Halt(1) end;
+         If (IfSta^.Empty()) then Fatal(Ln,'Fatal: !fi without corresponding !if.');
          A:=IfSta^.Pop();
          If (IfArr[A][1]<0) then IfArr[A][1]:=En;
          IfArr[A][2]:=En;
@@ -191,10 +192,7 @@ Function MakeExpr(Var Tk:Array of AnsiString;Ln,En,T:LongInt):PExpr;
          FPtr:=@(F_While)
          end else
       If (Tk[T]='!done') then begin
-         If (WhiSta^.Empty()) then begin
-            Writeln(StdErr,ExtractFileName(YukPath),'(',Ln,'): ',
-                           'Fatal: !done without corresponding !while.');
-            Halt(1) end;
+         If (WhiSta^.Empty()) then Fatal(Ln,'!done without corresponding !while.');
          A:=WhiSta^.Pop();
          WhiArr[A][2]:=En;
          Tk[T]:='i'+IntToStr(High(WhiArr)); T-=1;
@@ -210,22 +208,44 @@ Function MakeExpr(Var Tk:Array of AnsiString;Ln,En,T:LongInt):PExpr;
          FPtr:=@(F_)
          end else
       If (Tk[T]='!until') then begin
-         If (RepSta^.Empty()) then begin
-            Writeln(StdErr,ExtractFileName(YukPath),'(',Ln,'): ',
-                           'Fatal: !until without corresponding !repeat.');
-            Halt(1) end;
+         If (RepSta^.Empty()) then Fatal(Ln,'!until without corresponding !repeat.');
          A:=RepSta^.Pop();
          RepArr[A][2]:=En;
          Tk[T]:='i'+IntToStr(High(WhiArr)); T-=1;
          FPtr:=@(F_Until)
-         end else begin
-         Writeln(StdErr,ExtractFileName(YukPath),'(',Ln,'): ',
-                           'Fatal: Unknown language construct: "',Tk[T],'".');
-         Halt(1) end
-      end else begin
-      Writeln(StdErr,ExtractFileName(YukPath),'(',Ln,'): ',
-                    'Fatal: First token (',Tk[T],') is neither a function call nor a language construct.');
-      Halt(1) end;
+         end else
+      If (Tk[T]='!const') then begin
+         If ((Length(Tk)-T)<>3) then Fatal(Ln,'Wrong number of arguments passed to !const.');
+         If (Length(Tk[T+1])=0) or (Tk[T+1][1]<>'=')
+            then Fatal(Ln,'!const names must start with a "=" character.');
+         CName:=Copy(Tk[T+1],2,Length(Tk[T+1]));
+         If (Cons^.IsVal(CName)) 
+            then Fatal(Ln,'Redefinition of const "'+CName+'".');
+         If (Length(Tk[T+2])=0) or (Not ConstPrefix(Tk[T+2][1]))
+            then Fatal(Ln,'Second argument for !const must be either a value or a const.');
+         If (Tk[T+2][1]='s') then
+            V:=NewVal(VT_STR,Copy(Tk[T+2],3,Length(Tk[T+2])-3)) else
+         If (Tk[T+2][1]='f') then
+            V:=NewVal(VT_FLO,StrToReal(Copy(Tk[T+2],2,Length(Tk[T+2])))) else
+         If (Tk[T+2][1]='l') then
+            V:=NewVal(VT_BOO,StrToBoolDef(Copy(Tk[T+2],2,Length(Tk[T+2])),False)) else
+         If (Tk[T+2][1]='i') then
+            V:=NewVal(VT_INT,StrToInt(Copy(Tk[T+2],2,Length(Tk[T+2])))) else
+         If (Tk[T+2][1]='h') then
+            V:=NewVal(VT_HEX,StrToInt(Copy(Tk[T+2],2,Length(Tk[T+2])))) else
+         If (Tk[T+2][1]='o') then
+            V:=NewVal(VT_OCT,StrToInt(Copy(Tk[T+2],2,Length(Tk[T+2])))) else
+         If (Tk[T+2][1]='b') then
+            V:=NewVal(VT_BIN,StrToInt(Copy(Tk[T+2],2,Length(Tk[T+2])))) else
+         If (Tk[T+2][1]='=') then
+            Try    V:=Cons^.GetVal(Copy(Tk[T+2],2,Length(Tk[T+2])))
+            Except Fatal(Ln,'Unknown const "'+Copy(Tk[T+2],2,Length(Tk[T+2]))+'".') end;
+         V^.Tmp:=False; Cons^.SetVal(CName,V);
+         Dispose(E); Exit(NIL)
+         end else
+         Fatal(Ln,'Unknown language construct: "'+Tk[T]+'".')
+      end else
+      Fatal(Ln,'First token ('+Tk[T]+') is neither a function call nor a language construct.');
    E^.Fun:=FPtr; T+=1;
    While (T<=High(Tk)) do begin
       If (Length(Tk[T])=0) then begin
@@ -243,6 +263,14 @@ Function MakeExpr(Var Tk:Array of AnsiString;Ln,En,T:LongInt):PExpr;
          SetLength(E^.Tok,Length(E^.Tok)+1);
          New(Tok); New(PS); Tok^.Typ:=TK_REFE; Tok^.Ptr:=PS; 
          PS^:=Copy(Tk[T],2,Length(Tk[T]));
+         E^.Tok[High(E^.Tok)]:=Tok
+         end else
+      If (Tk[T][1]='=') then begin
+         SetLength(E^.Tok,Length(E^.Tok)+1);
+         CName:=Copy(Tk[T],2,Length(Tk[T]));
+         Try    V:=Cons^.GetVal(CName);
+         Except Fatal(Ln,'Unknown constant "'+CName+'".') end;
+         New(Tok); Tok^.Typ:=TK_CONS; Tok^.Ptr:=V;
          E^.Tok[High(E^.Tok)]:=Tok
          end else
       If (Tk[T][1]='s') then begin
@@ -311,13 +339,9 @@ Function MakeExpr(Var Tk:Array of AnsiString;Ln,En,T:LongInt):PExpr;
          Exit(E)
          end else
       If (Tk[T][1]='!') then begin
-         Writeln(StdErr,ExtractFileName(YukPath),'(',Ln,'): ',
-                'Fatal: Language construct used as a sub-expression. (',Tk[T],').');
-         Halt(1)
+         Fatal(Ln,'Language construct used as a sub-expression. ("'+Tk[T]+'").')
          end else begin
-         Writeln(StdErr,ExtractFileName(YukPath),'(',Ln,'): ',
-                 'Fatal: Invalid token: "',Tk[T],'".');
-         Halt(1)
+         Fatal(Ln,'Invalid token: "'+Tk[T]+'".')
          end;
       T+=1 end;
    Exit(E)
@@ -376,18 +400,19 @@ Procedure ProcessLine(L:AnsiString;N,E:LongWord);
    end;
 
 Procedure ReadFile(I:PText);
-   Var L:AnsiString; A,N:LongWord;
+   Var L:AnsiString; A,N,E:LongWord;
    begin
-   SetLength(Ex,0); N:=0;
-   SetLength(IfArr,0); New(IfSta,Create());
+   SetLength(Ex,0); N:=0; E:=0;
+   SetLength(IfArr,0);  New(IfSta,Create());
    SetLength(WhiArr,0); New(WhiSta,Create());
    SetLength(RepArr,0); New(RepSta,Create());
    While (Not Eof(I^)) do begin
       Readln(I^,L); N+=1;
       L:=Trim(L);
       If (Length(L)>0) and (L[1]<>'#') then begin
-         SetLength(Ex,Length(Ex)+1);
-         ProcessLine(L,N,High(Ex))
+         If (E = Length(Ex)) then SetLength(Ex,Length(Ex)+1);
+         ProcessLine(L,N,E);
+         If (Ex[E]<>NIL) then E+=1
          end
       end;
    If (Not IfSta^.Empty()) then begin
@@ -464,6 +489,7 @@ New(Func,Create('!','~'));
 Functions.Register(Func);
 
 New(Vars,Create('A','z'));
+New(Cons,Create('A','z'));
 
 If (ParamCount()>0) then begin
    For YukNum:=1 to ParamCount() do begin
