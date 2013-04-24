@@ -76,7 +76,7 @@ Procedure GenericTrie.SetVal(Const K:AnsiString;P:LongWord;N:PNode;Const V:Tp);
          end;
       SetVal(K,P+1,N^.Nxt[I],V)
       end else begin
-      If (N^.Val = NIL) then begin New(N^.Val); Vals+=1 end;
+      If (N^.Val = NIL) then begin New(N^.Val); Self.Vals+=1 end;
       N^.Val^:=V
       end
    end;
@@ -98,7 +98,7 @@ Procedure GenericTrie.RemVal(Const K:AnsiString;P:LongWord;N:PNode);
       end else begin
       If (N^.Val <> NIL) then begin
          Dispose(N^.Val); N^.Val:=NIL;
-         Vals -= 1 end
+         Self.Vals -= 1 end
       end
    end;
 
@@ -139,7 +139,7 @@ Function GenericTrie.GetVal(Key:AnsiString):Tp;
    begin Exit(GetVal(Key,1,Root)) end;
 
 Function GenericTrie.Empty():Boolean;
-   begin Exit(Vals>0) end;
+   begin Exit(Self.Vals = 0) end;
 
 Constructor GenericTrie.Create(argMin, argMax : Char);
    Var C:LongWord;
@@ -149,7 +149,7 @@ Constructor GenericTrie.Create(argMin, argMax : Char);
    New(Root); SetLength(Root^.Nxt,ArrS);
    Root^.Chi:=0; Root^.Val:=NIL;
    For C:=Low(Root^.Nxt) to High(Root^.Nxt) do Root^.Nxt[C]:=NIL;
-   Vals:=0
+   Self.Vals:=0
    end;
 
 Function GenericTrie.GetVal(N:PNode):Tp;
@@ -169,14 +169,14 @@ Function GenericTrie.RemVal(N:PNode):Tp;
    Var C:LongWord; R:Tp;
    begin
    If (N^.Val <> NIL) Then begin
-      R:=N^.Val^; Dispose(N^.Val); N^.Val:=NIL; Vals-=1;
+      R:=N^.Val^; Dispose(N^.Val); N^.Val:=NIL; Self.Vals-=1;
       Exit(R)
       end;
    If (N^.Chi = 0) then
-      Raise ExNotSet.Create('Called GenericTrie.GetVal() on an empty trie!');
+      Raise ExNotSet.Create('Called GenericTrie.RemVal() on an empty trie!');
    For C:=Low(N^.Nxt) to High(N^.Nxt) do
        If (N^.Nxt[C]<>NIL) then begin
-          R:=GetVal(N^.Nxt[C]);
+          R:=RemVal(N^.Nxt[C]);
           If (N^.Nxt[C]^.Val = NIL) and (N^.Nxt[C]^.Chi = 0) then begin
              Dispose(N^.Nxt[C]); N^.Nxt[C]:=NIL; N^.Chi-=1
              end;
@@ -194,10 +194,10 @@ Procedure GenericTrie.FreeNode(N:PNode);
       For I:=Low(N^.Nxt) to High(N^.Nxt) do
           If (N^.Nxt[I]<>NIL) then begin
              FreeNode(N^.Nxt[I]);
+             Dispose(N^.Nxt[I]);
              N^.Nxt[I]:=NIL
              end;
-   If (N^.Val <> NIL) then begin Dispose(N^.Val); Vals-=1 end;
-   Dispose(N)
+   If (N^.Val <> NIL) then begin Dispose(N^.Val); Self.Vals-=1 end
    end;
 
 Procedure GenericTrie.Flush();
@@ -205,7 +205,7 @@ Procedure GenericTrie.Flush();
 
 Destructor GenericTrie.Destroy();
    begin
-   Flush();
+   Flush(); Dispose(Root);
    {$IFDEF TRIE_CLASS} ; Inherited Destroy() {$ENDIF}
    end;
 

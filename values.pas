@@ -77,8 +77,9 @@ Function ValLe(A,B:PValue):PValue;
 
 Function  NilVal():PValue;
 Procedure FreeVal(Var Val:PValue);
-Function  CopyVal(V:PValue):PValue;
+Function  EmptyVal(T:TValueType):PValue;
 Function  CopyTyp(V:PValue):PValue;
+Function  CopyVal(V:PValue):PValue;
 Procedure SwapPtrs(A,B:PValue);
 
 Function NewVal(T:TValueType;V:Double):PValue;
@@ -1062,6 +1063,27 @@ Procedure FreeVal(Var Val:PValue);
    Dispose(Val)
    end;
 
+Function  EmptyVal(T:TValueType):PValue;
+   Var R:PValue; I:PQInt; S:PStr; D:PDouble; B:PBoolean;
+   begin
+   New(R); R^.Tmp:=True; R^.Typ:=T;
+   Case T of 
+      VT_NIL: R^.Ptr := NIL;
+      VT_INT: begin New(I); (I^):=0;     R^.Ptr:=I end;
+      VT_HEX: begin New(I); (I^):=0;     R^.Ptr:=I end;
+      VT_OCT: begin New(I); (I^):=0;     R^.Ptr:=I end;
+      VT_BIN: begin New(I); (I^):=0;     R^.Ptr:=I end;
+      VT_FLO: begin New(D); (D^):=0.0;   R^.Ptr:=D end;
+      VT_STR: begin New(S); (S^):='';    R^.Ptr:=S end;
+      VT_BOO: begin New(B); (B^):=False; R^.Ptr:=B end;
+      else R^.Ptr:=NIL
+      end;
+   Exit(R)
+   end;
+
+Function  CopyTyp(V:PValue):PValue;
+   begin Exit(EmptyVal(V^.Typ)) end;
+
 Function  CopyVal(V:PValue):PValue;
    Var R:PValue; I:PQInt; S:PStr; D:PDouble; B:PBoolean;
    begin
@@ -1075,23 +1097,6 @@ Function  CopyVal(V:PValue):PValue;
       VT_FLO: begin New(D); (D^):=PDouble(V^.Ptr)^; R^.Ptr:=D end;
       VT_STR: begin New(S); (S^):=PStr(V^.Ptr)^; R^.Ptr:=S end;
       VT_BOO: begin New(B); (B^):=PBool(V^.Ptr)^; R^.Ptr:=B end;
-      end;
-   Exit(R)
-   end;
-
-Function  CopyTyp(V:PValue):PValue;
-   Var R:PValue; I:PQInt; S:PStr; D:PDouble; B:PBoolean;
-   begin
-   New(R); R^.Tmp:=True; R^.Typ:=V^.Typ;
-   Case V^.Typ of 
-      VT_NIL: ;
-      VT_INT: begin New(I); (I^):=0; R^.Ptr:=I end;
-      VT_HEX: begin New(I); (I^):=0; R^.Ptr:=I end;
-      VT_OCT: begin New(I); (I^):=0; R^.Ptr:=I end;
-      VT_BIN: begin New(I); (I^):=0; R^.Ptr:=I end;
-      VT_FLO: begin New(D); (D^):=0.0; R^.Ptr:=D end;
-      VT_STR: begin New(S); (S^):=''; R^.Ptr:=S end;
-      VT_BOO: begin New(B); (B^):=False; R^.Ptr:=B end;
       end;
    Exit(R)
    end;

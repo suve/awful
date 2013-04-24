@@ -2,9 +2,9 @@ program awful;
 
 {$MODE OBJFPC} {$COPERATORS ON} {$LONGSTRINGS ON}
 
-uses SysUtils, Trie, Values, Functions, Stack;
+uses SysUtils, Math, Trie, Values, Functions, Stack;
 
-const AWFUL_REVISION = '5';
+const AWFUL_REVISION = '6';
 
 Type TTokenType = (
      TK_CONS, TK_VARI, TK_REFE, TK_EXPR, TK_BADT);
@@ -23,6 +23,12 @@ Type TTokenType = (
      Tok : Array of PToken
      end;
      
+     TProc = record
+     Nu : LongWord;
+     Ex : Array of PExpr;
+     Ar : Array of AnsiString;
+     end;
+     
      PText = ^System.Text;
      
      TLineInfo = LongInt; //This will probably become a record when functions get implemented
@@ -31,18 +37,75 @@ Type TTokenType = (
      
      PLIS = ^TLIS;
      TLIS = specialize GenericStack<TLineInfo>;
+     
+     PNumTrie = ^TNumTrie; 
+     TNumTrie = specialize GenericTrie<LongWord>;
 
 Var Func : PFunTrie;
-    Vars : PValTrie;
     Cons : PValTrie;
+
+    Vars : Array of PValTrie;
 
     IfArr : Array of TIf;
     RepArr, WhiArr : Array of TLoop;
     IfSta, RepSta, WhiSta : PLIS;
+    UsrFun : PNumTrie;
 
 Var YukFile : Text; YukNum:LongWord;
-    Ex : Array of PExpr;
-    ExLn : LongWord;
+    Pr : Array of TProc;
+    Proc, ExLn : LongWord;
+
+Function GetVar(Name:AnsiString;Typ:TValueType):PValue;
+   Var C:LongInt; R:PValue;
+   begin
+   //Writeln(StdErr,'GetVar: ',Name,'; ',Typ);
+   C:=High(Vars);
+   While (C>=0) do
+      Try    R:=Vars[C]^.GetVal(Name);
+             Exit(R)
+      Except C-=1 end;
+   //Writeln(StdErr,'Vars[',High(Vars),']^.SetVal(',Name,',',Typ,')');
+   R:=EmptyVal(Typ); R^.Tmp:=False;
+   Vars[High(Vars)]^.SetVal(Name,R);
+   Exit(R)
+   end;
+
+Function Eval(E:PExpr):PValue;
+   Var Arg:Array of PValue; T:LongWord; V:PValue;
+   begin
+   SetLength(Arg,Length(E^.Tok));
+   If (Length(E^.Tok)=0) then Exit(E^.Fun(Arg));
+   For T:=High(E^.Tok) downto Low(E^.Tok) do
+       If (E^.Tok[T]^.Typ = TK_CONS)
+          then Arg[T]:=CopyVal(PValue(E^.Tok[T]^.Ptr)) else
+       If (E^.Tok[T]^.Typ = TK_VARI) then begin
+          If (T<High(E^.Tok)) 
+             then V:=GetVar(PStr(E^.Tok[T]^.Ptr)^,Arg[T+1]^.Typ)
+             else V:=GetVar(PStr(E^.Tok[T]^.Ptr)^,VT_NIL);
+          Arg[T]:=CopyVal(V)
+          end else
+       If (E^.Tok[T]^.Typ = TK_REFE) then begin
+          If (T<High(E^.Tok)) 
+             then Arg[T]:=GetVar(PStr(E^.Tok[T]^.Ptr)^,Arg[T+1]^.Typ)
+             else Arg[T]:=GetVar(PStr(E^.Tok[T]^.Ptr)^,VT_NIL);
+          end else
+       If (E^.Tok[T]^.Typ = TK_EXPR)
+          then Arg[T]:=Eval(PExpr(E^.Tok[T]^.Ptr));
+   Exit(E^.Fun(Arg))
+   end;
+
+Function RunFunc(P:LongWord):PValue;
+   Var R:PValue;
+   begin
+   If (Pr[P].Nu = 0) then Exit(NilVal);
+   Proc:=P; ExLn:=0;
+   While (True) do begin
+      R:=Eval(Pr[P].Ex[ExLn]); ExLn+=1;
+      If (ExLn < Pr[P].Nu)
+         then FreeVal(R)
+         else Exit(R)
+      end
+   end;
 
 Function F_If(Arg:Array of PValue):PValue;
    Var C:LongWord; IfNum:QInt; R:Boolean; V:PValue;
@@ -129,6 +192,56 @@ Function F_Until(Arg:Array of PValue):PValue;
    Exit(NilVal)
    end;
 
+Function F_Return(Arg:Array of PValue):PValue;
+   Var C:LongWord; R:PValue;
+   begin
+   If (Length(Arg)>1) then
+      For C:=Low(Arg)+1 to High(Arg) do
+          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+   If (Not Arg[0]^.Tmp)
+      then R:=CopyVal(Arg[0]) else R:=Arg[0];
+   ExLn:=Pr[Proc].Nu;
+   Exit(R)
+   end;
+
+Function F_AutoCall(Arg:Array of PValue):PValue;
+   Var P,E,V:LongWord; A,H,PA,CA:LongInt; R,TV:PValue;
+   begin
+   P:=Proc; E:=ExLn; Proc:=PQInt(Arg[0]^.Ptr)^;
+   SetLength(Vars,Length(Vars)+1); V:=High(Vars);
+   New(Vars[V],Create('A','z'));
+   If (Length(Pr[Proc].Ar)>0) then begin
+      PA:=Length(Pr[Proc].Ar); CA:=Length(Arg)-1;
+      H:=Max(PA,CA);
+      If (H>0) then For A:=0 to (H-1) do begin
+         Vars[V]^.SetVal(Pr[Proc].Ar[A],Arg[A+1]);
+         Arg[A+1]^.Tmp:=False end;
+      If (PA>CA) then For A:=H to (PA-1) do
+         Vars[V]^.SetVal(Pr[Proc].Ar[A],NilVal) else
+      If (CA<PA) then For A:=H to (CA-1) do
+         Vars[V]^.SetVal('ARG'+IntToStr(A),Arg[A+1])
+      end;
+   R:=RunFunc(Proc);
+   //Writeln(StdErr,'F_AutoCall(',Proc,'): Trie size: ',Vars[V]^.Count);
+   If (Length(Pr[Proc].Ar)>0) then begin
+      For A:=0 to High(Pr[Proc].Ar) do Vars[V]^.RemVal(Pr[Proc].Ar[A]);
+      A+=1 end else A:=1;
+   While (A<=High(Arg)) do begin
+      Vars[V]^.RemVal('ARG'+IntToStr(A-1)); A+=1 end;
+   While (Vars[V]^.Count > 0) do begin
+      //Writeln(StdErr,'F_AutoCall(',Proc,'): Vars[',V,']; Count: ',Vars[V]^.Count,'; RemVal()');
+      TV:=Vars[V]^.RemVal();
+      //F_Writeln([NewVal(VT_STR,'TV = '),TV]);
+      FreeVal(TV)
+      end;
+   //Writeln(StdErr,'F_AutoCall(',Proc,'): Trie size: ',Vars[V]^.Count);
+   Dispose(Vars[V],Destroy()); SetLength(Vars,Length(Vars)-1);
+   For A:=Low(Arg) to High(Arg) do
+       If (Arg[A]^.Tmp) then FreeVal(Arg[A]);
+   Proc:=P; ExLn:=E;
+   Exit(R)
+   end;
+
 Function GetFunc(Name:AnsiString):PFunc;
    Var R:PFunc;
    begin
@@ -144,7 +257,7 @@ Procedure Fatal(Ln:LongWord;Msg:AnsiString);
    Halt(1)
    end;
 
-Function MakeExpr(Var Tk:Array of AnsiString;Ln,En,T:LongInt):PExpr;
+Function MakeExpr(Var Tk:Array of AnsiString;Ln,T:LongInt):PExpr;
    
    Function ConstPrefix(C:Char):Boolean;
       begin Exit(Pos(C,'sflihob=')<>0) end;
@@ -155,7 +268,12 @@ Function MakeExpr(Var Tk:Array of AnsiString;Ln,En,T:LongInt):PExpr;
    New(E); oT:=T;
    If (Tk[T][1]=':') then begin
       FPtr:=GetFunc(Copy(Tk[T],2,Length(Tk[T])));
-      If (FPtr = NIL) then Fatal(Ln,'Unknown function: "'+Tk[T]+'".')
+      If (FPtr = NIL) then begin
+         Try    A:=UsrFun^.GetVal(Copy(Tk[T],2,Length(Tk[T])));
+         Except Fatal(Ln,'Unknown function: "'+Tk[T]+'".') end;
+         Tk[T]:='i'+IntToStr(A);
+         FPtr:=@F_AutoCall; T-=1
+         end
       end else
    If (Tk[T][1]='!') then begin
       If (Tk[T]='!if') then begin
@@ -171,21 +289,21 @@ Function MakeExpr(Var Tk:Array of AnsiString;Ln,En,T:LongInt):PExpr;
          If (IfSta^.Empty) then Fatal(Ln,'!else without corresponding !if.');
          A:=IfSta^.Peek();
          If (IfArr[A][1]>=0) then Fatal(Ln,'!if from line '+IntToStr(IfArr[A][0])+' has a second !else.');
-         IfArr[A][1]:=En;
+         IfArr[A][1]:=ExLn;
          Tk[T]:='i'+IntToStr(A); T-=1;
          FPtr:=@(F_Else)
          end else
       If (Tk[T]='!fi') then begin
          If (IfSta^.Empty()) then Fatal(Ln,'Fatal: !fi without corresponding !if.');
          A:=IfSta^.Pop();
-         If (IfArr[A][1]<0) then IfArr[A][1]:=En;
-         IfArr[A][2]:=En;
+         If (IfArr[A][1]<0) then IfArr[A][1]:=ExLn;
+         IfArr[A][2]:=ExLn;
          FPtr:=@(F_)
          end else
       If (Tk[T]='!while') then begin
          SetLength(WhiArr,Length(WhiArr)+1);
          WhiArr[High(WhiArr)][0]:=Ln;
-         WhiArr[High(WhiArr)][1]:=En-1;
+         WhiArr[High(WhiArr)][1]:=ExLn-1;
          WhiArr[High(WhiArr)][2]:=-1;
          WhiSta^.Push(High(WhiArr));
          Tk[T]:='i'+IntToStr(High(WhiArr)); T-=1;
@@ -194,14 +312,14 @@ Function MakeExpr(Var Tk:Array of AnsiString;Ln,En,T:LongInt):PExpr;
       If (Tk[T]='!done') then begin
          If (WhiSta^.Empty()) then Fatal(Ln,'!done without corresponding !while.');
          A:=WhiSta^.Pop();
-         WhiArr[A][2]:=En;
+         WhiArr[A][2]:=ExLn;
          Tk[T]:='i'+IntToStr(High(WhiArr)); T-=1;
          FPtr:=@(F_Done)
          end else
       If (Tk[T]='!repeat') then begin
          SetLength(RepArr,Length(RepArr)+1);
          RepArr[High(RepArr)][0]:=Ln;
-         RepArr[High(RepArr)][1]:=En;
+         RepArr[High(RepArr)][1]:=ExLn;
          RepArr[High(RepArr)][2]:=-1;
          RepSta^.Push(High(RepArr));
          Tk[T]:='i'+IntToStr(High(RepArr)); T-=1;
@@ -210,8 +328,8 @@ Function MakeExpr(Var Tk:Array of AnsiString;Ln,En,T:LongInt):PExpr;
       If (Tk[T]='!until') then begin
          If (RepSta^.Empty()) then Fatal(Ln,'!until without corresponding !repeat.');
          A:=RepSta^.Pop();
-         RepArr[A][2]:=En;
-         Tk[T]:='i'+IntToStr(High(WhiArr)); T-=1;
+         RepArr[A][2]:=ExLn;
+         Tk[T]:='i'+IntToStr(High(RepArr)); T-=1;
          FPtr:=@(F_Until)
          end else
       If (Tk[T]='!const') then begin
@@ -243,6 +361,63 @@ Function MakeExpr(Var Tk:Array of AnsiString;Ln,En,T:LongInt):PExpr;
          V^.Tmp:=False; Cons^.SetVal(CName,V);
          Dispose(E); Exit(NIL)
          end else
+      If (Tk[T]='!fun') then begin
+         If (Not IfSta^.Empty()) then begin
+            A:=IfSta^.Peek(); A:=IfArr[A][0];
+            Fatal(A,'Function declaration inside an !if block.')
+            end else
+         If (Not WhiSta^.Empty()) then begin
+            A:=WhiSta^.Peek(); A:=WhiArr[A][0];
+            Fatal(A,'Function declaration inside a !while block.')
+            end else
+         If (Not RepSta^.Empty()) then begin
+            A:=RepSta^.Peek(); A:=RepArr[A][0];
+            Fatal(A,'Function declaration inside a !repeat block.')
+            end else
+         If (Proc<>0) then Fatal(Ln,'Nested function declaration.');
+         If ((Length(Tk)-T)<2) then Fatal(Ln,'No function name specified.');
+         If (Length(Tk[T+1])=0) or (Tk[T+1][1]<>':')
+            then Fatal(Ln,'Function names must start with the colon (":") character.');
+         CName:=Copy(Tk[T+1],2,Length(Tk[T+1]));
+         If (UsrFun^.IsVal(CName))
+            then Fatal(Ln,'Duplicate user function identifier ("'+Cname+'").');
+         SetLength(Pr,Length(Pr)+1);
+         Proc:=High(Pr); ExLn:=0;
+         Pr[Proc].Nu:=0; SetLength(Pr[Proc].Ex,0); SetLength(Pr[Proc].Ar,0);
+         UsrFun^.SetVal(CName,Proc); T+=2;
+         While (T<=High(Tk)) do begin
+            If (Length(Tk[T])=0) then begin
+               Writeln(StdErr,ExtractFileName(YukPath),'(',Ln,'): ',
+                              'Error: Empty token (',T,').');
+               T+=1; Continue end;
+            If (Tk[T][1]<>'$') then
+               Fatal(Ln,'Function argument names must start with the dollar ("$") character.');
+            SetLength(Pr[Proc].Ar,Length(Pr[Proc].Ar)+1);
+            Pr[Proc].Ar[High(Pr[Proc].Ar)]:=Copy(Tk[T],2,Length(Tk[T]));
+            T+=1 end;
+         Dispose(E); Exit(NIL)
+         end else
+      If (Tk[T]='!nuf') then begin
+         If (Proc = 0) then Fatal(Ln,'!nuf without corresponding !fun.');
+         If (Not IfSta^.Empty()) then begin
+            A:=IfSta^.Peek(); A:=IfArr[A][0];
+            Fatal(A,'!if stretches past end of function.')
+            end else
+         If (Not WhiSta^.Empty()) then begin
+            A:=WhiSta^.Peek(); A:=WhiArr[A][0];
+            Fatal(A,'!while stretches past end of function.')
+            end else
+         If (Not RepSta^.Empty()) then begin
+            A:=RepSta^.Peek(); A:=RepArr[A][0];
+            Fatal(A,'!repeat stretches past end of function.')
+            end;
+         Proc:=0; ExLn:=Pr[0].Nu-1;
+         Dispose(E); Exit(NIL)
+         end else
+      {If (Tk[T]='!return') then begin
+         If (Proc = 0) then Fatal(Ln,'!return used in main function.');
+         FPtr:=@F_Return
+         end else}
          Fatal(Ln,'Unknown language construct: "'+Tk[T]+'".')
       end else
       Fatal(Ln,'First token ('+Tk[T]+') is neither a function call nor a language construct.');
@@ -317,7 +492,7 @@ Function MakeExpr(Var Tk:Array of AnsiString;Ln,En,T:LongInt):PExpr;
          end else
       If (Tk[T][1]='(') then begin
          SetLength(E^.Tok,Length(E^.Tok)+1);
-         sex:=MakeExpr(Tk,Ln,En,T+1);
+         sex:=MakeExpr(Tk,Ln,T+1);
          New(Tok); Tok^.Typ:=TK_EXPR; Tok^.Ptr:=sex;
          E^.Tok[High(E^.Tok)]:=Tok;
          Nest:=0;
@@ -333,7 +508,7 @@ Function MakeExpr(Var Tk:Array of AnsiString;Ln,En,T:LongInt):PExpr;
          end else
       If (Tk[T][1]=':') then begin
          SetLength(E^.Tok,Length(E^.Tok)+1);
-         sex:=MakeExpr(Tk,Ln,En,T);
+         sex:=MakeExpr(Tk,Ln,T);
          New(Tok); Tok^.Typ:=TK_EXPR; Tok^.Ptr:=sex;
          E^.Tok[High(E^.Tok)]:=Tok;
          Exit(E)
@@ -347,8 +522,8 @@ Function MakeExpr(Var Tk:Array of AnsiString;Ln,En,T:LongInt):PExpr;
    Exit(E)
    end;
 
-Procedure ProcessLine(L:AnsiString;N,E:LongWord);
-   Var Tk:Array of AnsiString; P:LongWord;
+Function ProcessLine(L:AnsiString;N:LongWord):PExpr;
+   Var Tk:Array of AnsiString; P,E:LongWord;
        Str:LongInt; Del:Char;
    begin
    SetLength(Tk,0); P:=1; Str:=0; Del:=#255;
@@ -396,13 +571,14 @@ Procedure ProcessLine(L:AnsiString;N,E:LongWord);
       Writeln(StdErr,ExtractFileName(YukPath),'(',N,'): ',
               'Fatal: Line with no tokens.');
       Halt(1) end;
-   Ex[E]:=MakeExpr(Tk,N,E,0)
+   Exit(MakeExpr(Tk,N,0))
    end;
 
 Procedure ReadFile(I:PText);
-   Var L:AnsiString; A,N,E:LongWord;
+   Var L:AnsiString; A,N,E,P:LongWord; R:PExpr;
    begin
-   SetLength(Ex,0); N:=0; E:=0;
+   SetLength(Pr,1); N:=0; Proc:=0; ExLn:=0;
+   SetLength(Pr[0].Ar,0); SetLength(Pr[0].Ex,0); Pr[0].Nu:=0;
    SetLength(IfArr,0);  New(IfSta,Create());
    SetLength(WhiArr,0); New(WhiSta,Create());
    SetLength(RepArr,0); New(RepSta,Create());
@@ -410,11 +586,23 @@ Procedure ReadFile(I:PText);
       Readln(I^,L); N+=1;
       L:=Trim(L);
       If (Length(L)>0) and (L[1]<>'#') then begin
-         If (E = Length(Ex)) then SetLength(Ex,Length(Ex)+1);
-         ProcessLine(L,N,E);
-         If (Ex[E]<>NIL) then E+=1
+         P:=Proc; E:=Pr[P].Nu; ExLn:=E;
+         R:=ProcessLine(L,N);
+         If (R<>NIL) then begin
+            SetLength(Pr[P].Ex,Length(Pr[P].Ex)+1);
+            Pr[P].Ex[E]:=R;
+            Pr[P].Nu+=1
+            end
          end
       end;
+   {For P:=Low(Pr) to High(Pr) do begin
+       Write(StdErr,'Func #',P,' has ',Pr[P].Nu,'/',Length(Pr[P].Ex),' expressions and ',
+             Length(Pr[P].Ar),' arguments');
+       If (Length(Pr[P].Ar)>0) then begin Write(StdErr,':');
+          For A:=Low(Pr[P].Ar) to High(Pr[P].Ar)
+          do Write(StdErr,' ',Pr[P].Ar[A]) end;
+       Writeln(StdErr,'.')
+       end;}
    If (Not IfSta^.Empty()) then begin
       A:=IfSta^.Peek(); A:=IfArr[A][0];
       Writeln(StdErr,ExtractFileName(YukPath),'(',A,'): ',
@@ -434,46 +622,11 @@ Procedure ReadFile(I:PText);
    Dispose(IfSta,Destroy())
    end;
 
-Function Eval(E:PExpr):PValue;
-   Var Arg:Array of PValue; T:LongWord; V:PValue;
-   begin
-   SetLength(Arg,Length(E^.Tok));
-   If (Length(E^.Tok)=0) then Exit(E^.Fun(Arg));
-   For T:=High(E^.Tok) downto Low(E^.Tok) do
-       If (E^.Tok[T]^.Typ = TK_CONS)
-          then Arg[T]:=CopyVal(PValue(E^.Tok[T]^.Ptr)) else
-       If (E^.Tok[T]^.Typ = TK_VARI) then begin
-          Try    V:=Vars^.GetVal(PStr(E^.Tok[T]^.Ptr)^);
-                 Arg[T]:=CopyVal(V)
-          Except If (T<High(E^.Tok)) 
-                    then V:=CopyTyp(Arg[T+1])
-                    else V:=NilVal();
-                 V^.Tmp:=False;
-                 Vars^.SetVal(PStr(E^.Tok[T]^.Ptr)^,V);
-                 Arg[T]:=CopyVal(V)
-          end end else
-       If (E^.Tok[T]^.Typ = TK_REFE) then begin
-          Try    Arg[T]:=Vars^.GetVal(PStr(E^.Tok[T]^.Ptr)^)
-          Except If (T<High(E^.Tok)) 
-                    then Arg[T]:=CopyTyp(Arg[T+1])
-                    else Arg[T]:=NilVal();
-                 Arg[T]^.Tmp:=False;
-                 Vars^.SetVal(PStr(E^.Tok[T]^.Ptr)^,Arg[T]);
-          end end else
-       If (E^.Tok[T]^.Typ = TK_EXPR)
-          then Arg[T]:=Eval(PExpr(E^.Tok[T]^.Ptr));
-   Exit(E^.Fun(Arg))
-   end;
-
 Procedure Run();
    Var R:PValue;
    begin
-   If (Length(Ex)=0) then Exit() else ExLn:=Low(Ex);
-   While (ExLn<=High(Ex)) do begin
-      R:=Eval(Ex[ExLn]);
-      FreeVal(R);
-      ExLn+=1
-      end;
+   R:=RunFunc(0);
+   FreeVal(R)
    end;
 
 Procedure Cleanup();
@@ -486,10 +639,12 @@ GLOB_dt:=Now(); GLOB_ms:=TimeStampToMSecs(DateTimeToTimeStamp(GLOB_dt));
 IfSta:=NIL; RepSta:=NIL; WhiSta:=NIL;
 
 New(Func,Create('!','~'));
+Func^.SetVal('return',@F_Return);
 Functions.Register(Func);
 
-New(Vars,Create('A','z'));
+SetLength(Vars,1); New(Vars[0],Create('A','z'));
 New(Cons,Create('A','z'));
+New(UsrFun,Create('A','z'));
 
 If (ParamCount()>0) then begin
    For YukNum:=1 to ParamCount() do begin
@@ -506,6 +661,7 @@ If (ParamCount()>0) then begin
    Run()
    end;
 
-Dispose(Vars,Destroy());
+Dispose(Vars[0],Destroy());
+Dispose(Cons,Destroy());
 Dispose(Func,Destroy())
 end.

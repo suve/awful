@@ -2,9 +2,9 @@ unit stack;
 
 {$MODE OBJFPC} {$COPERATORS ON} 
 
-(* Do you want the Trie to be an object or a class? Obviously, it's   *
+(* Do you want the Stack to be an object or a class? Obviously, it's   *
  * impossible to have both at the same time. If both symbols are set, *
- * Trie becomes a class. If none are set, compilation error occurs.   *)
+ * Stack becomes a class. If none are set, compilation error occurs.   *)
 //{$DEFINE STACK_CLASS}
 {$DEFINE STACK_OBJECT} 
 

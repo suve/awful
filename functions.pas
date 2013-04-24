@@ -219,6 +219,7 @@ Function F_Sleep(Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; Dur:LongWord;
        ms_st, ms_en : Comp;
    begin
+   ms_st:=TimeStampToMSecs(DateTimeToTimeStamp(Now()));
    If (Length(Arg)=0) then Dur:=1000
       else begin
       If (Length(Arg)>1) then
@@ -235,7 +236,6 @@ Function F_Sleep(Arg:Array of PValue):PValue;
          end;
       If (Arg[0]^.Tmp) then FreeVal(Arg[0])
       end;
-   ms_st:=TimeStampToMSecs(DateTimeToTimeStamp(Now()));
    SysUtils.Sleep(Dur);
    ms_en:=TimeStampToMSecs(DateTimeToTimeStamp(Now()));
    Exit(NewVal(VT_INT,Trunc(ms_en - ms_st)))
@@ -244,7 +244,7 @@ Function F_Sleep(Arg:Array of PValue):PValue;
 Function F_Write(Arg:Array of PValue):PValue;
    Var C:LongWord;
    begin
-   If (Length(Arg)=0) then Exit();
+   If (Length(Arg)=0) then Exit(NilVal);
    For C:=Low(Arg) to High(Arg) do begin
        Case Arg[C]^.Typ of
           VT_NIL: Write('(nilvar)');
@@ -255,6 +255,7 @@ Function F_Write(Arg:Array of PValue):PValue;
           VT_FLO: Write(PDouble(Arg[C]^.Ptr)^:0:RealPrec);
           VT_BOO: Write(PBoolean(Arg[C]^.Ptr)^);
           VT_STR: Write(PAnsiString(Arg[C]^.Ptr)^);
+          else Write('(',Arg[C]^.Typ,')');
           end;
        If (Arg[C]^.Tmp) then FreeVal(Arg[C])
        end;
