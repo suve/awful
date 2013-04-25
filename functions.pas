@@ -92,6 +92,16 @@ Function F_DateTime_Min(Arg:Array of PValue):PValue;
 Function F_DateTime_Sec(Arg:Array of PValue):PValue;
 Function F_DateTime_String(Arg:Array of PValue):PValue;
 
+Function F_mkint(Arg:Array of PValue):PValue;
+Function F_mkhex(Arg:Array of PValue):PValue;
+Function F_mkoct(Arg:Array of PValue):PValue;
+Function F_mkbin(Arg:Array of PValue):PValue;
+Function F_mkflo(Arg:Array of PValue):PValue;
+Function F_mkstr(Arg:Array of PValue):PValue;
+Function F_mklog(Arg:Array of PValue):PValue;
+
+Function F_fork(Arg:Array of PValue):PValue;
+
 implementation
    uses SysUtils, Unix, Linux;
 
@@ -107,7 +117,7 @@ Const ROOTDISK = 3;
 
 Procedure Register(FT:PFunTrie);
    begin
-   FT^.SetVal('',@F_);
+   FT^.SetVal('',@F_); FT^.SetVal('nil',@F_);
    FT^.SetVal('sleep',@F_Sleep);
    FT^.SetVal('ticks',@F_Ticks);
    FT^.SetVal('filename',@F_FileName);
@@ -176,6 +186,14 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('datetime:min',@F_DateTime_Min);
    FT^.SetVal('datetime:sec',@F_DateTime_Sec);
    FT^.SetVal('datetime:string',@F_DateTime_String);
+   FT^.SetVal('mkint',@F_mkint);
+   FT^.SetVal('mkhex',@F_mkhex);
+   FT^.SetVal('mkoct',@F_mkoct);
+   FT^.SetVal('mkbin',@F_mkbin);
+   FT^.SetVal('mkflo',@F_mkflo); FT^.SetVal('mkfloat',@F_mkflo);
+   FT^.SetVal('mkstr',@F_mkstr); FT^.SetVal('mkstring',@F_mkstr);
+   FT^.SetVal('mklog',@F_mklog); FT^.SetVal('mkbool',@F_mklog);
+   FT^.SetVal('fork',@F_fork);
    end;
 
 Function F_(Arg:Array of PValue):PValue;
@@ -244,10 +262,10 @@ Function F_Sleep(Arg:Array of PValue):PValue;
 Function F_Write(Arg:Array of PValue):PValue;
    Var C:LongWord;
    begin
-   If (Length(Arg)=0) then Exit(NilVal);
+   If (Length(Arg)=0) then Exit(NewVal(VT_STR,''));
    For C:=Low(Arg) to High(Arg) do begin
        Case Arg[C]^.Typ of
-          VT_NIL: Write('(nilvar)');
+          //VT_NIL: Write('(nilvar)');
           VT_INT: Write(PQInt(Arg[C]^.Ptr)^);
           VT_HEX: Write(HexToStr(PQInt(Arg[C]^.Ptr)^));
           VT_OCT: Write(OctToStr(PQInt(Arg[C]^.Ptr)^));
@@ -259,7 +277,7 @@ Function F_Write(Arg:Array of PValue):PValue;
           end;
        If (Arg[C]^.Tmp) then FreeVal(Arg[C])
        end;
-   Exit(NilVal)
+   Exit(NewVal(VT_STR,''))
    end;
 
 Function F_Writeln(Arg:Array of PValue):PValue;
@@ -1486,6 +1504,201 @@ Function F_DateTime_String(Arg:Array of PValue):PValue;
    If (Length(Arg) >= 1) and (Arg[0]^.Tmp) then FreeVal(Arg[0]);
    DateTimeToString(S,F,dt);
    Exit(NewVal(VT_STR,S))
+   end;
+
+Function F_mkint(Arg:Array of PValue):PValue;
+   Var C:LongWord; V:PValue;
+   begin
+   If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
+   For C:=High(Arg) downto (Low(Arg)+1) do
+       If (Arg[C]^.Tmp) then FreeVal(Arg[C]) else
+       If (Arg[C]^.Typ <> VT_INT) then begin
+          V:=ValToInt(Arg[C]); V^.Tmp:=False;
+          SwapPtrs(Arg[C],V); FreeVal(V)
+          end;
+   If (Arg[0]^.Tmp) then begin
+      If (Arg[0]^.Typ <> VT_INT) then begin
+         V:=ValToInt(Arg[0]); FreeVal(Arg[0])
+         end else V:=Arg[0];
+      Exit(V)
+      end else begin
+      If (Arg[0]^.Typ<>VT_INT) then begin
+         V:=ValToInt(Arg[0]); V^.Tmp:=False;
+         SwapPtrs(Arg[C],V); FreeVal(V)
+         end;
+      Exit(CopyVal(Arg[0]))
+      end
+   end;
+
+Function F_mkhex(Arg:Array of PValue):PValue;
+   Var C:LongWord; V:PValue;
+   begin
+   If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
+   For C:=High(Arg) downto (Low(Arg)+1) do
+       If (Arg[C]^.Tmp) then FreeVal(Arg[C]) else
+       If (Arg[C]^.Typ <> VT_Hex) then begin
+          V:=ValToHex(Arg[C]); V^.Tmp:=False;
+          SwapPtrs(Arg[C],V); FreeVal(V)
+          end;
+   If (Arg[0]^.Tmp) then begin
+      If (Arg[0]^.Typ <> VT_Hex) then begin
+         V:=ValToHex(Arg[0]); FreeVal(Arg[0])
+         end else V:=Arg[0];
+      Exit(V)
+      end else begin
+      If (Arg[0]^.Typ<>VT_Hex) then begin
+         V:=ValToHex(Arg[0]); V^.Tmp:=False;
+         SwapPtrs(Arg[C],V); FreeVal(V)
+         end;
+      Exit(CopyVal(Arg[0]))
+      end
+   end;
+
+Function F_mkoct(Arg:Array of PValue):PValue;
+   Var C:LongWord; V:PValue;
+   begin
+   If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
+   For C:=High(Arg) downto (Low(Arg)+1) do
+       If (Arg[C]^.Tmp) then FreeVal(Arg[C]) else
+       If (Arg[C]^.Typ <> VT_INT) then begin
+          V:=ValToOct(Arg[C]); V^.Tmp:=False;
+          SwapPtrs(Arg[C],V); FreeVal(V)
+          end;
+   If (Arg[0]^.Tmp) then begin
+      If (Arg[0]^.Typ <> VT_INT) then begin
+         V:=ValToOct(Arg[0]); FreeVal(Arg[0])
+         end else V:=Arg[0];
+      Exit(V)
+      end else begin
+      If (Arg[0]^.Typ<>VT_INT) then begin
+         V:=ValToOct(Arg[0]); V^.Tmp:=False;
+         SwapPtrs(Arg[C],V); FreeVal(V)
+         end;
+      Exit(CopyVal(Arg[0]))
+      end
+   end;
+
+Function F_mkbin(Arg:Array of PValue):PValue;
+   Var C:LongWord; V:PValue;
+   begin
+   If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
+   For C:=High(Arg) downto (Low(Arg)+1) do
+       If (Arg[C]^.Tmp) then FreeVal(Arg[C]) else
+       If (Arg[C]^.Typ <> VT_INT) then begin
+          V:=ValToBin(Arg[C]); V^.Tmp:=False;
+          SwapPtrs(Arg[C],V); FreeVal(V)
+          end;
+   If (Arg[0]^.Tmp) then begin
+      If (Arg[0]^.Typ <> VT_INT) then begin
+         V:=ValToBin(Arg[0]); FreeVal(Arg[0])
+         end else V:=Arg[0];
+      Exit(V)
+      end else begin
+      If (Arg[0]^.Typ<>VT_INT) then begin
+         V:=ValToBin(Arg[0]); V^.Tmp:=False;
+         SwapPtrs(Arg[C],V); FreeVal(V)
+         end;
+      Exit(CopyVal(Arg[0]))
+      end
+   end;
+
+Function F_mkflo(Arg:Array of PValue):PValue;
+   Var C:LongWord; V:PValue;
+   begin
+   If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
+   For C:=High(Arg) downto (Low(Arg)+1) do
+       If (Arg[C]^.Tmp) then FreeVal(Arg[C]) else
+       If (Arg[C]^.Typ <> VT_INT) then begin
+          V:=ValToFlo(Arg[C]); V^.Tmp:=False;
+          SwapPtrs(Arg[C],V); FreeVal(V)
+          end;
+   If (Arg[0]^.Tmp) then begin
+      If (Arg[0]^.Typ <> VT_INT) then begin
+         V:=ValToFlo(Arg[0]); FreeVal(Arg[0])
+         end else V:=Arg[0];
+      Exit(V)
+      end else begin
+      If (Arg[0]^.Typ<>VT_INT) then begin
+         V:=ValToFlo(Arg[0]); V^.Tmp:=False;
+         SwapPtrs(Arg[C],V); FreeVal(V)
+         end;
+      Exit(CopyVal(Arg[0]))
+      end
+   end;
+
+Function F_mkstr(Arg:Array of PValue):PValue;
+   Var C:LongWord; V:PValue;
+   begin
+   If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
+   For C:=High(Arg) downto (Low(Arg)+1) do
+       If (Arg[C]^.Tmp) then FreeVal(Arg[C]) else
+       If (Arg[C]^.Typ <> VT_INT) then begin
+          V:=ValToStr(Arg[C]); V^.Tmp:=False;
+          SwapPtrs(Arg[C],V); FreeVal(V)
+          end;
+   If (Arg[0]^.Tmp) then begin
+      If (Arg[0]^.Typ <> VT_INT) then begin
+         V:=ValToStr(Arg[0]); FreeVal(Arg[0])
+         end else V:=Arg[0];
+      Exit(V)
+      end else begin
+      If (Arg[0]^.Typ<>VT_INT) then begin
+         V:=ValToStr(Arg[0]); V^.Tmp:=False;
+         SwapPtrs(Arg[C],V); FreeVal(V)
+         end;
+      Exit(CopyVal(Arg[0]))
+      end
+   end;
+
+Function F_mklog(Arg:Array of PValue):PValue;
+   Var C:LongWord; V:PValue;
+   begin
+   If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
+   For C:=High(Arg) downto (Low(Arg)+1) do
+       If (Arg[C]^.Tmp) then FreeVal(Arg[C]) else
+       If (Arg[C]^.Typ <> VT_INT) then begin
+          V:=ValToBoo(Arg[C]); V^.Tmp:=False;
+          SwapPtrs(Arg[C],V); FreeVal(V)
+          end;
+   If (Arg[0]^.Tmp) then begin
+      If (Arg[0]^.Typ <> VT_INT) then begin
+         V:=ValToBoo(Arg[0]); FreeVal(Arg[0])
+         end else V:=Arg[0];
+      Exit(V)
+      end else begin
+      If (Arg[0]^.Typ<>VT_INT) then begin
+         V:=ValToBoo(Arg[0]); V^.Tmp:=False;
+         SwapPtrs(Arg[C],V); FreeVal(V)
+         end;
+      Exit(CopyVal(Arg[0]))
+      end
+   end;
+
+Function F_fork(Arg:Array of PValue):PValue;
+   Var C:LongWord; V:PValue; R:Boolean;
+   begin
+   If (Length(Arg)=0) then Exit(NewVal(VT_BOO,False));
+   If (Length(Arg)>3) then For C:=High(Arg) downto 3 do
+      If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+   If (Arg[0]^.Typ = VT_BOO) then begin
+      R:=PBool(Arg[0]^.Ptr)^;
+      If (Arg[0]^.Tmp) then FreeVal(Arg[0])
+      end else begin
+      V:=ValToBoo(Arg[0]); R:=PBool(V^.Ptr)^;
+      If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+      FreeVal(V)
+      end;
+   If (R) then begin
+      If (Length(Arg)=1) then Exit(NewVal(VT_BOO,True));
+      If (Length(Arg)>2) then If (Arg[2]^.Tmp) then FreeVal(Arg[2]);
+      If (Arg[1]^.Tmp) then Exit(Arg[1]) else Exit(CopyVal(Arg[1]))
+      end else begin
+      If (Length(Arg)<3) then begin
+         If (Length(Arg)=2) then If (Arg[1]^.Tmp) then FreeVal(Arg[1]);
+         Exit(NewVal(VT_BOO,False))
+         end;
+      If (Arg[2]^.Tmp) then Exit(Arg[2]) else Exit(CopyVal(Arg[2]))
+      end
    end;
 
 end.

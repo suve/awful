@@ -215,7 +215,6 @@ Function ValToInt(V:PValue):PValue;
    begin
    New(R); R^.Typ:=VT_INT; R^.Tmp:=True; New(P); R^.Ptr:=P;
    Case V^.Typ of
-      VT_NIL: P^:=0;
       VT_INT: P^:=PQInt(V^.Ptr)^;
       VT_HEX: P^:=PQInt(V^.Ptr)^;
       VT_OCT: P^:=PQInt(V^.Ptr)^;
@@ -223,6 +222,7 @@ Function ValToInt(V:PValue):PValue;
       VT_FLO: P^:=Trunc(PDouble(V^.Ptr)^);
       VT_BOO: If (PBoolean(V^.Ptr)^ = TRUE) then P^:=1 else P^:=0;
       VT_STR: P^:=StrToInt(PStr(V^.Ptr)^);
+      else P^:=0;
       end;
    Exit(R)
    end;
@@ -232,7 +232,6 @@ Function ValToHex(V:PValue):PValue;
    begin
    New(R); R^.Typ:=VT_HEX; R^.Tmp:=True; New(P); R^.Ptr:=P;
    Case V^.Typ of
-      VT_NIL: P^:=0;
       VT_INT: P^:=PQInt(V^.Ptr)^;
       VT_HEX: P^:=PQInt(V^.Ptr)^;
       VT_OCT: P^:=PQInt(V^.Ptr)^;
@@ -240,6 +239,7 @@ Function ValToHex(V:PValue):PValue;
       VT_FLO: P^:=Trunc(PDouble(V^.Ptr)^);
       VT_BOO: If (PBoolean(V^.Ptr)^ = TRUE) then P^:=1 else P^:=0;
       VT_STR: P^:=StrToHex(PStr(V^.Ptr)^);
+      else P^:=0;
       end;
    Exit(R)
    end;
@@ -249,7 +249,6 @@ Function ValToOct(V:PValue):PValue;
    begin
    New(R); R^.Typ:=VT_OCT; R^.Tmp:=True; New(P); R^.Ptr:=P;
    Case V^.Typ of
-      VT_NIL: P^:=0;
       VT_INT: P^:=PQInt(V^.Ptr)^;
       VT_HEX: P^:=PQInt(V^.Ptr)^;
       VT_OCT: P^:=PQInt(V^.Ptr)^;
@@ -257,6 +256,7 @@ Function ValToOct(V:PValue):PValue;
       VT_FLO: P^:=Trunc(PDouble(V^.Ptr)^);
       VT_BOO: If (PBoolean(V^.Ptr)^ = TRUE) then P^:=1 else P^:=0;
       VT_STR: P^:=StrToOct(PStr(V^.Ptr)^);
+      else P^:=0;
       end;
    Exit(R)
    end;
@@ -266,7 +266,6 @@ Function ValToBin(V:PValue):PValue;
    begin
    New(R); R^.Typ:=VT_BIN; R^.Tmp:=True; New(P); R^.Ptr:=P;
    Case V^.Typ of
-      VT_NIL: P^:=0;
       VT_INT: P^:=PQInt(V^.Ptr)^;
       VT_HEX: P^:=PQInt(V^.Ptr)^;
       VT_OCT: P^:=PQInt(V^.Ptr)^;
@@ -274,6 +273,7 @@ Function ValToBin(V:PValue):PValue;
       VT_FLO: P^:=Trunc(PDouble(V^.Ptr)^);
       VT_BOO: If (PBoolean(V^.Ptr)^ = TRUE) then P^:=1 else P^:=0;
       VT_STR: P^:=StrToBin(PStr(V^.Ptr)^);
+      else P^:=0;
       end;
    Exit(R)
    end;
@@ -283,7 +283,6 @@ Function ValToFlo(V:PValue):PValue;
    begin
    New(R); R^.Typ:=VT_FLO; R^.Tmp:=True; New(P); R^.Ptr:=P;
    Case V^.Typ of
-      VT_NIL: P^:=0;
       VT_INT: P^:=PQInt(V^.Ptr)^;
       VT_HEX: P^:=PQInt(V^.Ptr)^;
       VT_OCT: P^:=PQInt(V^.Ptr)^;
@@ -291,6 +290,7 @@ Function ValToFlo(V:PValue):PValue;
       VT_FLO: P^:=PDouble(V^.Ptr)^;
       VT_BOO: If (PBoolean(V^.Ptr)^ = TRUE) then P^:=1 else P^:=0;
       VT_STR: P^:=StrToReal(PStr(V^.Ptr)^);
+      else P^:=0;
       end;
    Exit(R)
    end;
@@ -300,7 +300,6 @@ Function ValToBoo(V:PValue):PValue;
    begin
    New(R); R^.Typ:=VT_BOO; R^.Tmp:=True; New(P); R^.Ptr:=P;
    Case V^.Typ of
-      VT_NIL: P^:=FALSE;
       VT_INT: P^:=(PQInt(V^.Ptr)^)<>0;
       VT_HEX: P^:=(PQInt(V^.Ptr)^)<>0;
       VT_OCT: P^:=(PQInt(V^.Ptr)^)<>0;
@@ -308,6 +307,7 @@ Function ValToBoo(V:PValue):PValue;
       VT_FLO: P^:=(PDouble(V^.Ptr)^)<>0;
       VT_BOO: P^:=PBoolean(V^.Ptr)^;
       VT_STR: P^:=StrToBoolDef(PStr(V^.Ptr)^,FALSE);
+      else P^:=False;
       end;
    Exit(R)
    end;
@@ -317,7 +317,6 @@ Function ValToStr(V:PValue):PValue;
    begin
    New(R); R^.Typ:=VT_STR; R^.Tmp:=True; New(P); R^.Ptr:=P;
    Case V^.Typ of
-      VT_NIL: P^:='';
       VT_INT: P^:=IntToStr(PQInt(V^.Ptr)^);
       VT_HEX: P^:=HexToStr(PQInt(V^.Ptr)^);
       VT_OCT: P^:=OctToStr(PQInt(V^.Ptr)^);
@@ -326,6 +325,7 @@ Function ValToStr(V:PValue):PValue;
       VT_BOO: If (PBoolean(V^.Ptr)^ = TRUE)
                  then P^:='TRUE' else P^:='FALSE';
       VT_STR: P^:=PStr(V^.Ptr)^;
+      else P^:='';
       end;
    Exit(R)
    end;
@@ -769,6 +769,7 @@ Function ValSeq(A,B:PValue):PValue;
       Exit(NewVal(VT_BOO, (PStr(A^.Ptr)^) = (PStr(B^.Ptr)^))) else
    If (A^.Typ = VT_BOO) then
       Exit(NewVal(VT_BOO, (PBool(A^.Ptr)^) = (PBool(B^.Ptr)^))) else
+   If (A^.Typ = VT_NIL) and (B^.Typ = VT_NIL) then Exit(NewVal(VT_BOO,True)) else
       {else} Exit(NewVal(VT_BOO,False))
    end;
 
@@ -825,6 +826,8 @@ Function ValEq(A,B:PValue):PValue;
          Exit(NewVal(VT_BOO, (PBool(A^.Ptr)^) = (PBool(B^.Ptr)^))) else
          {else} Exit(NewVal(VT_BOO, False))
       end else // all other, non-comparable types
+   If (A^.Typ = VT_NIL) and (B^.Typ = VT_NIL) then Exit(NewVal(VT_BOO,True))
+      else
       Exit(NewVal(VT_BOO,False))
    end;
 
@@ -881,6 +884,8 @@ Function ValGt(A,B:PValue):PValue;
          Exit(NewVal(VT_BOO, BoolToInt(PBool(A^.Ptr)^) > BoolToInt(PBool(B^.Ptr)^))) else
          {else} Exit(NewVal(VT_BOO, False))
       end else // all other, non-comparable types
+   If (A^.Typ = VT_NIL) and (B^.Typ = VT_NIL) then Exit(NewVal(VT_BOO,False))
+      else
       Exit(NewVal(VT_BOO,False))
    end;
 
@@ -930,6 +935,8 @@ Function ValGe(A,B:PValue):PValue;
          Exit(NewVal(VT_BOO, BoolToInt(PBool(A^.Ptr)^) >= BoolToInt(PBool(B^.Ptr)^))) else
          {else} Exit(NewVal(VT_BOO, False))
       end else // all other, non-comparable types
+   If (A^.Typ = VT_NIL) and (B^.Typ = VT_NIL) then Exit(NewVal(VT_BOO,True))
+      else
       Exit(NewVal(VT_BOO,False))
    end;
 
@@ -979,6 +986,8 @@ Function ValLt(A,B:PValue):PValue;
          Exit(NewVal(VT_BOO, BoolToInt(PBool(A^.Ptr)^) < BoolToInt(PBool(B^.Ptr)^))) else
          {else} Exit(NewVal(VT_BOO, False))
       end else // all other, non-comparable types
+   If (A^.Typ = VT_NIL) and (B^.Typ = VT_NIL) then Exit(NewVal(VT_BOO,False))
+      else
       Exit(NewVal(VT_BOO,False))
    end;
 
@@ -1028,6 +1037,8 @@ Function ValLe(A,B:PValue):PValue;
          Exit(NewVal(VT_BOO, BoolToInt(PBool(A^.Ptr)^) <= BoolToInt(PBool(B^.Ptr)^))) else
          {else} Exit(NewVal(VT_BOO, False))
       end else // all other, non-comparable types
+   If (A^.Typ = VT_NIL) and (B^.Typ = VT_NIL) then Exit(NewVal(VT_BOO,False))
+      else
       Exit(NewVal(VT_BOO,False))
    end;
 
@@ -1102,8 +1113,12 @@ Function  CopyVal(V:PValue):PValue;
    end;
 
 Procedure SwapPtrs(A,B:PValue);
-   Var P:Pointer;
-   begin P:=A^.Ptr; A^.Ptr:=B^.Ptr; B^.Ptr:=P end;
+   Var P:Pointer; T:TValueType;
+   begin
+   P:=A^.Ptr; T:=A^.Typ;
+   A^.Ptr:=B^.Ptr; A^.Typ:=B^.Typ;
+   B^.Ptr:=P; B^.Typ:=T
+   end;
 
 Function NewVal(T:TValueType;V:Double):PValue;
    Var R:PValue; P:PDouble;

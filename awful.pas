@@ -4,7 +4,7 @@ program awful;
 
 uses SysUtils, Math, Trie, Values, Functions, Stack;
 
-const AWFUL_REVISION = '6';
+const AWFUL_REVISION = '7';
 
 Type TTokenType = (
      TK_CONS, TK_VARI, TK_REFE, TK_EXPR, TK_BADT);
@@ -40,6 +40,8 @@ Type TTokenType = (
      
      PNumTrie = ^TNumTrie; 
      TNumTrie = specialize GenericTrie<LongWord>;
+     
+     TParamMode = (PAR_INPUT, PAR_OUTPUT, PAR_ERR);
 
 Var Func : PFunTrie;
     Cons : PValTrie;
@@ -54,6 +56,7 @@ Var Func : PFunTrie;
 Var YukFile : Text; YukNum:LongWord;
     Pr : Array of TProc;
     Proc, ExLn : LongWord;
+    ParMod:TParamMode;
 
 Function GetVar(Name:AnsiString;Typ:TValueType):PValue;
    Var C:LongInt; R:PValue;
@@ -212,14 +215,16 @@ Function F_AutoCall(Arg:Array of PValue):PValue;
    New(Vars[V],Create('A','z'));
    If (Length(Pr[Proc].Ar)>0) then begin
       PA:=Length(Pr[Proc].Ar); CA:=Length(Arg)-1;
-      H:=Max(PA,CA);
+      H:=Min(PA,CA);
       If (H>0) then For A:=0 to (H-1) do begin
          Vars[V]^.SetVal(Pr[Proc].Ar[A],Arg[A+1]);
          Arg[A+1]^.Tmp:=False end;
-      If (PA>CA) then For A:=H to (PA-1) do
-         Vars[V]^.SetVal(Pr[Proc].Ar[A],NilVal) else
-      If (CA<PA) then For A:=H to (CA-1) do
-         Vars[V]^.SetVal('ARG'+IntToStr(A),Arg[A+1])
+      If (PA>CA) then For A:=H to (PA-1) do begin
+         TV:=NilVal(); TV^.Tmp:=False;
+         Vars[V]^.SetVal(Pr[Proc].Ar[A],TV) end else
+      If (CA<PA) then For A:=H to (CA-1) do begin
+         Vars[V]^.SetVal('ARG'+IntToStr(A),Arg[A+1]);
+         Arg[A+1]^.Tmp:=False end
       end;
    R:=RunFunc(Proc);
    //Writeln(StdErr,'F_AutoCall(',Proc,'): Trie size: ',Vars[V]^.Count);
@@ -647,13 +652,28 @@ New(Cons,Create('A','z'));
 New(UsrFun,Create('A','z'));
 
 If (ParamCount()>0) then begin
+   ParMod:=PAR_INPUT;
    For YukNum:=1 to ParamCount() do begin
+   If (ParamStr(YukNum)='-o') then begin
+      ParMod:=PAR_OUTPUT; Continue end else
+   If (ParamStr(YukNum)='-e') then begin
+      ParMod:=PAR_ERR; Continue end;
    Assign(YukFile,ParamStr(YukNum));
-   {$I-} Reset(YukFile); {$I+}
-   If (IOResult=0) then begin
-      YukPath:=ParamStr(YukNum);
-      ReadFile(@YukFile); Close(YukFile);
-      Run(); Cleanup()
+   If (ParMod = PAR_INPUT) then begin
+      {$I-} Reset(YukFile); {$I+}
+      If (IOResult=0) then begin
+         YukPath:=ParamStr(YukNum);
+         ReadFile(@YukFile); Close(YukFile);
+         Run(); Cleanup()
+         end
+      end else begin
+      {$I-} Rewrite(YukFile); {$I+}
+      If (IOResult = 0) then begin
+         If (ParMod = PAR_OUTPUT)
+            then begin StdOut:=YukFile; Output:=YukFile end
+            else StdErr:=YukFile;
+         ParMod:=PAR_INPUT
+         end
       end
    end end else begin
    YukPath:='(stdin)';

@@ -190,13 +190,15 @@ Function GenericTrie.RemVal():Tp;
 Procedure GenericTrie.FreeNode(N:PNode);
    Var I:LongWord;
    begin
-   If (N^.Chi > 0) then
+   If (N^.Chi > 0) then begin
       For I:=Low(N^.Nxt) to High(N^.Nxt) do
           If (N^.Nxt[I]<>NIL) then begin
              FreeNode(N^.Nxt[I]);
              Dispose(N^.Nxt[I]);
              N^.Nxt[I]:=NIL
              end;
+      N^.Chi:=0
+      end;
    If (N^.Val <> NIL) then begin Dispose(N^.Val); Self.Vals-=1 end
    end;
 
