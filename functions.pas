@@ -103,7 +103,7 @@ Function F_mklog(Arg:Array of PValue):PValue;
 Function F_fork(Arg:Array of PValue):PValue;
 
 implementation
-   uses SysUtils, Unix, Linux;
+   uses Math, SysUtils, Unix, Linux;
 
 Type TGetVal = record
      Key, Val : AnsiString
@@ -578,12 +578,16 @@ Function DecodeURL(Str:AnsiString):AnsiString;
    Res:=''; SetLength(Res,Length(Str));
    R:=1; P:=1;
    While (P<=Length(Str)) do
-      If (Str[P]<>'%')
-         then begin Res[R]:=Str[P]; R+=1; P+=1 end
-         else begin
+      If (Str[P]='%')
+         then begin
          Res[R]:=Chr(StrToHex(Str[P+1..P+2]));
          P+=3; R+=1
-         end;
+         end else
+      If (Str[P]='+')
+         then begin Res[R]:=' ';    R+=1; P+=1 end else
+      If (Str[P]<>#0)
+         then begin Res[R]:=Str[P]; R+=1; P+=1 end
+         else P+=1;
    SetLength(Res,R-1);
    Exit(Res)
    end;
@@ -675,10 +679,10 @@ Function GetSet(Key:AnsiString;L,R:LongWord):Boolean;
    begin
    If (L>R) then Exit(False);
    Mid:=(L+R) div 2;
-   Case CompareStr(Key,GetArr[Mid].Key) of
-      +1: Exit(GetSet(Key,L,Mid-1));
+   Case Sign(CompareStr(Key,GetArr[Mid].Key)) of
+      -1: Exit(GetSet(Key,L,Mid-1));
        0: Exit(True);
-      -1: Exit(GetSet(Key,Mid+1,R));
+      +1: Exit(GetSet(Key,Mid+1,R));
    end end;
 
 Function GetSet(Key:AnsiString):Boolean;
@@ -693,10 +697,10 @@ Function GetStr(Key:AnsiString;L,R:LongWord):AnsiString;
    begin
    If (L>R) then Exit('');
    Mid:=(L+R) div 2;
-   Case CompareStr(Key,GetArr[Mid].Key) of
-      +1: Exit(GetStr(Key,L,Mid-1));
+   Case Sign(CompareStr(Key,GetArr[Mid].Key)) of
+      -1: Exit(GetStr(Key,L,Mid-1));
        0: Exit(GetArr[Mid].Val);
-      -1: Exit(GetStr(Key,Mid+1,R));
+      +1: Exit(GetStr(Key,Mid+1,R));
    end end;
 
 Function GetStr(Key:AnsiString):AnsiString;

@@ -4,7 +4,7 @@ program awful;
 
 uses SysUtils, Math, Trie, Values, Functions, Stack;
 
-const AWFUL_REVISION = '7';
+const AWFUL_REVISION = '8';
 
 Type TTokenType = (
      TK_CONS, TK_VARI, TK_REFE, TK_EXPR, TK_BADT);
