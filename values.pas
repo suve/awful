@@ -1102,7 +1102,6 @@ Function  CopyVal(V:PValue):PValue;
    begin
    New(R); R^.Tmp:=True; R^.Typ:=V^.Typ;
    Case V^.Typ of 
-      VT_NIL: ;
       VT_INT: begin New(I); (I^):=PQInt(V^.Ptr)^; R^.Ptr:=I end;
       VT_HEX: begin New(I); (I^):=PQInt(V^.Ptr)^; R^.Ptr:=I end;
       VT_OCT: begin New(I); (I^):=PQInt(V^.Ptr)^; R^.Ptr:=I end;
@@ -1110,6 +1109,7 @@ Function  CopyVal(V:PValue):PValue;
       VT_FLO: begin New(D); (D^):=PDouble(V^.Ptr)^; R^.Ptr:=D end;
       VT_STR: begin New(S); (S^):=PStr(V^.Ptr)^; R^.Ptr:=S end;
       VT_BOO: begin New(B); (B^):=PBool(V^.Ptr)^; R^.Ptr:=B end;
+      else R^.Ptr:=NIL
       end;
    Exit(R)
    end;
@@ -1132,7 +1132,7 @@ Function NewVal(T:TValueType;V:Double):PValue;
 Function NewVal(T:TValueType;V:Int64):PValue;
    Var R:PValue; P:PQInt;
    begin
-   New(R); R^.Typ:=VT_INT; New(P); R^.Ptr:=P; R^.Tmp:=True;
+   New(R); R^.Typ:=T; New(P); R^.Ptr:=P; R^.Tmp:=True;
    P^:=V; Exit(R)
    end;
 

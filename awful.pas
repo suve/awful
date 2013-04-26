@@ -4,7 +4,7 @@ program awful;
 
 uses SysUtils, Math, Trie, Values, Functions, Stack;
 
-const AWFUL_REVISION = '8';
+const AWFUL_REVISION = '9';
 
 Type TTokenType = (
      TK_CONS, TK_VARI, TK_REFE, TK_EXPR, TK_BADT);
@@ -521,20 +521,21 @@ Function MakeExpr(Var Tk:Array of AnsiString;Ln,T:LongInt):PExpr;
       If (Tk[T][1]='!') then begin
          Fatal(Ln,'Language construct used as a sub-expression. ("'+Tk[T]+'").')
          end else begin
-         Fatal(Ln,'Invalid token: "'+Tk[T]+'".')
+         Writeln(StdErr,ExtractFileName(YukPath),'(',Ln,'): ',
+                       'Error: Invalid token ("',Tk[T],'").');
          end;
       T+=1 end;
    Exit(E)
    end;
 
 Function ProcessLine(L:AnsiString;N:LongWord):PExpr;
-   Var Tk:Array of AnsiString; P,E:LongWord;
+   Var Tk:Array of AnsiString; P:LongWord;
        Str:LongInt; Del:Char;
    begin
    SetLength(Tk,0); P:=1; Str:=0; Del:=#255;
    While (Length(L)>0) do begin
       If (Str<=0) then begin
-         If (P>Length(L)) or (L[P]=#32) then begin
+         If (P>Length(L)) or (L[P]=#32) or (L[P]='#') then begin
             SetLength(Tk,Length(Tk)+1);
             Tk[High(Tk)]:=Copy(L,1,P-1);
             If (Tk[High(Tk)]='|') then begin
@@ -542,8 +543,11 @@ Function ProcessLine(L:AnsiString;N:LongWord):PExpr;
                SetLength(Tk,Length(Tk)+1);
                Tk[High(Tk)]:='('
                end;
-            While (P<Length(L)) and (L[P+1]=#32) do P+=1;
-            Delete(L,1,P); P:=0; Str:=0
+            If (L[P]<>'#') then begin
+               While (P<Length(L)) and (L[P+1]=#32) do P+=1;
+               Delete(L,1,P) 
+               end else L:='';
+            P:=0; Str:=0
             end else
          If (Str=0) and (L[P]='s')
             then Str:=+1 else Str:=-1
@@ -641,15 +645,15 @@ Procedure Cleanup();
 
 begin //MAIN
 GLOB_dt:=Now(); GLOB_ms:=TimeStampToMSecs(DateTimeToTimeStamp(GLOB_dt));
-IfSta:=NIL; RepSta:=NIL; WhiSta:=NIL;
+IfSta:=NIL; RepSta:=NIL; WhiSta:=NIL; Randomize();
 
 New(Func,Create('!','~'));
 Func^.SetVal('return',@F_Return);
 Functions.Register(Func);
 
-SetLength(Vars,1); New(Vars[0],Create('A','z'));
-New(Cons,Create('A','z'));
-New(UsrFun,Create('A','z'));
+SetLength(Vars,1); New(Vars[0],Create('!','~'));
+New(Cons,Create('!','~'));
+New(UsrFun,Create('!','~'));
 
 If (ParamCount()>0) then begin
    ParMod:=PAR_INPUT;

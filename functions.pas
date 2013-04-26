@@ -102,6 +102,8 @@ Function F_mklog(Arg:Array of PValue):PValue;
 
 Function F_fork(Arg:Array of PValue):PValue;
 
+Function F_random(Arg:Array of PValue):PValue;
+
 implementation
    uses Math, SysUtils, Unix, Linux;
 
@@ -194,6 +196,7 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('mkstr',@F_mkstr); FT^.SetVal('mkstring',@F_mkstr);
    FT^.SetVal('mklog',@F_mklog); FT^.SetVal('mkbool',@F_mklog);
    FT^.SetVal('fork',@F_fork);
+   FT^.SetVal('random',@F_random);
    end;
 
 Function F_(Arg:Array of PValue):PValue;
@@ -674,7 +677,7 @@ Procedure ProcessGet();
       end;
    end;
 
-Function GetSet(Key:AnsiString;L,R:LongWord):Boolean;
+Function GetSet(Key:AnsiString;L,R:LongInt):Boolean;
    Var Mid:LongWord;
    begin
    If (L>R) then Exit(False);
@@ -692,7 +695,7 @@ Function GetSet(Key:AnsiString):Boolean;
       else Exit(False)
    end;
 
-Function GetStr(Key:AnsiString;L,R:LongWord):AnsiString;
+Function GetStr(Key:AnsiString;L,R:LongInt):AnsiString;
    Var Mid:LongWord;
    begin
    If (L>R) then Exit('');
@@ -1703,6 +1706,59 @@ Function F_fork(Arg:Array of PValue):PValue;
          end;
       If (Arg[2]^.Tmp) then Exit(Arg[2]) else Exit(CopyVal(Arg[2]))
       end
+   end;
+
+Function F_random(Arg:Array of PValue):PValue;
+   Var C:LongWord; V:PValue; DH,DL:Double; IH,IL:QInt; Ch:Char;
+   begin
+   If (Length(Arg)>2) then
+      For C:=High(Arg) downto 2 do
+          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+   If (Length(Arg)=2) then begin
+      If (Arg[0]^.Typ = VT_FLO) then begin
+         If (Arg[1]^.Typ <> VT_FLO) then begin
+            V:=ValToFlo(Arg[1]);
+            If (Arg[1]^.Tmp) then FreeVal(Arg[1]);
+            Arg[1]:=V 
+            end;
+         If (PDouble(Arg[0]^.Ptr)^ <= PDouble(Arg[1]^.Ptr)^)
+            then begin DL:=PDouble(Arg[0]^.Ptr)^; DH:=PDouble(Arg[1]^.Ptr)^ end
+            else begin DL:=PDouble(Arg[1]^.Ptr)^; DH:=PDouble(Arg[0]^.Ptr)^ end;
+         DH:=DL+((DH-DL)*System.Random());
+         For C:=1 downto 0 do If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+         Exit(NewVal(VT_FLO,DH))
+         end else begin
+         For C:=1 downto 0 do
+             If (Arg[C]^.Typ<VT_INT) or (Arg[C]^.Typ>VT_BIN) then begin
+                V:=ValToInt(Arg[C]); If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+                Arg[C]:=V end;
+         If (PQInt(Arg[0]^.Ptr)^ <= PQInt(Arg[1]^.Ptr)^)
+            then begin IL:=PQInt(Arg[0]^.Ptr)^; IH:=PQInt(Arg[1]^.Ptr)^ end
+            else begin IL:=PQInt(Arg[1]^.Ptr)^; IH:=PQInt(Arg[0]^.Ptr)^ end;
+         IH:=IL+System.Random(IH-IL+1);
+         V:=NewVal(Arg[0]^.Typ,IH);
+         For C:=1 downto 0 do If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+         Exit(V)
+      end end else
+   If (Length(Arg)=1) then begin
+      If (Arg[0]^.Typ = VT_STR) then begin
+         If (Length(PStr(Arg[0]^.Ptr)^)=0) then begin
+            If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+            Exit(NewVal(VT_STR,''))
+            end;
+         Ch:=(PStr(Arg[0]^.Ptr)^)[1+Random(Length(PStr(Arg[0]^.Ptr)^))];
+         If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+         Exit(NewVal(VT_STR,Ch))
+         end else begin
+         If (Arg[0]^.Typ < VT_INT) or (Arg[0]^.Typ > VT_BIN) then begin
+            V:=ValToInt(Arg[0]); If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+            Arg[0]:=V end;
+         IH:=Random(PQInt(Arg[0]^.Ptr)^);
+         V:=NewVal(Arg[0]^.Typ,IH);
+         If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+         Exit(V)
+      end end else
+      Exit(NewVal(VT_FLO,System.Random()))
    end;
 
 end.
