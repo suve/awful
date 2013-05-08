@@ -10,9 +10,11 @@ Var RealPrec : LongWord = 3;
 Type TValueType = (
      VT_NIL, VT_REC, VT_PTR,
      VT_INT, VT_HEX, VT_OCT, VT_BIN, VT_FLO,
-     VT_BOO, VT_STR, VT_TXT); 
+     VT_BOO, VT_STR, VT_TXT);
 
-     PValue = ^TValue;
+Const VT_LOG = VT_BOO;
+
+Type PValue = ^TValue;
      TValue = record
      Typ : TValueType;
      Tmp : Boolean;
@@ -27,6 +29,9 @@ Type TValueType = (
      
      PBool = ^Bool;
      Bool = Boolean;
+     
+     PFloat = ^TFloat;
+     TFloat = Extended;
      
      PValTrie = ^TValTrie;
      TValTrie = specialize GenericTrie<PValue>;
@@ -48,7 +53,7 @@ Function StrToHex(Str:TStr):QInt;
 Function StrToOct(Str:TStr):QInt;
 Function StrToBin(Str:TStr):QInt;
 Function StrToNum(Str:TStr;Tp:TValueType):QInt;
-Function StrToReal(Str:TStr):Double;
+Function StrToReal(Str:TStr):TFloat;
 
 Function ValToInt(V:PValue):PValue;
 Function ValToHex(V:PValue):PValue;
@@ -82,7 +87,7 @@ Function  CopyTyp(V:PValue):PValue;
 Function  CopyVal(V:PValue):PValue;
 Procedure SwapPtrs(A,B:PValue);
 
-Function NewVal(T:TValueType;V:Double):PValue;
+Function NewVal(T:TValueType;V:TFloat):PValue;
 Function NewVal(T:TValueType;V:Int64):PValue;
 Function NewVal(T:TValueType;V:Bool):PValue;
 Function NewVal(T:TValueType;V:TStr):PValue;
@@ -195,8 +200,8 @@ Function StrToNum(Str:TStr;Tp:TValueType):QInt;
       VT_BIN: Exit(StrToBin(Str));
    end end;
 
-Function StrToReal(Str:TStr):Double;
-   Var P:LongWord; Res:Double;
+Function StrToReal(Str:TStr):TFloat;
+   Var P:LongWord; Res:TFloat;
    begin
    If (Length(Str)=0) then Exit(0);
    P:=Pos('.',Str); If (P=0) then P:=Pos(',',Str);
@@ -221,7 +226,7 @@ Function ValToInt(V:PValue):PValue;
       VT_HEX: P^:=PQInt(V^.Ptr)^;
       VT_OCT: P^:=PQInt(V^.Ptr)^;
       VT_BIN: P^:=PQInt(V^.Ptr)^;
-      VT_FLO: P^:=Trunc(PDouble(V^.Ptr)^);
+      VT_FLO: P^:=Trunc(PFloat(V^.Ptr)^);
       VT_BOO: If (PBoolean(V^.Ptr)^ = TRUE) then P^:=1 else P^:=0;
       VT_STR: P^:=StrToInt(PStr(V^.Ptr)^);
       else P^:=0;
@@ -238,7 +243,7 @@ Function ValToHex(V:PValue):PValue;
       VT_HEX: P^:=PQInt(V^.Ptr)^;
       VT_OCT: P^:=PQInt(V^.Ptr)^;
       VT_BIN: P^:=PQInt(V^.Ptr)^;
-      VT_FLO: P^:=Trunc(PDouble(V^.Ptr)^);
+      VT_FLO: P^:=Trunc(PFloat(V^.Ptr)^);
       VT_BOO: If (PBoolean(V^.Ptr)^ = TRUE) then P^:=1 else P^:=0;
       VT_STR: P^:=StrToHex(PStr(V^.Ptr)^);
       else P^:=0;
@@ -255,7 +260,7 @@ Function ValToOct(V:PValue):PValue;
       VT_HEX: P^:=PQInt(V^.Ptr)^;
       VT_OCT: P^:=PQInt(V^.Ptr)^;
       VT_BIN: P^:=PQInt(V^.Ptr)^;
-      VT_FLO: P^:=Trunc(PDouble(V^.Ptr)^);
+      VT_FLO: P^:=Trunc(PFloat(V^.Ptr)^);
       VT_BOO: If (PBoolean(V^.Ptr)^ = TRUE) then P^:=1 else P^:=0;
       VT_STR: P^:=StrToOct(PStr(V^.Ptr)^);
       else P^:=0;
@@ -272,7 +277,7 @@ Function ValToBin(V:PValue):PValue;
       VT_HEX: P^:=PQInt(V^.Ptr)^;
       VT_OCT: P^:=PQInt(V^.Ptr)^;
       VT_BIN: P^:=PQInt(V^.Ptr)^;
-      VT_FLO: P^:=Trunc(PDouble(V^.Ptr)^);
+      VT_FLO: P^:=Trunc(PFloat(V^.Ptr)^);
       VT_BOO: If (PBoolean(V^.Ptr)^ = TRUE) then P^:=1 else P^:=0;
       VT_STR: P^:=StrToBin(PStr(V^.Ptr)^);
       else P^:=0;
@@ -281,7 +286,7 @@ Function ValToBin(V:PValue):PValue;
    end;
 
 Function ValToFlo(V:PValue):PValue;
-   Var R:PValue; P:PDouble;
+   Var R:PValue; P:PFloat;
    begin
    New(R); R^.Typ:=VT_FLO; R^.Tmp:=True; New(P); R^.Ptr:=P;
    Case V^.Typ of
@@ -289,7 +294,7 @@ Function ValToFlo(V:PValue):PValue;
       VT_HEX: P^:=PQInt(V^.Ptr)^;
       VT_OCT: P^:=PQInt(V^.Ptr)^;
       VT_BIN: P^:=PQInt(V^.Ptr)^;
-      VT_FLO: P^:=PDouble(V^.Ptr)^;
+      VT_FLO: P^:=PFloat(V^.Ptr)^;
       VT_BOO: If (PBoolean(V^.Ptr)^ = TRUE) then P^:=1 else P^:=0;
       VT_STR: P^:=StrToReal(PStr(V^.Ptr)^);
       else P^:=0;
@@ -306,7 +311,7 @@ Function ValToBoo(V:PValue):PValue;
       VT_HEX: P^:=(PQInt(V^.Ptr)^)<>0;
       VT_OCT: P^:=(PQInt(V^.Ptr)^)<>0;
       VT_BIN: P^:=(PQInt(V^.Ptr)^)<>0;
-      VT_FLO: P^:=(PDouble(V^.Ptr)^)<>0;
+      VT_FLO: P^:=(PFloat(V^.Ptr)^)<>0;
       VT_BOO: P^:=PBoolean(V^.Ptr)^;
       VT_STR: P^:=StrToBoolDef(PStr(V^.Ptr)^,FALSE);
       else P^:=False;
@@ -323,7 +328,7 @@ Function ValToStr(V:PValue):PValue;
       VT_HEX: P^:=HexToStr(PQInt(V^.Ptr)^);
       VT_OCT: P^:=OctToStr(PQInt(V^.Ptr)^);
       VT_BIN: P^:=BinToStr(PQInt(V^.Ptr)^);
-      VT_FLO: P^:=RealToStr(PDouble(V^.Ptr)^,RealPrec);
+      VT_FLO: P^:=RealToStr(PFloat(V^.Ptr)^,RealPrec);
       VT_BOO: If (PBoolean(V^.Ptr)^ = TRUE)
                  then P^:='TRUE' else P^:='FALSE';
       VT_STR: P^:=PStr(V^.Ptr)^;
@@ -333,7 +338,7 @@ Function ValToStr(V:PValue):PValue;
    end;
 
 Function ValSet(A,B:PValue):PValue;
-   Var R:PValue; I:PQInt; S:PStr; L:PBoolean; D:PDouble;
+   Var R:PValue; I:PQInt; S:PStr; L:PBoolean; D:PFloat;
    begin
    New(R); R^.Typ:=A^.Typ; R^.Tmp:=True;
    If (A^.Typ = VT_NIL) then begin 
@@ -344,7 +349,7 @@ Function ValSet(A,B:PValue):PValue;
       If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) 
          then (I^):=(PQInt(B^.Ptr)^) else
       If (B^.Typ = VT_FLO)
-         then (I^):=Trunc((I^)+(PDouble(B^.Ptr)^)) else
+         then (I^):=Trunc((I^)+(PFloat(B^.Ptr)^)) else
       If (B^.Typ = VT_STR)
          then (I^):=StrToNum(PStr(B^.Ptr)^,A^.Typ) else
       If (B^.Typ = VT_BOO)
@@ -355,7 +360,7 @@ Function ValSet(A,B:PValue):PValue;
       If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) 
          then (D^):=(PQInt(B^.Ptr)^) else
       If (B^.Typ = VT_FLO)
-         then (D^):=PDouble(B^.Ptr)^ else
+         then (D^):=PFloat(B^.Ptr)^ else
       If (B^.Typ = VT_STR)
          then (D^):=StrToReal(PStr(B^.Ptr)^) else
       If (B^.Typ = VT_BOO)
@@ -372,7 +377,7 @@ Function ValSet(A,B:PValue):PValue;
       If (B^.Typ = VT_BIN)
          then (S^):=BinToStr(PQInt(B^.Ptr)^) else
       If (B^.Typ = VT_FLO)
-         then (S^):=RealToStr(PDouble(B^.Ptr)^,RealPrec) else
+         then (S^):=RealToStr(PFloat(B^.Ptr)^,RealPrec) else
       If (B^.Typ = VT_STR)
          then (S^):=(PStr(B^.Ptr)^) else
       If (B^.Typ = VT_BOO)
@@ -383,7 +388,7 @@ Function ValSet(A,B:PValue):PValue;
       If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) 
          then (L^):=(PQInt(B^.Ptr)^<>0) else
       If (B^.Typ = VT_FLO)
-         then (L^):=(PDouble(B^.Ptr)^<>0) else
+         then (L^):=(PFloat(B^.Ptr)^<>0) else
       If (B^.Typ = VT_STR)
          then (L^):=StrToBoolDef(PStr(B^.Ptr)^,FALSE) else
       If (B^.Typ = VT_BOO)
@@ -393,7 +398,7 @@ Function ValSet(A,B:PValue):PValue;
    end;
 
 Function ValAdd(A,B:PValue):PValue;
-   Var R:PValue; I:PQInt; S:PStr; L:PBoolean; D:PDouble;
+   Var R:PValue; I:PQInt; S:PStr; L:PBoolean; D:PFloat;
    begin
    New(R); R^.Typ:=A^.Typ; R^.Tmp:=True;
    If (A^.Typ = VT_NIL) then begin 
@@ -404,18 +409,18 @@ Function ValAdd(A,B:PValue):PValue;
       If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) 
          then (I^)+=(PQInt(B^.Ptr)^) else
       If (B^.Typ = VT_FLO)
-         then (I^):=Trunc((I^)+(PDouble(B^.Ptr)^)) else
+         then (I^):=Trunc((I^)+(PFloat(B^.Ptr)^)) else
       If (B^.Typ = VT_STR)
          then (I^)+=StrToNum(PStr(B^.Ptr)^,A^.Typ) else
       If (B^.Typ = VT_BOO)
          then If (PBoolean(B^.Ptr)^) then (I^)+=1
       end else
    If (A^.Typ = VT_FLO) then begin
-      New(D); R^.Ptr:=D; (D^):=PDouble(A^.Ptr)^;
+      New(D); R^.Ptr:=D; (D^):=PFloat(A^.Ptr)^;
       If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) 
          then (D^)+=(PQInt(B^.Ptr)^) else
       If (B^.Typ = VT_FLO)
-         then (D^)+=PDouble(B^.Ptr)^ else
+         then (D^)+=PFloat(B^.Ptr)^ else
       If (B^.Typ = VT_STR)
          then (D^)+=StrToReal(PStr(B^.Ptr)^) else
       If (B^.Typ = VT_BOO)
@@ -432,7 +437,7 @@ Function ValAdd(A,B:PValue):PValue;
       If (B^.Typ = VT_BIN)
          then (S^)+=BinToStr(PQInt(B^.Ptr)^) else
       If (B^.Typ = VT_FLO)
-         then (S^)+=RealToStr(PDouble(B^.Ptr)^,RealPrec) else
+         then (S^)+=RealToStr(PFloat(B^.Ptr)^,RealPrec) else
       If (B^.Typ = VT_STR)
          then (S^)+=(PStr(B^.Ptr)^) else
       If (B^.Typ = VT_BOO)
@@ -443,7 +448,7 @@ Function ValAdd(A,B:PValue):PValue;
       If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) 
          then (L^):=(L^) or (PQInt(B^.Ptr)^<>0) else
       If (B^.Typ = VT_FLO)
-         then (L^):=(L^) or (PDouble(B^.Ptr)^<>0) else
+         then (L^):=(L^) or (PFloat(B^.Ptr)^<>0) else
       If (B^.Typ = VT_STR)
          then (L^):=(L^) or StrToBoolDef(PStr(B^.Ptr)^,FALSE) else
       If (B^.Typ = VT_BOO)
@@ -453,7 +458,7 @@ Function ValAdd(A,B:PValue):PValue;
    end;
 
 Function ValSub(A,B:PValue):PValue;
-   Var R:PValue; I:PQInt; S:PStr; L:PBoolean; D:PDouble;
+   Var R:PValue; I:PQInt; S:PStr; L:PBoolean; D:PFloat;
    begin
    New(R); R^.Typ:=A^.Typ; R^.Tmp:=True;
    If (A^.Typ = VT_NIL) then begin 
@@ -464,18 +469,18 @@ Function ValSub(A,B:PValue):PValue;
       If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) 
          then (I^)-=(PQInt(B^.Ptr)^) else
       If (B^.Typ = VT_FLO)
-         then (I^):=Trunc((I^)-(PDouble(B^.Ptr)^)) else
+         then (I^):=Trunc((I^)-(PFloat(B^.Ptr)^)) else
       If (B^.Typ = VT_STR)
          then (I^)-=StrToNum(PStr(B^.Ptr)^,A^.Typ) else
       If (B^.Typ = VT_BOO)
          then If (PBoolean(B^.Ptr)^) then (I^)-=1
       end else
    If (A^.Typ = VT_FLO) then begin
-      New(D); R^.Ptr:=D; (D^):=PDouble(A^.Ptr)^;
+      New(D); R^.Ptr:=D; (D^):=PFloat(A^.Ptr)^;
       If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) 
          then (D^)-=(PQInt(B^.Ptr)^) else
       If (B^.Typ = VT_FLO)
-         then (D^)-=PDouble(B^.Ptr)^ else
+         then (D^)-=PFloat(B^.Ptr)^ else
       If (B^.Typ = VT_STR)
          then (D^)-=StrToReal(PStr(B^.Ptr)^) else
       If (B^.Typ = VT_BOO)
@@ -492,7 +497,7 @@ Function ValSub(A,B:PValue):PValue;
       If (B^.Typ = VT_BIN)
          then (S^)+=BinToStr(PQInt(B^.Ptr)^) else
       If (B^.Typ = VT_FLO)
-         then (S^):=RealToStr(PDouble(B^.Ptr)^,RealPrec) else
+         then (S^):=RealToStr(PFloat(B^.Ptr)^,RealPrec) else
       If (B^.Typ = VT_STR)
          then (S^)+=(PStr(B^.Ptr)^) else
       If (B^.Typ = VT_BOO)
@@ -503,7 +508,7 @@ Function ValSub(A,B:PValue):PValue;
       If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) 
          then (L^):=(L^) xor (PQInt(B^.Ptr)^<>0) else
       If (B^.Typ = VT_FLO)
-         then (L^):=(L^) xor (PDouble(B^.Ptr)^<>0) else
+         then (L^):=(L^) xor (PFloat(B^.Ptr)^<>0) else
       If (B^.Typ = VT_STR)
          then (L^):=(L^) xor StrToBoolDef(PStr(B^.Ptr)^,FALSE) else
       If (B^.Typ = VT_BOO)
@@ -513,7 +518,7 @@ Function ValSub(A,B:PValue):PValue;
    end;
 
 Function ValMul(A,B:PValue):PValue;
-   Var R:PValue; I:PQInt; S,O:PStr; L:PBoolean; D:PDouble; C,T:LongWord;
+   Var R:PValue; I:PQInt; S,O:PStr; L:PBoolean; D:PFloat; C,T:LongWord;
    begin
    New(R); R^.Typ:=A^.Typ; R^.Tmp:=True;
    If (A^.Typ = VT_NIL) then begin 
@@ -524,18 +529,18 @@ Function ValMul(A,B:PValue):PValue;
       If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) 
          then (I^)*=(PQInt(B^.Ptr)^) else
       If (B^.Typ = VT_FLO)
-         then (I^):=Trunc((I^)*(PDouble(B^.Ptr)^)) else
+         then (I^):=Trunc((I^)*(PFloat(B^.Ptr)^)) else
       If (B^.Typ = VT_STR)
          then (I^)*=StrToNum(PStr(B^.Ptr)^,A^.Typ) else
       If (B^.Typ = VT_BOO)
          then If (Not PBoolean(B^.Ptr)^) then (I^):=0
       end else
    If (A^.Typ = VT_FLO) then begin
-      New(D); R^.Ptr:=D; (D^):=PDouble(A^.Ptr)^;
+      New(D); R^.Ptr:=D; (D^):=PFloat(A^.Ptr)^;
       If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) 
          then (D^)*=(PQInt(B^.Ptr)^) else
       If (B^.Typ = VT_FLO)
-         then (D^)*=PDouble(B^.Ptr)^ else
+         then (D^)*=PFloat(B^.Ptr)^ else
       If (B^.Typ = VT_STR)
          then (D^)*=StrToReal(PStr(B^.Ptr)^) else
       If (B^.Typ = VT_BOO)
@@ -552,7 +557,7 @@ Function ValMul(A,B:PValue):PValue;
       If (B^.Typ = VT_BIN)
          then T:=Abs(PQInt(B^.Ptr)^) else
       If (B^.Typ = VT_FLO)
-         then T:=Abs(Trunc(PDouble(B^.Ptr)^)) else
+         then T:=Abs(Trunc(PFloat(B^.Ptr)^)) else
       If (B^.Typ = VT_STR)
          then T:=StrToInt(PStr(B^.Ptr)^) else
       If (B^.Typ = VT_BOO)
@@ -566,7 +571,7 @@ Function ValMul(A,B:PValue):PValue;
       If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) 
          then (L^):=(L^) and (PQInt(B^.Ptr)^<>0) else
       If (B^.Typ = VT_FLO)
-         then (L^):=(L^) and (PDouble(B^.Ptr)^<>0) else
+         then (L^):=(L^) and (PFloat(B^.Ptr)^<>0) else
       If (B^.Typ = VT_STR)
          then (L^):=(L^) and StrToBoolDef(PStr(B^.Ptr)^,FALSE) else
       If (B^.Typ = VT_BOO)
@@ -576,7 +581,7 @@ Function ValMul(A,B:PValue):PValue;
    end;
 
 Function ValDiv(A,B:PValue):PValue;
-   Var R:PValue; I:PQInt; S:PStr; L:PBoolean; D:PDouble;
+   Var R:PValue; I:PQInt; S:PStr; L:PBoolean; D:PFloat;
    begin
    New(R); R^.Typ:=A^.Typ; R^.Tmp:=True;
    If (A^.Typ = VT_NIL) then begin 
@@ -587,18 +592,18 @@ Function ValDiv(A,B:PValue):PValue;
       If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) 
          then (I^):=(I^) div (PQInt(B^.Ptr)^) else
       If (B^.Typ = VT_FLO)
-         then (I^):=Trunc((I^)/(PDouble(B^.Ptr)^)) else
+         then (I^):=Trunc((I^)/(PFloat(B^.Ptr)^)) else
       If (B^.Typ = VT_STR)
          then (I^):=(I^) div StrToNum(PStr(B^.Ptr)^,A^.Typ) else
       If (B^.Typ = VT_BOO)
          then If (Not PBoolean(B^.Ptr)^) then (I^):=0
       end else
    If (A^.Typ = VT_FLO) then begin
-      New(D); R^.Ptr:=D; (D^):=PDouble(A^.Ptr)^;
+      New(D); R^.Ptr:=D; (D^):=PFloat(A^.Ptr)^;
       If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) 
          then (D^)/=(PQInt(B^.Ptr)^) else
       If (B^.Typ = VT_FLO)
-         then (D^)/=PDouble(B^.Ptr)^ else
+         then (D^)/=PFloat(B^.Ptr)^ else
       If (B^.Typ = VT_STR)
          then (D^)/=StrToReal(PStr(B^.Ptr)^) else
       If (B^.Typ = VT_BOO)
@@ -615,7 +620,7 @@ Function ValDiv(A,B:PValue):PValue;
       If (B^.Typ = VT_BIN)
          then (S^)+=BinToStr(PQInt(B^.Ptr)^) else
       If (B^.Typ = VT_FLO)
-         then (S^):=RealToStr(PDouble(B^.Ptr)^,RealPrec) else
+         then (S^):=RealToStr(PFloat(B^.Ptr)^,RealPrec) else
       If (B^.Typ = VT_STR)
          then (S^)+=(PStr(B^.Ptr)^) else
       If (B^.Typ = VT_BOO)
@@ -626,7 +631,7 @@ Function ValDiv(A,B:PValue):PValue;
       If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) 
          then (L^):=Not ((L^) xor (PQInt(B^.Ptr)^<>0)) else
       If (B^.Typ = VT_FLO)
-         then (L^):=Not ((L^) xor (PDouble(B^.Ptr)^<>0)) else
+         then (L^):=Not ((L^) xor (PFloat(B^.Ptr)^<>0)) else
       If (B^.Typ = VT_STR)
          then (L^):=Not ((L^) xor StrToBoolDef(PStr(B^.Ptr)^,FALSE)) else
       If (B^.Typ = VT_BOO)
@@ -636,7 +641,7 @@ Function ValDiv(A,B:PValue):PValue;
    end;
 
 Function ValMod(A,B:PValue):PValue;
-   Var R:PValue; I:PQInt; S:PStr; L:PBoolean; D:PDouble; T:Double;
+   Var R:PValue; I:PQInt; S:PStr; L:PBoolean; D:PFloat; T:TFloat;
    begin
    New(R); R^.Typ:=A^.Typ; R^.Tmp:=True;
    If (A^.Typ = VT_NIL) then begin 
@@ -648,7 +653,7 @@ Function ValMod(A,B:PValue):PValue;
          then (I^):=(I^) mod (PQInt(B^.Ptr)^) else
       If (B^.Typ = VT_FLO)
          then begin 
-         T:=(I^); While (T>=PDouble(B^.Ptr)^) do T-=PDouble(B^.Ptr)^;
+         T:=(I^); While (T>=PFloat(B^.Ptr)^) do T-=PFloat(B^.Ptr)^;
          (I^):=Trunc(T)
          end else
       If (B^.Typ = VT_STR)
@@ -657,11 +662,11 @@ Function ValMod(A,B:PValue):PValue;
          then (I^):=0
       end else
    If (A^.Typ = VT_FLO) then begin
-      New(D); R^.Ptr:=D; (D^):=PDouble(A^.Ptr)^;
+      New(D); R^.Ptr:=D; (D^):=PFloat(A^.Ptr)^;
       If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) 
          then While (D^>=PQInt(B^.Ptr)^) do (D^)-=(PQInt(B^.Ptr)^) else
       If (B^.Typ = VT_FLO)
-         then While (D^>=PDouble(B^.Ptr)^) do (D^)-=PDouble(B^.Ptr)^ else
+         then While (D^>=PFloat(B^.Ptr)^) do (D^)-=PFloat(B^.Ptr)^ else
       If (B^.Typ = VT_STR)
          then begin
          T:=StrToReal(PStr(B^.Ptr)^); While (D^>=T) do (D^)-=T
@@ -680,7 +685,7 @@ Function ValMod(A,B:PValue):PValue;
       If (B^.Typ = VT_BIN)
          then (S^)+=BinToStr(PQInt(B^.Ptr)^) else
       If (B^.Typ = VT_FLO)
-         then (S^):=RealToStr(PDouble(B^.Ptr)^,RealPrec) else
+         then (S^):=RealToStr(PFloat(B^.Ptr)^,RealPrec) else
       If (B^.Typ = VT_STR)
          then (S^)+=(PStr(B^.Ptr)^) else
       If (B^.Typ = VT_BOO)
@@ -691,7 +696,7 @@ Function ValMod(A,B:PValue):PValue;
       {If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) 
          then (L^):=(L^) and (PQInt(B^.Ptr)^<>0) else
       If (B^.Typ = VT_FLO)
-         then (L^):=(L^) and (PDouble(B^.Ptr)^<>0) else
+         then (L^):=(L^) and (PFloat(B^.Ptr)^<>0) else
       If (B^.Typ = VT_STR)
          then (L^):=(L^) and StrToBoolDef(PStr(B^.Ptr)^,FALSE) else
       If (B^.Typ = VT_BOO)
@@ -701,7 +706,7 @@ Function ValMod(A,B:PValue):PValue;
    end;
 
 Function ValPow(A,B:PValue):PValue;
-   Var R:PValue; I:PQInt; S:PStr; L:PBoolean; D:PDouble;
+   Var R:PValue; I:PQInt; S:PStr; L:PBoolean; D:PFloat;
    begin
    New(R); R^.Typ:=A^.Typ; R^.Tmp:=True;
    If (A^.Typ = VT_NIL) then begin 
@@ -712,20 +717,20 @@ Function ValPow(A,B:PValue):PValue;
       If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) 
          then (I^):=Trunc(IntPower(I^,PQInt(B^.Ptr)^)) else
       If (B^.Typ = VT_FLO)
-         then (I^):=Trunc(Power(I^,PDouble(B^.Ptr)^)) else
+         then (I^):=Trunc(Power(I^,PFloat(B^.Ptr)^)) else
       If (B^.Typ = VT_STR)
          then (I^):=Trunc(IntPower(I^,StrToNum(PStr(B^.Ptr)^,A^.Typ))) else
       If (B^.Typ = VT_BOO)
          then If (Not PBoolean(B^.Ptr)^) then (I^):=1
       end else
    If (A^.Typ = VT_FLO) then begin
-      New(D); R^.Ptr:=D; (D^):=PDouble(A^.Ptr)^;
+      New(D); R^.Ptr:=D; (D^):=PFloat(A^.Ptr)^;
       If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) 
-         then (D^)*=Power(D^,PQInt(B^.Ptr)^) else
+         then (D^):=Power(D^,PQInt(B^.Ptr)^) else
       If (B^.Typ = VT_FLO)
-         then (D^)*=Power(D^,PDouble(B^.Ptr)^) else
+         then (D^):=Power(D^,PFloat(B^.Ptr)^) else
       If (B^.Typ = VT_STR)
-         then (D^)*=Power(D^,StrToReal(PStr(B^.Ptr)^)) else
+         then (D^):=Power(D^,StrToReal(PStr(B^.Ptr)^)) else
       If (B^.Typ = VT_BOO)
          then If (Not PBoolean(B^.Ptr)^) then (D^):=0
       end else
@@ -740,7 +745,7 @@ Function ValPow(A,B:PValue):PValue;
       If (B^.Typ = VT_BIN)
          then (S^)+=BinToStr(PQInt(B^.Ptr)^) else
       If (B^.Typ = VT_FLO)
-         then (S^):=RealToStr(PDouble(B^.Ptr)^,RealPrec) else
+         then (S^):=RealToStr(PFloat(B^.Ptr)^,RealPrec) else
       If (B^.Typ = VT_STR)
          then (S^)+=(PStr(B^.Ptr)^) else
       If (B^.Typ = VT_BOO)
@@ -751,7 +756,7 @@ Function ValPow(A,B:PValue):PValue;
       {If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) 
          then (L^):=(L^) and (PQInt(B^.Ptr)^<>0) else
       If (B^.Typ = VT_FLO)
-         then (L^):=(L^) and (PDouble(B^.Ptr)^<>0) else
+         then (L^):=(L^) and (PFloat(B^.Ptr)^<>0) else
       If (B^.Typ = VT_STR)
          then (L^):=(L^) and StrToBoolDef(PStr(B^.Ptr)^,FALSE) else
       If (B^.Typ = VT_BOO)
@@ -766,7 +771,7 @@ Function ValSeq(A,B:PValue):PValue;
    If (A^.Typ >= VT_INT) and (A^.Typ <= VT_BIN) then
       Exit(NewVal(VT_BOO, (PQInt(A^.Ptr)^) = (PQInt(B^.Ptr)^))) else
    If (A^.Typ = VT_FLO) then
-      Exit(NewVal(VT_BOO, (PDouble(A^.Ptr)^) = (PDouble(B^.Ptr)^))) else
+      Exit(NewVal(VT_BOO, (PFloat(A^.Ptr)^) = (PFloat(B^.Ptr)^))) else
    If (A^.Typ = VT_STR) then
       Exit(NewVal(VT_BOO, (PStr(A^.Ptr)^) = (PStr(B^.Ptr)^))) else
    If (A^.Typ = VT_BOO) then
@@ -788,7 +793,7 @@ Function ValEq(A,B:PValue):PValue;
       If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
          Exit(NewVal(VT_BOO, (PQInt(A^.Ptr)^) = (PQInt(B^.Ptr)^))) else
       If (B^.Typ = VT_FLO) then
-         Exit(NewVal(VT_BOO, (PQInt(A^.Ptr)^) = Trunc(PDouble(B^.Ptr)^))) else
+         Exit(NewVal(VT_BOO, (PQInt(A^.Ptr)^) = Trunc(PFloat(B^.Ptr)^))) else
       If (B^.Typ = VT_STR) then
          Exit(NewVal(VT_BOO, (PQInt(A^.Ptr)^) = StrToNum(PStr(B^.Ptr)^,A^.Typ))) else
       If (B^.Typ = VT_BOO) then
@@ -797,20 +802,20 @@ Function ValEq(A,B:PValue):PValue;
       end else
    If (A^.Typ = VT_FLO) then begin
       If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
-         Exit(NewVal(VT_BOO, Trunc(PDouble(A^.Ptr)^) = (PQInt(B^.Ptr)^))) else
+         Exit(NewVal(VT_BOO, Trunc(PFloat(A^.Ptr)^) = (PQInt(B^.Ptr)^))) else
       If (B^.Typ = VT_FLO) then
-         Exit(NewVal(VT_BOO, (PDouble(A^.Ptr)^) = (PDouble(B^.Ptr)^))) else
+         Exit(NewVal(VT_BOO, (PFloat(A^.Ptr)^) = (PFloat(B^.Ptr)^))) else
       If (B^.Typ = VT_STR) then
-         Exit(NewVal(VT_BOO, (PDouble(A^.Ptr)^) = StrToReal(PStr(B^.Ptr)^))) else
+         Exit(NewVal(VT_BOO, (PFloat(A^.Ptr)^) = StrToReal(PStr(B^.Ptr)^))) else
       If (B^.Typ = VT_BOO) then
-         Exit(NewVal(VT_BOO, Trunc(PDouble(A^.Ptr)^) = BoolToInt(PBool(B^.Ptr)^))) else
+         Exit(NewVal(VT_BOO, Trunc(PFloat(A^.Ptr)^) = BoolToInt(PBool(B^.Ptr)^))) else
          {else} Exit(NewVal(VT_BOO, False))
       end else
    If (A^.Typ = VT_STR) then begin
       If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
          Exit(NewVal(VT_BOO, StrToNum(PStr(A^.Ptr)^,B^.Typ) = (PQInt(B^.Ptr)^))) else
       If (B^.Typ = VT_FLO) then
-         Exit(NewVal(VT_BOO, StrToReal(PStr(A^.Ptr)^) = (PDouble(B^.Ptr)^))) else
+         Exit(NewVal(VT_BOO, StrToReal(PStr(A^.Ptr)^) = (PFloat(B^.Ptr)^))) else
       If (B^.Typ = VT_STR) then
          Exit(NewVal(VT_BOO, (PStr(A^.Ptr)^) = (PStr(B^.Ptr)^))) else
       If (B^.Typ = VT_BOO) then
@@ -821,7 +826,7 @@ Function ValEq(A,B:PValue):PValue;
       If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
          Exit(NewVal(VT_BOO, (PBool(A^.Ptr)^) = (PQInt(B^.Ptr)^ <> 0))) else
       If (B^.Typ = VT_FLO) then
-         Exit(NewVal(VT_BOO, (PBool(A^.Ptr)^) = (PDouble(B^.Ptr)^ <> 0.0))) else
+         Exit(NewVal(VT_BOO, (PBool(A^.Ptr)^) = (PFloat(B^.Ptr)^ <> 0.0))) else
       If (B^.Typ = VT_STR) then
          Exit(NewVal(VT_BOO, (PBool(A^.Ptr)^) = StrToBoolDef(PStr(B^.Ptr)^,FALSE))) else
       If (B^.Typ = VT_BOO) then
@@ -846,7 +851,7 @@ Function ValGt(A,B:PValue):PValue;
       If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
          Exit(NewVal(VT_BOO, (PQInt(A^.Ptr)^) > (PQInt(B^.Ptr)^))) else
       If (B^.Typ = VT_FLO) then
-         Exit(NewVal(VT_BOO, (PQInt(A^.Ptr)^) > Trunc(PDouble(B^.Ptr)^))) else
+         Exit(NewVal(VT_BOO, (PQInt(A^.Ptr)^) > Trunc(PFloat(B^.Ptr)^))) else
       If (B^.Typ = VT_STR) then
          Exit(NewVal(VT_BOO, (PQInt(A^.Ptr)^) > StrToNum(PStr(B^.Ptr)^,A^.Typ))) else
       If (B^.Typ = VT_BOO) then
@@ -855,20 +860,20 @@ Function ValGt(A,B:PValue):PValue;
       end else
    If (A^.Typ = VT_FLO) then begin
       If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
-         Exit(NewVal(VT_BOO, (PDouble(A^.Ptr)^) > Double(PQInt(B^.Ptr)^))) else
+         Exit(NewVal(VT_BOO, (PFloat(A^.Ptr)^) > TFloat(PQInt(B^.Ptr)^))) else
       If (B^.Typ = VT_FLO) then
-         Exit(NewVal(VT_BOO, (PDouble(A^.Ptr)^) > (PDouble(B^.Ptr)^))) else
+         Exit(NewVal(VT_BOO, (PFloat(A^.Ptr)^) > (PFloat(B^.Ptr)^))) else
       If (B^.Typ = VT_STR) then
-         Exit(NewVal(VT_BOO, (PDouble(A^.Ptr)^) > StrToReal(PStr(B^.Ptr)^))) else
+         Exit(NewVal(VT_BOO, (PFloat(A^.Ptr)^) > StrToReal(PStr(B^.Ptr)^))) else
       If (B^.Typ = VT_BOO) then
-         Exit(NewVal(VT_BOO, (PDouble(A^.Ptr)^) > Double(BoolToInt(PBool(B^.Ptr)^)))) else
+         Exit(NewVal(VT_BOO, (PFloat(A^.Ptr)^) > TFloat(BoolToInt(PBool(B^.Ptr)^)))) else
          {else} Exit(NewVal(VT_BOO, False))
       end else
    If (A^.Typ = VT_STR) then begin
       If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
          Exit(NewVal(VT_BOO, StrToNum(PStr(A^.Ptr)^,B^.Typ) > (PQInt(B^.Ptr)^))) else
       If (B^.Typ = VT_FLO) then
-         Exit(NewVal(VT_BOO, StrToReal(PStr(A^.Ptr)^) > (PDouble(B^.Ptr)^))) else
+         Exit(NewVal(VT_BOO, StrToReal(PStr(A^.Ptr)^) > (PFloat(B^.Ptr)^))) else
       If (B^.Typ = VT_STR) then
          Exit(NewVal(VT_BOO, (PStr(A^.Ptr)^) > (PStr(B^.Ptr)^))) else
       If (B^.Typ = VT_BOO) then
@@ -879,7 +884,7 @@ Function ValGt(A,B:PValue):PValue;
       If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
          Exit(NewVal(VT_BOO, BoolToInt(PBool(A^.Ptr)^) > (PQInt(B^.Ptr)^))) else
       If (B^.Typ = VT_FLO) then
-         Exit(NewVal(VT_BOO, BoolToInt(PBool(A^.Ptr)^) > Trunc(PDouble(B^.Ptr)^))) else
+         Exit(NewVal(VT_BOO, BoolToInt(PBool(A^.Ptr)^) > Trunc(PFloat(B^.Ptr)^))) else
       If (B^.Typ = VT_STR) then
          Exit(NewVal(VT_BOO, BoolToInt(PBool(A^.Ptr)^) > BoolToInt(StrToBoolDef(PStr(B^.Ptr)^,FALSE)))) else
       If (B^.Typ = VT_BOO) then
@@ -897,7 +902,7 @@ Function ValGe(A,B:PValue):PValue;
       If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
          Exit(NewVal(VT_BOO, (PQInt(A^.Ptr)^) >= (PQInt(B^.Ptr)^))) else
       If (B^.Typ = VT_FLO) then
-         Exit(NewVal(VT_BOO, (PQInt(A^.Ptr)^) >= Trunc(PDouble(B^.Ptr)^))) else
+         Exit(NewVal(VT_BOO, (PQInt(A^.Ptr)^) >= Trunc(PFloat(B^.Ptr)^))) else
       If (B^.Typ = VT_STR) then
          Exit(NewVal(VT_BOO, (PQInt(A^.Ptr)^) >= StrToNum(PStr(B^.Ptr)^,A^.Typ))) else
       If (B^.Typ = VT_BOO) then
@@ -906,20 +911,20 @@ Function ValGe(A,B:PValue):PValue;
       end else
    If (A^.Typ = VT_FLO) then begin
       If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
-         Exit(NewVal(VT_BOO, (PDouble(A^.Ptr)^) >= Double(PQInt(B^.Ptr)^))) else
+         Exit(NewVal(VT_BOO, (PFloat(A^.Ptr)^) >= TFloat(PQInt(B^.Ptr)^))) else
       If (B^.Typ = VT_FLO) then
-         Exit(NewVal(VT_BOO, (PDouble(A^.Ptr)^) >= (PDouble(B^.Ptr)^))) else
+         Exit(NewVal(VT_BOO, (PFloat(A^.Ptr)^) >= (PFloat(B^.Ptr)^))) else
       If (B^.Typ = VT_STR) then
-         Exit(NewVal(VT_BOO, (PDouble(A^.Ptr)^) >= StrToReal(PStr(B^.Ptr)^))) else
+         Exit(NewVal(VT_BOO, (PFloat(A^.Ptr)^) >= StrToReal(PStr(B^.Ptr)^))) else
       If (B^.Typ = VT_BOO) then
-         Exit(NewVal(VT_BOO, (PDouble(A^.Ptr)^) >= Double(BoolToInt(PBool(B^.Ptr)^)))) else
+         Exit(NewVal(VT_BOO, (PFloat(A^.Ptr)^) >= TFloat(BoolToInt(PBool(B^.Ptr)^)))) else
          {else} Exit(NewVal(VT_BOO, False))
       end else
    If (A^.Typ = VT_STR) then begin
       If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
          Exit(NewVal(VT_BOO, StrToNum(PStr(A^.Ptr)^,B^.Typ) >= (PQInt(B^.Ptr)^))) else
       If (B^.Typ = VT_FLO) then
-         Exit(NewVal(VT_BOO, StrToReal(PStr(A^.Ptr)^) >= (PDouble(B^.Ptr)^))) else
+         Exit(NewVal(VT_BOO, StrToReal(PStr(A^.Ptr)^) >= (PFloat(B^.Ptr)^))) else
       If (B^.Typ = VT_STR) then
          Exit(NewVal(VT_BOO, (PStr(A^.Ptr)^) >= (PStr(B^.Ptr)^))) else
       If (B^.Typ = VT_BOO) then
@@ -930,7 +935,7 @@ Function ValGe(A,B:PValue):PValue;
       If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
          Exit(NewVal(VT_BOO, BoolToInt(PBool(A^.Ptr)^) >= (PQInt(B^.Ptr)^))) else
       If (B^.Typ = VT_FLO) then
-         Exit(NewVal(VT_BOO, BoolToInt(PBool(A^.Ptr)^) >= Trunc(PDouble(B^.Ptr)^))) else
+         Exit(NewVal(VT_BOO, BoolToInt(PBool(A^.Ptr)^) >= Trunc(PFloat(B^.Ptr)^))) else
       If (B^.Typ = VT_STR) then
          Exit(NewVal(VT_BOO, BoolToInt(PBool(A^.Ptr)^) >= BoolToInt(StrToBoolDef(PStr(B^.Ptr)^,FALSE)))) else
       If (B^.Typ = VT_BOO) then
@@ -948,7 +953,7 @@ Function ValLt(A,B:PValue):PValue;
       If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
          Exit(NewVal(VT_BOO, (PQInt(A^.Ptr)^) < (PQInt(B^.Ptr)^))) else
       If (B^.Typ = VT_FLO) then
-         Exit(NewVal(VT_BOO, (PQInt(A^.Ptr)^) < Trunc(PDouble(B^.Ptr)^))) else
+         Exit(NewVal(VT_BOO, (PQInt(A^.Ptr)^) < Trunc(PFloat(B^.Ptr)^))) else
       If (B^.Typ = VT_STR) then
          Exit(NewVal(VT_BOO, (PQInt(A^.Ptr)^) < StrToNum(PStr(B^.Ptr)^,A^.Typ))) else
       If (B^.Typ = VT_BOO) then
@@ -957,20 +962,20 @@ Function ValLt(A,B:PValue):PValue;
       end else
    If (A^.Typ = VT_FLO) then begin
       If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
-         Exit(NewVal(VT_BOO, (PDouble(A^.Ptr)^) < Double(PQInt(B^.Ptr)^))) else
+         Exit(NewVal(VT_BOO, (PFloat(A^.Ptr)^) < TFloat(PQInt(B^.Ptr)^))) else
       If (B^.Typ = VT_FLO) then
-         Exit(NewVal(VT_BOO, (PDouble(A^.Ptr)^) < (PDouble(B^.Ptr)^))) else
+         Exit(NewVal(VT_BOO, (PFloat(A^.Ptr)^) < (PFloat(B^.Ptr)^))) else
       If (B^.Typ = VT_STR) then
-         Exit(NewVal(VT_BOO, (PDouble(A^.Ptr)^) < StrToReal(PStr(B^.Ptr)^))) else
+         Exit(NewVal(VT_BOO, (PFloat(A^.Ptr)^) < StrToReal(PStr(B^.Ptr)^))) else
       If (B^.Typ = VT_BOO) then
-         Exit(NewVal(VT_BOO, (PDouble(A^.Ptr)^) < Double(BoolToInt(PBool(B^.Ptr)^)))) else
+         Exit(NewVal(VT_BOO, (PFloat(A^.Ptr)^) < TFloat(BoolToInt(PBool(B^.Ptr)^)))) else
          {else} Exit(NewVal(VT_BOO, False))
       end else
    If (A^.Typ = VT_STR) then begin
       If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
          Exit(NewVal(VT_BOO, StrToNum(PStr(A^.Ptr)^,B^.Typ) < (PQInt(B^.Ptr)^))) else
       If (B^.Typ = VT_FLO) then
-         Exit(NewVal(VT_BOO, StrToReal(PStr(A^.Ptr)^) < (PDouble(B^.Ptr)^))) else
+         Exit(NewVal(VT_BOO, StrToReal(PStr(A^.Ptr)^) < (PFloat(B^.Ptr)^))) else
       If (B^.Typ = VT_STR) then
          Exit(NewVal(VT_BOO, (PStr(A^.Ptr)^) < (PStr(B^.Ptr)^))) else
       If (B^.Typ = VT_BOO) then
@@ -981,7 +986,7 @@ Function ValLt(A,B:PValue):PValue;
       If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
          Exit(NewVal(VT_BOO, BoolToInt(PBool(A^.Ptr)^) < (PQInt(B^.Ptr)^))) else
       If (B^.Typ = VT_FLO) then
-         Exit(NewVal(VT_BOO, BoolToInt(PBool(A^.Ptr)^) < Trunc(PDouble(B^.Ptr)^))) else
+         Exit(NewVal(VT_BOO, BoolToInt(PBool(A^.Ptr)^) < Trunc(PFloat(B^.Ptr)^))) else
       If (B^.Typ = VT_STR) then
          Exit(NewVal(VT_BOO, BoolToInt(PBool(A^.Ptr)^) < BoolToInt(StrToBoolDef(PStr(B^.Ptr)^,FALSE)))) else
       If (B^.Typ = VT_BOO) then
@@ -999,7 +1004,7 @@ Function ValLe(A,B:PValue):PValue;
       If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
          Exit(NewVal(VT_BOO, (PQInt(A^.Ptr)^) <= (PQInt(B^.Ptr)^))) else
       If (B^.Typ = VT_FLO) then
-         Exit(NewVal(VT_BOO, (PQInt(A^.Ptr)^) <= Trunc(PDouble(B^.Ptr)^))) else
+         Exit(NewVal(VT_BOO, (PQInt(A^.Ptr)^) <= Trunc(PFloat(B^.Ptr)^))) else
       If (B^.Typ = VT_STR) then
          Exit(NewVal(VT_BOO, (PQInt(A^.Ptr)^) <= StrToNum(PStr(B^.Ptr)^,A^.Typ))) else
       If (B^.Typ = VT_BOO) then
@@ -1008,20 +1013,20 @@ Function ValLe(A,B:PValue):PValue;
       end else
    If (A^.Typ = VT_FLO) then begin
       If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
-         Exit(NewVal(VT_BOO, (PDouble(A^.Ptr)^) <= Double(PQInt(B^.Ptr)^))) else
+         Exit(NewVal(VT_BOO, (PFloat(A^.Ptr)^) <= TFloat(PQInt(B^.Ptr)^))) else
       If (B^.Typ = VT_FLO) then
-         Exit(NewVal(VT_BOO, (PDouble(A^.Ptr)^) <= (PDouble(B^.Ptr)^))) else
+         Exit(NewVal(VT_BOO, (PFloat(A^.Ptr)^) <= (PFloat(B^.Ptr)^))) else
       If (B^.Typ = VT_STR) then
-         Exit(NewVal(VT_BOO, (PDouble(A^.Ptr)^) <= StrToReal(PStr(B^.Ptr)^))) else
+         Exit(NewVal(VT_BOO, (PFloat(A^.Ptr)^) <= StrToReal(PStr(B^.Ptr)^))) else
       If (B^.Typ = VT_BOO) then
-         Exit(NewVal(VT_BOO, (PDouble(A^.Ptr)^) <= Double(BoolToInt(PBool(B^.Ptr)^)))) else
+         Exit(NewVal(VT_BOO, (PFloat(A^.Ptr)^) <= TFloat(BoolToInt(PBool(B^.Ptr)^)))) else
          {else} Exit(NewVal(VT_BOO, False))
       end else
    If (A^.Typ = VT_STR) then begin
       If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
          Exit(NewVal(VT_BOO, StrToNum(PStr(A^.Ptr)^,B^.Typ) <= (PQInt(B^.Ptr)^))) else
       If (B^.Typ = VT_FLO) then
-         Exit(NewVal(VT_BOO, StrToReal(PStr(A^.Ptr)^) <= (PDouble(B^.Ptr)^))) else
+         Exit(NewVal(VT_BOO, StrToReal(PStr(A^.Ptr)^) <= (PFloat(B^.Ptr)^))) else
       If (B^.Typ = VT_STR) then
          Exit(NewVal(VT_BOO, (PStr(A^.Ptr)^) <= (PStr(B^.Ptr)^))) else
       If (B^.Typ = VT_BOO) then
@@ -1032,7 +1037,7 @@ Function ValLe(A,B:PValue):PValue;
       If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
          Exit(NewVal(VT_BOO, BoolToInt(PBool(A^.Ptr)^) <= (PQInt(B^.Ptr)^))) else
       If (B^.Typ = VT_FLO) then
-         Exit(NewVal(VT_BOO, BoolToInt(PBool(A^.Ptr)^) <= Trunc(PDouble(B^.Ptr)^))) else
+         Exit(NewVal(VT_BOO, BoolToInt(PBool(A^.Ptr)^) <= Trunc(PFloat(B^.Ptr)^))) else
       If (B^.Typ = VT_STR) then
          Exit(NewVal(VT_BOO, BoolToInt(PBool(A^.Ptr)^) <= BoolToInt(StrToBoolDef(PStr(B^.Ptr)^,FALSE)))) else
       If (B^.Typ = VT_BOO) then
@@ -1060,7 +1065,7 @@ Procedure FreeVal(Var Val:PValue);
       VT_HEX: Dispose(PQInt(Val^.Ptr));
       VT_OCT: Dispose(PQInt(Val^.Ptr));
       VT_BIN: Dispose(PQInt(Val^.Ptr));
-      VT_FLO: Dispose(PDouble(Val^.Ptr));
+      VT_FLO: Dispose(PFloat(Val^.Ptr));
       VT_BOO: Dispose(PBoolean(Val^.Ptr));
       VT_STR: Dispose(PAnsiString(Val^.Ptr));
       VT_REC: begin
@@ -1077,7 +1082,7 @@ Procedure FreeVal(Var Val:PValue);
    end;
 
 Function  EmptyVal(T:TValueType):PValue;
-   Var R:PValue; I:PQInt; S:PStr; D:PDouble; B:PBoolean;
+   Var R:PValue; I:PQInt; S:PStr; D:PFloat; B:PBoolean;
    begin
    New(R); R^.Tmp:=True; R^.Typ:=T;
    Case T of 
@@ -1098,7 +1103,7 @@ Function  CopyTyp(V:PValue):PValue;
    begin Exit(EmptyVal(V^.Typ)) end;
 
 Function  CopyVal(V:PValue):PValue;
-   Var R:PValue; I:PQInt; S:PStr; D:PDouble; B:PBoolean;
+   Var R:PValue; I:PQInt; S:PStr; D:PFloat; B:PBoolean;
    begin
    New(R); R^.Tmp:=True; R^.Typ:=V^.Typ;
    Case V^.Typ of 
@@ -1106,7 +1111,7 @@ Function  CopyVal(V:PValue):PValue;
       VT_HEX: begin New(I); (I^):=PQInt(V^.Ptr)^; R^.Ptr:=I end;
       VT_OCT: begin New(I); (I^):=PQInt(V^.Ptr)^; R^.Ptr:=I end;
       VT_BIN: begin New(I); (I^):=PQInt(V^.Ptr)^; R^.Ptr:=I end;
-      VT_FLO: begin New(D); (D^):=PDouble(V^.Ptr)^; R^.Ptr:=D end;
+      VT_FLO: begin New(D); (D^):=PFloat(V^.Ptr)^; R^.Ptr:=D end;
       VT_STR: begin New(S); (S^):=PStr(V^.Ptr)^; R^.Ptr:=S end;
       VT_BOO: begin New(B); (B^):=PBool(V^.Ptr)^; R^.Ptr:=B end;
       else R^.Ptr:=NIL
@@ -1122,8 +1127,8 @@ Procedure SwapPtrs(A,B:PValue);
    B^.Ptr:=P; B^.Typ:=T
    end;
 
-Function NewVal(T:TValueType;V:Double):PValue;
-   Var R:PValue; P:PDouble;
+Function NewVal(T:TValueType;V:TFloat):PValue;
+   Var R:PValue; P:PFloat;
    begin
    New(R); R^.Typ:=VT_FLO; New(P); R^.Ptr:=P; R^.Tmp:=True;
    P^:=V; Exit(R)

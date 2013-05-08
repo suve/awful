@@ -6,6 +6,7 @@ interface
    uses Values;
 
 Var GLOB_MS:Comp; GLOB_dt:TDateTime;
+    GLOB_SMS:Comp; GLOB_sdt:TDateTime;
     YukPath:AnsiString;
 
 Procedure Register(FT:PFunTrie);
@@ -17,6 +18,7 @@ Function F_FileName(Arg:Array of PValue):PValue;
 
 Function F_Sleep(Arg:Array of PValue):PValue;
 Function F_Ticks(Arg:Array of PValue):PValue;
+Function F_ScrTicks(Arg:Array of PValue):PValue;
 
 Function F_Write(Arg:Array of PValue):PValue;
 Function F_Writeln(Arg:Array of PValue):PValue;
@@ -39,6 +41,7 @@ Function F_Lt(Arg:Array of PValue):PValue;
 Function F_Le(Arg:Array of PValue):PValue;
 
 Function F_DecodeURL(Arg:Array of PValue):PValue;
+Function F_EncodeURL(Arg:Array of PValue):PValue;
 Function F_EncodeHTML(Arg:Array of PValue):PValue;
 
 Function F_GetProcess(Arg:Array of PValue):PValue;
@@ -49,7 +52,9 @@ Function F_GetNum(Arg:Array of PValue):PValue;
 
 Function F_SetPrecision(Arg:Array of PValue):PValue;
 Function F_Perc(Arg:Array of PValue):PValue;
+Function F_sqrt(Arg:Array of PValue):PValue;
 
+{$IFDEF LINUX}
 Function F_SysInfo_Get(Arg:Array of PValue):PValue;
 Function F_SysInfo_Uptime(Arg:Array of PValue):PValue;
 Function F_SysInfo_Load(Arg:Array of PValue):PValue;
@@ -67,16 +72,22 @@ Function F_SysInfo_Procnum(Arg:Array of PValue):PValue;
 Function F_SysInfo_Thermal(Arg:Array of PValue):PValue;
 Function F_SysInfo_Hostname(Arg:Array of PValue):PValue;
 Function F_SysInfo_DomainName(Arg:Array of PValue):PValue;
+{$ENDIF}
 
 Function F_Trim(Arg:Array of PValue):PValue;
 Function F_TrimLeft(Arg:Array of PValue):PValue;
 Function F_TrimRight(Arg:Array of PValue):PValue;
 Function F_UpperCase(Arg:Array of PValue):PValue;
 Function F_LowerCase(Arg:Array of PValue):PValue;
+Function F_StrLen(Arg:Array of PValue):PValue;
+Function F_StrPos(Arg:Array of PValue):PValue;
+Function F_SubStr(Arg:Array of PValue):PValue;
+Function F_DelStr(Arg:Array of PValue):PValue;
 
 Function F_Doctype(Arg:Array of PValue):PValue;
 
 Function F_DateTime_Start(Arg:Array of PValue):PValue;
+Function F_DateTime_ScrStart(Arg:Array of PValue):PValue;
 Function F_DateTime_Now(Arg:Array of PValue):PValue;
 Function F_DateTime_Date(Arg:Array of PValue):PValue;
 Function F_DateTime_Time(Arg:Array of PValue):PValue;
@@ -104,8 +115,10 @@ Function F_fork(Arg:Array of PValue):PValue;
 
 Function F_random(Arg:Array of PValue):PValue;
 
+Function F_sizeof(Arg:Array of PValue):PValue;
+
 implementation
-   uses Math, SysUtils, Unix, Linux;
+   uses Math, SysUtils {$IFDEF LINUX}, Unix, Linux{$ENDIF};
 
 Type TGetVal = record
      Key, Val : AnsiString
@@ -143,51 +156,60 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('le',@F_le);     FT^.SetVal('<=',@F_Le);
    FT^.SetVal('floatprec',@F_SetPrecision);
    FT^.SetVal('perc',@F_Perc);
-   FT^.SetVal('get:prepare',@F_GetProcess);
-   FT^.SetVal('get:is',@F_GetIs_);
-   FT^.SetVal('get:val',@F_GetVal);
-   FT^.SetVal('get:key',@F_GetKey);
-   FT^.SetVal('get:num',@F_GetNum);
+   FT^.SetVal('sqrt',@F_sqrt);
+   FT^.SetVal('get-prepare',@F_GetProcess);
+   FT^.SetVal('get-is',@F_GetIs_);
+   FT^.SetVal('get-val',@F_GetVal);
+   FT^.SetVal('get-key',@F_GetKey);
+   FT^.SetVal('get-num',@F_GetNum);
    FT^.SetVal('decodeURL',@F_DecodeURL);
+   FT^.SetVal('encodeURL',@F_DecodeURL);
    FT^.SetVal('encodeHTML',@F_EncodeHTML);
-   FT^.SetVal('sysinfo:get',@F_SysInfo_Get);
-   FT^.SetVal('sysinfo:uptime',@F_SysInfo_Uptime);
-   FT^.SetVal('sysinfo:load',@F_SysInfo_Load);
-   FT^.SetVal('sysinfo:ram:total',@F_SysInfo_RAMtotal);
-   FT^.SetVal('sysinfo:ram:free',@F_SysInfo_RAMfree);
-   FT^.SetVal('sysinfo:ram:used',@F_SysInfo_RAMused);
-   FT^.SetVal('sysinfo:ram:buffer',@F_SysInfo_RAMbuffer);
-   FT^.SetVal('sysinfo:swap:total',@F_SysInfo_SwapTotal);
-   FT^.SetVal('sysinfo:swap:free',@F_SysInfo_SwapFree);
-   FT^.SetVal('sysinfo:swap:used',@F_SysInfo_SwapUsed);
-   FT^.SetVal('sysinfo:procnum',@F_SysInfo_Procnum);
-   FT^.SetVal('sysinfo:disk:total',@F_SysInfo_DiskTotal);
-   FT^.SetVal('sysinfo:disk:free',@F_SysInfo_DiskFree);
-   FT^.SetVal('sysinfo:disk:used',@F_SysInfo_DiskUsed);
-   FT^.SetVal('sysinfo:thermal',@F_SysInfo_Thermal);
-   FT^.SetVal('sysinfo:domainname',@F_SysInfo_DomainName);
-   FT^.SetVal('sysinfo:hostname',@F_SysInfo_Hostname);
+   {$IFDEF LINUX}
+   FT^.SetVal('sysinfo-get',@F_SysInfo_Get);
+   FT^.SetVal('sysinfo-uptime',@F_SysInfo_Uptime);
+   FT^.SetVal('sysinfo-load',@F_SysInfo_Load);
+   FT^.SetVal('sysinfo-ram-total',@F_SysInfo_RAMtotal);
+   FT^.SetVal('sysinfo-ram-free',@F_SysInfo_RAMfree);
+   FT^.SetVal('sysinfo-ram-used',@F_SysInfo_RAMused);
+   FT^.SetVal('sysinfo-ram-buffer',@F_SysInfo_RAMbuffer);
+   FT^.SetVal('sysinfo-swap-total',@F_SysInfo_SwapTotal);
+   FT^.SetVal('sysinfo-swap-free',@F_SysInfo_SwapFree);
+   FT^.SetVal('sysinfo-swap-used',@F_SysInfo_SwapUsed);
+   FT^.SetVal('sysinfo-procnum',@F_SysInfo_Procnum);
+   FT^.SetVal('sysinfo-disk-total',@F_SysInfo_DiskTotal);
+   FT^.SetVal('sysinfo-disk-free',@F_SysInfo_DiskFree);
+   FT^.SetVal('sysinfo-disk-used',@F_SysInfo_DiskUsed);
+   FT^.SetVal('sysinfo-thermal',@F_SysInfo_Thermal);
+   FT^.SetVal('sysinfo-domainname',@F_SysInfo_DomainName);
+   FT^.SetVal('sysinfo-hostname',@F_SysInfo_Hostname);
+   {$ENDIF}
    FT^.SetVal('trim',@F_Trim);
    FT^.SetVal('trimle',@F_TrimLeft);
    FT^.SetVal('trimri',@F_TrimRight);
    FT^.SetVal('uppercase',@F_UpperCase);
    FT^.SetVal('lowercase',@F_LowerCase);
+   FT^.SetVal('strlen',@F_StrLen);
+   FT^.SetVal('strpos',@F_StrPos);
+   FT^.SetVal('substr',@F_SubStr);
+   FT^.SetVal('delstr',@F_DelStr);
    FT^.SetVal('doctype',@F_Doctype);
-   FT^.SetVal('datetime:start',@F_DateTime_Start);
-   FT^.SetVal('datetime:now',@F_DateTime_Now);
-   FT^.SetVal('datetime:date',@F_DateTime_Date);
-   FT^.SetVal('datetime:time',@F_DateTime_Time);
-   FT^.SetVal('datetime:decode',@F_DateTime_Decode);
-   FT^.SetVal('datetime:encode',@F_DateTime_Encode);
-   FT^.SetVal('datetime:make',@F_DateTime_Make);
-   FT^.SetVal('datetime:year',@F_DateTime_Year);
-   FT^.SetVal('datetime:month',@F_DateTime_Month);
-   FT^.SetVal('datetime:day',@F_DateTime_Day);
-   FT^.SetVal('datetime:dow',@F_DateTime_DOW);
-   FT^.SetVal('datetime:hour',@F_DateTime_Hour);
-   FT^.SetVal('datetime:min',@F_DateTime_Min);
-   FT^.SetVal('datetime:sec',@F_DateTime_Sec);
-   FT^.SetVal('datetime:string',@F_DateTime_String);
+   FT^.SetVal('datetime-start',@F_DateTime_Start);
+   FT^.SetVal('datetime-scrstart',@F_DateTime_ScrStart);
+   FT^.SetVal('datetime-now',@F_DateTime_Now);
+   FT^.SetVal('datetime-date',@F_DateTime_Date);
+   FT^.SetVal('datetime-time',@F_DateTime_Time);
+   FT^.SetVal('datetime-decode',@F_DateTime_Decode);
+   FT^.SetVal('datetime-encode',@F_DateTime_Encode);
+   FT^.SetVal('datetime-make',@F_DateTime_Make);
+   FT^.SetVal('datetime-year',@F_DateTime_Year);
+   FT^.SetVal('datetime-month',@F_DateTime_Month);
+   FT^.SetVal('datetime-day',@F_DateTime_Day);
+   FT^.SetVal('datetime-dow',@F_DateTime_DOW);
+   FT^.SetVal('datetime-hour',@F_DateTime_Hour);
+   FT^.SetVal('datetime-min',@F_DateTime_Min);
+   FT^.SetVal('datetime-sec',@F_DateTime_Sec);
+   FT^.SetVal('datetime-string',@F_DateTime_String);
    FT^.SetVal('mkint',@F_mkint);
    FT^.SetVal('mkhex',@F_mkhex);
    FT^.SetVal('mkoct',@F_mkoct);
@@ -197,6 +219,7 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('mklog',@F_mklog); FT^.SetVal('mkbool',@F_mklog);
    FT^.SetVal('fork',@F_fork);
    FT^.SetVal('random',@F_random);
+   FT^.SetVal('sizeof',@F_sizeof);
    end;
 
 Function F_(Arg:Array of PValue):PValue;
@@ -236,6 +259,16 @@ Function F_Ticks(Arg:Array of PValue):PValue;
    Exit(NewVal(VT_INT,Trunc(TS-GLOB_ms)))
    end;
 
+Function F_ScrTicks(Arg:Array of PValue):PValue;
+   Var C:LongWord; TS:Comp;
+   begin
+   If (Length(Arg)>0) then
+      For C:=Low(Arg) to High(Arg) do
+          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+   TS:=TimeStampToMSecs(DateTimeToTimeStamp(Now()));
+   Exit(NewVal(VT_INT,Trunc(TS-GLOB_sms)))
+   end;
+
 Function F_Sleep(Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; Dur:LongWord;
        ms_st, ms_en : Comp;
@@ -249,7 +282,7 @@ Function F_Sleep(Arg:Array of PValue):PValue;
       If (Arg[0]^.Typ >= VT_INT) and (Arg[0]^.Typ <= VT_BIN)
          then Dur:=PQInt(Arg[0]^.Ptr)^ else
       If (Arg[0]^.Typ = VT_FLO)
-         then Dur:=Trunc(1000*PDouble(Arg[0]^.Ptr)^)
+         then Dur:=Trunc(1000*PFloat(Arg[0]^.Ptr)^)
          else begin
          V:=ValToInt(Arg[0]);
          Dur:=PQInt(V^.Ptr)^;
@@ -273,7 +306,7 @@ Function F_Write(Arg:Array of PValue):PValue;
           VT_HEX: Write(HexToStr(PQInt(Arg[C]^.Ptr)^));
           VT_OCT: Write(OctToStr(PQInt(Arg[C]^.Ptr)^));
           VT_BIN: Write(BinToStr(PQInt(Arg[C]^.Ptr)^));
-          VT_FLO: Write(PDouble(Arg[C]^.Ptr)^:0:RealPrec);
+          VT_FLO: Write(PFloat(Arg[C]^.Ptr)^:0:RealPrec);
           VT_BOO: Write(PBoolean(Arg[C]^.Ptr)^);
           VT_STR: Write(PAnsiString(Arg[C]^.Ptr)^);
           else Write('(',Arg[C]^.Typ,')');
@@ -595,6 +628,21 @@ Function DecodeURL(Str:AnsiString):AnsiString;
    Exit(Res)
    end;
 
+Function EncodeURL(Str:AnsiString):AnsiString;
+   Var Res:AnsiString; P,R:LongWord;
+   begin
+   Res:=''; SetLength(Res,Length(Str));
+   R:=1; P:=1;
+   While (P<=Length(Str)) do
+      If (((Str[P]>=#48) and (Str[P]<= #57)) or //0-9
+          ((Str[P]>=#65) and (Str[P]<= #90)) or //A-Z
+          ((Str[P]>=#97) and (Str[P]<=#122)) or //a-z
+          (Pos(Str[P],'-_.~')>0))
+         then Res+=Str[P]
+         else Res+='%'+HexToStr(Ord(Str[P]),2);
+   Exit(Res)
+   end;
+
 Function EncodeHTML(Str:AnsiString):AnsiString;
    Var Res:AnsiString; P,R:LongWord;
    begin
@@ -626,6 +674,23 @@ Function F_DecodeURL(Arg:Array of PValue):PValue;
       end;
    If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
    Exit(NewVal(VT_STR,DecodeURL(S)))
+   end;
+
+Function F_EncodeURL(Arg:Array of PValue):PValue;
+   Var C:LongWord; V:PValue; S:AnsiString;
+   begin
+   If (Length(Arg)=0) then Exit(NewVal(VT_STR,''));
+   For C:=High(Arg) downto 1 do
+       If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+   If (Arg[0]^.Typ = VT_STR)
+      then S:=PStr(Arg[0]^.Ptr)^
+      else begin
+      V:=ValToStr(Arg[0]);
+      S:=PStr(V^.Ptr)^;
+      FreeVal(V)
+      end;
+   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   Exit(NewVal(VT_STR,EncodeURL(S)))
    end;
 
 Function F_EncodeHTML(Arg:Array of PValue):PValue;
@@ -821,7 +886,7 @@ Function F_SetPrecision(Arg:Array of PValue):PValue;
    end;
 
 Function F_Perc(Arg:Array of PValue):PValue;
-   Var C:LongWord; A,V:PValue; I:PQInt; S:AnsiString; D:PDouble;
+   Var C:LongWord; A,V:PValue; I:PQInt; S:AnsiString; D:PFloat;
    begin
    If (Length(Arg)=0) then Exit(NewVal(VT_STR,'0%'));
    If (Length(Arg)>2) then
@@ -829,9 +894,9 @@ Function F_Perc(Arg:Array of PValue):PValue;
           If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
    If (Length(Arg)>=2) then begin
       If (Arg[0]^.Typ = VT_FLO) then begin
-         A:=CopyVal(Arg[0]); D:=PDouble(A^.Ptr); (D^)*=100;
+         A:=CopyVal(Arg[0]); D:=PFloat(A^.Ptr); (D^)*=100;
          V:=ValDiv(A,Arg[1]); FreeVal(A);
-         S:=IntToStr(Trunc(PDouble(V^.Ptr)^))+'%';
+         S:=IntToStr(Trunc(PFloat(V^.Ptr)^))+'%';
          FreeVal(V)
          end else begin
          If (Arg[0]^.Typ >= VT_INT) and (Arg[0]^.Typ <= VT_BIN)
@@ -843,10 +908,10 @@ Function F_Perc(Arg:Array of PValue):PValue;
          end
       end else begin
       If (Arg[0]^.Typ = VT_FLO)
-         then S:=IntToStr(Trunc(100*PDouble(Arg[0]^.Ptr)^))+'%'
+         then S:=IntToStr(Trunc(100*PFloat(Arg[0]^.Ptr)^))+'%'
          else begin
          A:=ValToFlo(Arg[0]);
-         S:=IntToStr(Trunc(100*PDouble(A^.Ptr)^))+'%';
+         S:=IntToStr(Trunc(100*PFloat(A^.Ptr)^))+'%';
          FreeVal(A)
          end
       end;
@@ -855,6 +920,7 @@ Function F_Perc(Arg:Array of PValue):PValue;
    Exit(NewVal(VT_STR,S))
    end;
 
+{$IFDEF LINUX}
 Function GetSysInfo():Boolean;
    begin
    If (SI<>NIL) then Dispose(SI); New(SI);
@@ -1040,6 +1106,7 @@ Function F_SysInfo_DomainName(Arg:Array of PValue):PValue;
           If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
    Exit(NewVal(VT_INT,GetDomainName()))
    end;
+{$ENDIF} //end of Linux-only functions
 
 Function F_Trim(Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; S:AnsiString;
@@ -1175,6 +1242,15 @@ Function F_DateTime_Start(Arg:Array of PValue):PValue;
    Exit(NewVal(VT_FLO,GLOB_dt))
    end;
 
+Function F_DateTime_ScrStart(Arg:Array of PValue):PValue;
+   Var C:LongWord;
+   begin
+   If (Length(Arg)>0) then
+      For C:=Low(Arg) to High(Arg) do
+          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+   Exit(NewVal(VT_FLO,GLOB_sdt))
+   end;
+
 Function F_DateTime_Now(Arg:Array of PValue):PValue;
    Var C:LongWord;
    begin
@@ -1265,10 +1341,10 @@ Function F_DateTime_Decode(Arg:Array of PValue):PValue;
           If (Arg[C]^.Tmp) then FreeVal(Arg[C])
       end else H:=High(Arg);
    If (Arg[0]^.Typ = VT_FLO)
-      then dt:=(PDouble(Arg[0]^.Ptr)^)
+      then dt:=(PFloat(Arg[0]^.Ptr)^)
       else begin
       V:=ValToFlo(Arg[0]);
-      dt:=(PDouble(V^.Ptr)^);
+      dt:=(PFloat(V^.Ptr)^);
       FreeVal(V)
       end;
    DecodeDateFully(dt,dec[1],dec[2],dec[3],dec[4]);
@@ -1293,10 +1369,10 @@ Function F_DateTime_Day(Arg:Array of PValue):PValue;
    For C:=High(Arg) downto 1 do
       If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
    If (Arg[0]^.Typ = VT_FLO)
-      then dt:=(PDouble(Arg[0]^.Ptr)^)
+      then dt:=(PFloat(Arg[0]^.Ptr)^)
       else begin
       V:=ValToFlo(Arg[0]);
-      dt:=(PDouble(V^.Ptr)^);
+      dt:=(PFloat(V^.Ptr)^);
       FreeVal(V)
       end;
    If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
@@ -1311,10 +1387,10 @@ Function F_DateTime_Month(Arg:Array of PValue):PValue;
    For C:=High(Arg) downto 1 do
       If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
    If (Arg[0]^.Typ = VT_FLO)
-      then dt:=(PDouble(Arg[0]^.Ptr)^)
+      then dt:=(PFloat(Arg[0]^.Ptr)^)
       else begin
       V:=ValToFlo(Arg[0]);
-      dt:=(PDouble(V^.Ptr)^);
+      dt:=(PFloat(V^.Ptr)^);
       FreeVal(V)
       end;
    If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
@@ -1329,10 +1405,10 @@ Function F_DateTime_Year(Arg:Array of PValue):PValue;
    For C:=High(Arg) downto 1 do
       If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
    If (Arg[0]^.Typ = VT_FLO)
-      then dt:=(PDouble(Arg[0]^.Ptr)^)
+      then dt:=(PFloat(Arg[0]^.Ptr)^)
       else begin
       V:=ValToFlo(Arg[0]);
-      dt:=(PDouble(V^.Ptr)^);
+      dt:=(PFloat(V^.Ptr)^);
       FreeVal(V)
       end;
    If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
@@ -1347,10 +1423,10 @@ Function F_DateTime_DOW(Arg:Array of PValue):PValue;
    For C:=High(Arg) downto 1 do
       If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
    If (Arg[0]^.Typ = VT_FLO)
-      then dt:=(PDouble(Arg[0]^.Ptr)^)
+      then dt:=(PFloat(Arg[0]^.Ptr)^)
       else begin
       V:=ValToFlo(Arg[0]);
-      dt:=(PDouble(V^.Ptr)^);
+      dt:=(PFloat(V^.Ptr)^);
       FreeVal(V)
       end;
    If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
@@ -1365,10 +1441,10 @@ Function F_DateTime_Hour(Arg:Array of PValue):PValue;
    For C:=High(Arg) downto 1 do
       If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
    If (Arg[0]^.Typ = VT_FLO)
-      then dt:=(PDouble(Arg[0]^.Ptr)^)
+      then dt:=(PFloat(Arg[0]^.Ptr)^)
       else begin
       V:=ValToFlo(Arg[0]);
-      dt:=(PDouble(V^.Ptr)^);
+      dt:=(PFloat(V^.Ptr)^);
       FreeVal(V)
       end;
    If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
@@ -1383,10 +1459,10 @@ Function F_DateTime_Min(Arg:Array of PValue):PValue;
    For C:=High(Arg) downto 1 do
       If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
    If (Arg[0]^.Typ = VT_FLO)
-      then dt:=(PDouble(Arg[0]^.Ptr)^)
+      then dt:=(PFloat(Arg[0]^.Ptr)^)
       else begin
       V:=ValToFlo(Arg[0]);
-      dt:=(PDouble(V^.Ptr)^);
+      dt:=(PFloat(V^.Ptr)^);
       FreeVal(V)
       end;
    If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
@@ -1401,10 +1477,10 @@ Function F_DateTime_Sec(Arg:Array of PValue):PValue;
    For C:=High(Arg) downto 1 do
       If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
    If (Arg[0]^.Typ = VT_FLO)
-      then dt:=(PDouble(Arg[0]^.Ptr)^)
+      then dt:=(PFloat(Arg[0]^.Ptr)^)
       else begin
       V:=ValToFlo(Arg[0]);
-      dt:=(PDouble(V^.Ptr)^);
+      dt:=(PFloat(V^.Ptr)^);
       FreeVal(V)
       end;
    If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
@@ -1501,10 +1577,10 @@ Function F_DateTime_String(Arg:Array of PValue):PValue;
       then F:=dtf(PStr(Arg[1]^.Ptr)^)
       else F:=dtf_def;
    If (Length(Arg) > 0) and (Arg[0]^.Typ = VT_FLO)
-      then dt:=(PDouble(Arg[0]^.Ptr)^) else
+      then dt:=(PFloat(Arg[0]^.Ptr)^) else
    If (Length(Arg) > 0) then begin
       V:=ValToFlo(Arg[0]);
-      dt:=(PDouble(V^.Ptr)^);
+      dt:=(PFloat(V^.Ptr)^);
       FreeVal(V)
       end else dt:=SysUtils.Now();
    If (Length(Arg) >= 2) and (Arg[1]^.Tmp) then FreeVal(Arg[1]);
@@ -1564,20 +1640,20 @@ Function F_mkhex(Arg:Array of PValue):PValue;
 Function F_mkoct(Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue;
    begin
-   If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
+   If (Length(Arg)=0) then Exit(NewVal(VT_OCT,0));
    For C:=High(Arg) downto (Low(Arg)+1) do
        If (Arg[C]^.Tmp) then FreeVal(Arg[C]) else
-       If (Arg[C]^.Typ <> VT_INT) then begin
+       If (Arg[C]^.Typ <> VT_OCT) then begin
           V:=ValToOct(Arg[C]); V^.Tmp:=False;
           SwapPtrs(Arg[C],V); FreeVal(V)
           end;
    If (Arg[0]^.Tmp) then begin
-      If (Arg[0]^.Typ <> VT_INT) then begin
+      If (Arg[0]^.Typ <> VT_OCT) then begin
          V:=ValToOct(Arg[0]); FreeVal(Arg[0])
          end else V:=Arg[0];
       Exit(V)
       end else begin
-      If (Arg[0]^.Typ<>VT_INT) then begin
+      If (Arg[0]^.Typ<>VT_OCT) then begin
          V:=ValToOct(Arg[0]); V^.Tmp:=False;
          SwapPtrs(Arg[C],V); FreeVal(V)
          end;
@@ -1588,20 +1664,20 @@ Function F_mkoct(Arg:Array of PValue):PValue;
 Function F_mkbin(Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue;
    begin
-   If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
+   If (Length(Arg)=0) then Exit(NewVal(VT_BIN,0));
    For C:=High(Arg) downto (Low(Arg)+1) do
        If (Arg[C]^.Tmp) then FreeVal(Arg[C]) else
-       If (Arg[C]^.Typ <> VT_INT) then begin
+       If (Arg[C]^.Typ <> VT_BIN) then begin
           V:=ValToBin(Arg[C]); V^.Tmp:=False;
           SwapPtrs(Arg[C],V); FreeVal(V)
           end;
    If (Arg[0]^.Tmp) then begin
-      If (Arg[0]^.Typ <> VT_INT) then begin
+      If (Arg[0]^.Typ <> VT_BIN) then begin
          V:=ValToBin(Arg[0]); FreeVal(Arg[0])
          end else V:=Arg[0];
       Exit(V)
       end else begin
-      If (Arg[0]^.Typ<>VT_INT) then begin
+      If (Arg[0]^.Typ<>VT_BIN) then begin
          V:=ValToBin(Arg[0]); V^.Tmp:=False;
          SwapPtrs(Arg[C],V); FreeVal(V)
          end;
@@ -1620,7 +1696,7 @@ Function F_mkflo(Arg:Array of PValue):PValue;
           SwapPtrs(Arg[C],V); FreeVal(V)
           end;
    If (Arg[0]^.Tmp) then begin
-      If (Arg[0]^.Typ <> VT_INT) then begin
+      If (Arg[0]^.Typ <> VT_FLO) then begin
          V:=ValToFlo(Arg[0]); FreeVal(Arg[0])
          end else V:=Arg[0];
       Exit(V)
@@ -1636,20 +1712,20 @@ Function F_mkflo(Arg:Array of PValue):PValue;
 Function F_mkstr(Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue;
    begin
-   If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
+   If (Length(Arg)=0) then Exit(NewVal(VT_STR,0));
    For C:=High(Arg) downto (Low(Arg)+1) do
        If (Arg[C]^.Tmp) then FreeVal(Arg[C]) else
-       If (Arg[C]^.Typ <> VT_INT) then begin
+       If (Arg[C]^.Typ <> VT_STR) then begin
           V:=ValToStr(Arg[C]); V^.Tmp:=False;
           SwapPtrs(Arg[C],V); FreeVal(V)
           end;
    If (Arg[0]^.Tmp) then begin
-      If (Arg[0]^.Typ <> VT_INT) then begin
+      If (Arg[0]^.Typ <> VT_STR) then begin
          V:=ValToStr(Arg[0]); FreeVal(Arg[0])
          end else V:=Arg[0];
       Exit(V)
       end else begin
-      If (Arg[0]^.Typ<>VT_INT) then begin
+      If (Arg[0]^.Typ<>VT_STR) then begin
          V:=ValToStr(Arg[0]); V^.Tmp:=False;
          SwapPtrs(Arg[C],V); FreeVal(V)
          end;
@@ -1660,20 +1736,20 @@ Function F_mkstr(Arg:Array of PValue):PValue;
 Function F_mklog(Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue;
    begin
-   If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
+   If (Length(Arg)=0) then Exit(NewVal(VT_BOO,0));
    For C:=High(Arg) downto (Low(Arg)+1) do
        If (Arg[C]^.Tmp) then FreeVal(Arg[C]) else
-       If (Arg[C]^.Typ <> VT_INT) then begin
+       If (Arg[C]^.Typ <> VT_BOO) then begin
           V:=ValToBoo(Arg[C]); V^.Tmp:=False;
           SwapPtrs(Arg[C],V); FreeVal(V)
           end;
    If (Arg[0]^.Tmp) then begin
-      If (Arg[0]^.Typ <> VT_INT) then begin
+      If (Arg[0]^.Typ <> VT_BOO) then begin
          V:=ValToBoo(Arg[0]); FreeVal(Arg[0])
          end else V:=Arg[0];
       Exit(V)
       end else begin
-      If (Arg[0]^.Typ<>VT_INT) then begin
+      If (Arg[0]^.Typ<>VT_BOO) then begin
          V:=ValToBoo(Arg[0]); V^.Tmp:=False;
          SwapPtrs(Arg[C],V); FreeVal(V)
          end;
@@ -1709,7 +1785,7 @@ Function F_fork(Arg:Array of PValue):PValue;
    end;
 
 Function F_random(Arg:Array of PValue):PValue;
-   Var C:LongWord; V:PValue; DH,DL:Double; IH,IL:QInt; Ch:Char;
+   Var C:LongWord; V:PValue; DH,DL:TFloat; IH,IL:QInt; Ch:Char;
    begin
    If (Length(Arg)>2) then
       For C:=High(Arg) downto 2 do
@@ -1721,9 +1797,9 @@ Function F_random(Arg:Array of PValue):PValue;
             If (Arg[1]^.Tmp) then FreeVal(Arg[1]);
             Arg[1]:=V 
             end;
-         If (PDouble(Arg[0]^.Ptr)^ <= PDouble(Arg[1]^.Ptr)^)
-            then begin DL:=PDouble(Arg[0]^.Ptr)^; DH:=PDouble(Arg[1]^.Ptr)^ end
-            else begin DL:=PDouble(Arg[1]^.Ptr)^; DH:=PDouble(Arg[0]^.Ptr)^ end;
+         If (PFloat(Arg[0]^.Ptr)^ <= PFloat(Arg[1]^.Ptr)^)
+            then begin DL:=PFloat(Arg[0]^.Ptr)^; DH:=PFloat(Arg[1]^.Ptr)^ end
+            else begin DL:=PFloat(Arg[1]^.Ptr)^; DH:=PFloat(Arg[0]^.Ptr)^ end;
          DH:=DL+((DH-DL)*System.Random());
          For C:=1 downto 0 do If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
          Exit(NewVal(VT_FLO,DH))
@@ -1759,6 +1835,136 @@ Function F_random(Arg:Array of PValue):PValue;
          Exit(V)
       end end else
       Exit(NewVal(VT_FLO,System.Random()))
+   end;
+
+Function F_StrLen(Arg:Array of PValue):PValue;
+   Var C:LongWord; V:PValue; L:QInt;
+   begin
+   If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
+   If (Length(Arg)>1) then
+      For C:=High(Arg) downto 1 do
+          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+   If (Arg[0]^.Typ<>VT_STR) then begin
+      V:=ValToStr(Arg[0]); If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+      Arg[0]:=V end;
+   L:=Length(PStr(Arg[0]^.Ptr)^);
+   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   Exit(NewVal(VT_INT,L))
+   end;
+
+Function F_StrPos(Arg:Array of PValue):PValue;
+   Var C:LongWord; V:PValue; P:QInt;
+   begin
+   If (Length(Arg)<2) then Exit(NewVal(VT_INT,0));
+   If (Length(Arg)>2) then
+      For C:=High(Arg) downto 1 do
+          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+   For C:=1 downto 0 do 
+      If (Arg[C]^.Typ<>VT_STR) then begin
+         V:=ValToStr(Arg[C]); If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+         Arg[C]:=V end;
+   P:=Pos(PStr(Arg[0]^.Ptr)^,PStr(Arg[1]^.Ptr)^);
+   For C:=1 downto 0 do If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+   Exit(NewVal(VT_INT,P))
+   end;
+
+Function F_SubStr(Arg:Array of PValue):PValue;
+   Var C:LongWord; V:PValue; I:Array[1..2] of QInt; R:TStr;
+   begin
+   If (Length(Arg)=0) then Exit(NewVal(VT_STR,''));
+   If (Length(Arg)>3) then
+      For C:=High(Arg) downto 3 do
+          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+   For C:=2 downto 1 do
+       If (Length(Arg)>C) then
+          If (Arg[C]^.Typ >= VT_INT) and (Arg[C]^.Typ<= VT_BIN)
+             then i[C]:=PQInt(Arg[C]^.Ptr)^
+             else begin
+             V:=ValToInt(Arg[C]); i[C]:=PQInt(V^.Ptr)^; FreeVal(V)
+             end else
+             If (C=2) then i[C]:=High(Integer) else i[C]:=1;
+   If (Arg[0]^.Typ = VT_STR)
+      then R:=Copy(PStr(Arg[0]^.Ptr)^,i[1],i[2]) 
+      else begin
+      V:=ValToStr(Arg[0]); R:=Copy(PStr(V^.Ptr)^,i[1],i[2]); 
+      FreeVal(V) end;
+   For C:=2 downto 0 do
+       If (Length(Arg)>C) and (Arg[C]^.Tmp)
+          then FreeVal(Arg[C]);
+   Exit(NewVal(VT_STR,R))
+   end;
+
+Function F_DelStr(Arg:Array of PValue):PValue;
+   Var C:LongWord; V:PValue; I:Array[1..2] of QInt; 
+   begin
+   If (Length(Arg)=0) then Exit(NewVal(VT_STR,''));
+   If (Length(Arg)>3) then
+      For C:=High(Arg) downto 3 do
+          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+   For C:=2 downto 1 do
+       If (Length(Arg)>C) then
+          If (Arg[C]^.Typ >= VT_INT) and (Arg[C]^.Typ<= VT_BIN)
+             then i[C]:=PQInt(Arg[C]^.Ptr)^
+             else begin
+             V:=ValToInt(Arg[C]); i[C]:=PQInt(V^.Ptr)^; FreeVal(V)
+             end else
+             If (C=2) then i[C]:=High(SizeInt) else i[C]:=1;
+   If (Arg[0]^.Typ = VT_STR)
+      then V:=CopyVal(Arg[0])
+      else V:=ValToStr(Arg[0]);
+   Delete(PStr(V^.Ptr)^,i[1],i[2]); 
+   For C:=2 downto 0 do
+       If (Length(Arg)>C) and (Arg[C]^.Tmp)
+          then FreeVal(Arg[C]);
+   Exit(V)
+   end;
+
+Function F_sqrt(Arg:Array of PValue):PValue;
+   Var C:LongWord; V:PValue; F:TFLoat;
+   begin
+   If (Length(Arg)=0) then Exit(NewVal(VT_FLO,0.0));
+   If (Length(Arg)>1) then
+      For C:=High(Arg) downto 1 do
+          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+   If (Arg[0]^.Typ = VT_FLO) then begin
+      F:=Sqrt(PFloat(Arg[0]^.Ptr)^)
+      end else
+   If (Arg[0]^.Typ >= VT_INT) and (Arg[0]^.Typ <= VT_BIN) then begin
+      F:=Sqrt(PQInt(Arg[0]^.Ptr)^)
+      end else begin
+      V:=ValToFlo(Arg[0]);
+      F:=Sqrt(PFLoat(V^.Ptr)^);
+      FreeVal(V)
+      end;
+   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   Exit(NewVal(VT_FLO,F))
+   end;
+
+Function F_sizeof(Arg:Array of PValue):PValue;
+   Var C:LongWord; V:PValue; 
+   begin
+   If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
+   If (Length(Arg)>1) then
+      For C:=High(Arg) downto 1 do
+          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+   If (Arg[0]^.Typ <> VT_STR) then begin
+      V:=ValToStr(Arg[0]);
+      If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+      Arg[0]:=V
+      end;
+   If (PStr(Arg[0]^.Ptr)^ = 'flo') then C:=SizeOf(TFloat) else
+   If (PStr(Arg[0]^.Ptr)^ = 'int') then C:=SizeOf(QInt) else
+   If (PStr(Arg[0]^.Ptr)^ = 'hex') then C:=SizeOf(QInt) else
+   If (PStr(Arg[0]^.Ptr)^ = 'oct') then C:=SizeOf(QInt) else
+   If (PStr(Arg[0]^.Ptr)^ = 'bin') then C:=SizeOf(QInt) else
+   If (PStr(Arg[0]^.Ptr)^ = 'str') then C:=SizeOf(TStr) else
+   If (PStr(Arg[0]^.Ptr)^ = 'log') then C:=SizeOf(Bool) else
+   If (PStr(Arg[0]^.Ptr)^ = 'float') then C:=SizeOf(TFloat) else
+   If (PStr(Arg[0]^.Ptr)^ = 'string') then C:=SizeOf(TStr) else
+   If (PStr(Arg[0]^.Ptr)^ = 'bool') then C:=SizeOf(Bool) else
+      (* else *) C:=0;
+   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   Exit(NewVal(VT_INT,C*8))
    end;
 
 end.

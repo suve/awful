@@ -4,7 +4,9 @@ program awful;
 
 uses SysUtils, Math, Trie, Values, Functions, Stack;
 
-const AWFUL_REVISION = '9';
+const VMAJOR = 0;
+      VMINOR = 0;
+      VREVISION = 10;
 
 Type TTokenType = (
      TK_CONS, TK_VARI, TK_REFE, TK_EXPR, TK_BADT);
@@ -56,6 +58,7 @@ Var Func : PFunTrie;
 Var YukFile : Text; YukNum:LongWord;
     Pr : Array of TProc;
     Proc, ExLn : LongWord;
+    mulico:LongWord;
     ParMod:TParamMode;
 
 Function GetVar(Name:AnsiString;Typ:TValueType):PValue;
@@ -226,6 +229,7 @@ Function F_AutoCall(Arg:Array of PValue):PValue;
          Vars[V]^.SetVal('ARG'+IntToStr(A),Arg[A+1]);
          Arg[A+1]^.Tmp:=False end
       end;
+   Vars[V]^.SetVal('ARGNUM',NewVal(VT_INT,CA));
    R:=RunFunc(Proc);
    //Writeln(StdErr,'F_AutoCall(',Proc,'): Trie size: ',Vars[V]^.Count);
    If (Length(Pr[Proc].Ar)>0) then begin
@@ -246,6 +250,31 @@ Function F_AutoCall(Arg:Array of PValue):PValue;
    Proc:=P; ExLn:=E;
    Exit(R)
    end;
+
+Function F_Call(Arg:Array of PValue):PValue;
+   Var C:LongWord; V:PValue; UFN:LongWord; FPtr:PFunc; S:TStr;
+   begin
+   If (Length(Arg)=0) then Exit(NilVal());
+   If (Arg[0]^.Typ <> VT_STR) then begin
+      V:=ValToStr(Arg[0]); If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+      Arg[0]:=V end;
+   S:=PStr(Arg[0]^.Ptr)^;
+   If (Length(S)>0) and (S[1]=':') then Delete(S,1,1);
+   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   Try
+      UFN:=UsrFun^.GetVal(S);
+      Arg[0]:=NewVal(VT_INT,UFN);
+      Exit(F_AutoCall(Arg))
+   Except
+      Try
+         FPtr:=Func^.GetVal(S);
+         Exit(FPtr(Arg[1..High(Arg)]));
+      Except
+         If (Length(Arg)>1) then
+            For C:=High(Arg) downto 1 do
+                If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+         Exit(NilVal())
+   end end end;
 
 Function GetFunc(Name:AnsiString):PFunc;
    Var R:PFunc;
@@ -534,19 +563,33 @@ Function ProcessLine(L:AnsiString;N:LongWord):PExpr;
    begin
    SetLength(Tk,0); P:=1; Str:=0; Del:=#255;
    While (Length(L)>0) do begin
+      If (mulico > 0) then begin
+         If (P>Length(L)) then L:='' else
+         If (L[P]='#') then
+            If (Length(L)>P) and (L[P+1]='>') then mulico+=1 else
+            If (P>1) and (L[P-1]='<') then begin
+               If (mulico > 1) then mulico-=1 else begin
+                  Delete(L,1,P); P:=0; mulico:=0
+               end end
+         end else
       If (Str<=0) then begin
          If (P>Length(L)) or (L[P]=#32) or (L[P]='#') then begin
-            SetLength(Tk,Length(Tk)+1);
-            Tk[High(Tk)]:=Copy(L,1,P-1);
-            If (Tk[High(Tk)]='|') then begin
-               Tk[High(Tk)]:=')';
+            If (P>1) then begin
                SetLength(Tk,Length(Tk)+1);
-               Tk[High(Tk)]:='('
+               Tk[High(Tk)]:=Copy(L,1,P-1);
+               If (Tk[High(Tk)]='|') then begin
+                  Tk[High(Tk)]:=')';
+                  SetLength(Tk,Length(Tk)+1);
+                  Tk[High(Tk)]:='('
+                  end
                end;
             If (L[P]<>'#') then begin
                While (P<Length(L)) and (L[P+1]=#32) do P+=1;
                Delete(L,1,P) 
-               end else L:='';
+               end else //Comment character! 
+            If (Length(L)>P) and (L[P+1]='>') //begin of multi-line comment
+               then begin Delete(L,1,P+1); mulico += 1 end 
+               else L:=''; //normal comment
             P:=0; Str:=0
             end else
          If (Str=0) and (L[P]='s')
@@ -574,19 +617,16 @@ Function ProcessLine(L:AnsiString;N:LongWord):PExpr;
             end;
          Delete(L,1,P); P:=0; Str:=0
          end;
-      P+=1;
+      P+=1
       end;
-   If (Length(Tk)=0) then begin //Should never happen.
-      Writeln(StdErr,ExtractFileName(YukPath),'(',N,'): ',
-              'Fatal: Line with no tokens.');
-      Halt(1) end;
+   If (Length(Tk)=0) then Exit(NIL);
    Exit(MakeExpr(Tk,N,0))
    end;
 
 Procedure ReadFile(I:PText);
    Var L:AnsiString; A,N,E,P:LongWord; R:PExpr;
    begin
-   SetLength(Pr,1); N:=0; Proc:=0; ExLn:=0;
+   SetLength(Pr,1); N:=0; Proc:=0; ExLn:=0; mulico:=0;
    SetLength(Pr[0].Ar,0); SetLength(Pr[0].Ex,0); Pr[0].Nu:=0;
    SetLength(IfArr,0);  New(IfSta,Create());
    SetLength(WhiArr,0); New(WhiSta,Create());
@@ -594,7 +634,7 @@ Procedure ReadFile(I:PText);
    While (Not Eof(I^)) do begin
       Readln(I^,L); N+=1;
       L:=Trim(L);
-      If (Length(L)>0) and (L[1]<>'#') then begin
+      If (Length(L)>0) {and (L[1]<>'#')} then begin
          P:=Proc; E:=Pr[P].Nu; ExLn:=E;
          R:=ProcessLine(L,N);
          If (R<>NIL) then begin
@@ -634,6 +674,7 @@ Procedure ReadFile(I:PText);
 Procedure Run();
    Var R:PValue;
    begin
+   GLOB_sdt:=Now(); GLOB_sms:=TimeStampToMSecs(DateTimeToTimeStamp(GLOB_sdt));
    R:=RunFunc(0);
    FreeVal(R)
    end;
@@ -648,6 +689,7 @@ GLOB_dt:=Now(); GLOB_ms:=TimeStampToMSecs(DateTimeToTimeStamp(GLOB_dt));
 IfSta:=NIL; RepSta:=NIL; WhiSta:=NIL; Randomize();
 
 New(Func,Create('!','~'));
+Func^.SetVal('call',@F_Call);
 Func^.SetVal('return',@F_Return);
 Functions.Register(Func);
 
