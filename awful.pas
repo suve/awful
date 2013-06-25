@@ -2,17 +2,24 @@ program awful;
 
 {$MODE OBJFPC} {$COPERATORS ON} {$LONGSTRINGS ON}
 
-uses SysUtils, Math, Trie, Values, Functions, Stack;
+uses SysUtils, Math, Trie, Values, Stack,
+     Functions, YukSDL;
 
 const VMAJOR = 0;
       VMINOR = 0;
-      VREVISION = 10;
+      VREVISION = 11;
 
 Type TTokenType = (
-     TK_CONS, TK_VARI, TK_REFE, TK_EXPR, TK_BADT);
+     TK_EXPR, TK_CONS, TK_VARI, TK_REFE, TK_AVAL, TK_AREF, TK_BADT);
      
      PExpr = ^TExpr;
      PToken = ^TToken;
+     
+     PArrTk = ^TArrTk;
+     TArrTk = record
+     wat : TStr;
+     Ind : PToken
+     end;
      
      TToken = record
      Typ : TTokenType;
@@ -76,8 +83,34 @@ Function GetVar(Name:AnsiString;Typ:TValueType):PValue;
    Exit(R)
    end;
 
+Function GetArr(Name,Index:AnsiString;Typ:TValueType):PValue;
+   Var A,V:PValue; T:PValTrie;
+   begin
+   //Writeln(StdErr,'GetArr(): Trying to get $',Name,'[',Index,']...');
+   A:=GetVar(Name,VT_REC); T:=PValTrie(A^.Ptr);
+   Try    V:=T^.GetVal(Index)
+   Except V:=EmptyVal(Typ); V^.Tmp:=False;
+          T^.SetVal(Index,V)
+          end;
+   Exit(V)
+   end;
+
 Function Eval(E:PExpr):PValue;
-   Var Arg:Array of PValue; T:LongWord; V:PValue;
+   
+   Function ArrayIndex(Tk:PToken):TStr;
+      Var V,H:PValue; S:TStr;
+      begin
+      If (Tk^.Typ = TK_EXPR) then V:=Eval(PExpr(Tk^.Ptr)) else
+      If (Tk^.Typ = TK_CONS) then V:=CopyVal(PValue(Tk^.Ptr)) else
+      If (Tk^.Typ = TK_VARI) then V:=CopyVal(GetVar(PStr(Tk^.Ptr)^,VT_STR)) else
+      If (Tk^.Typ = TK_REFE) then V:=CopyVal(GetVar(PStr(Tk^.Ptr)^,VT_STR));
+      If (V^.Typ <> VT_STR) then begin
+         H:=ValToStr(V); S:=PStr(H^.Ptr)^; FreeVal(H)
+         end else S:=PStr(V^.Ptr)^; 
+      FreeVal(V); Exit(S)
+      end;
+   
+   Var Arg:Array of PValue; T:LongWord; V:PValue; Ind:TStr;
    begin
    SetLength(Arg,Length(E^.Tok));
    If (Length(E^.Tok)=0) then Exit(E^.Fun(Arg));
@@ -94,6 +127,19 @@ Function Eval(E:PExpr):PValue;
           If (T<High(E^.Tok)) 
              then Arg[T]:=GetVar(PStr(E^.Tok[T]^.Ptr)^,Arg[T+1]^.Typ)
              else Arg[T]:=GetVar(PStr(E^.Tok[T]^.Ptr)^,VT_NIL);
+          end else
+       If (E^.Tok[T]^.Typ = TK_AVAL) then begin
+          Ind:=ArrayIndex(PArrTk(E^.Tok[T]^.Ptr)^.Ind);
+          If (T<High(E^.Tok)) 
+             then V:=GetArr(TStr(PArrTk(E^.Tok[T]^.Ptr)^.wat),Ind,Arg[T+1]^.Typ)
+             else V:=GetArr(TStr(PArrTk(E^.Tok[T]^.Ptr)^.wat),Ind,VT_NIL);
+          Arg[T]:=CopyVal(V)
+          end else
+       If (E^.Tok[T]^.Typ = TK_AREF) then begin
+          Ind:=ArrayIndex(PArrTk(E^.Tok[T]^.Ptr)^.Ind);
+          If (T<High(E^.Tok)) 
+             then Arg[T]:=GetArr(TStr(PArrTk(E^.Tok[T]^.Ptr)^.wat),Ind,Arg[T+1]^.Typ)
+             else Arg[T]:=GetArr(TStr(PArrTk(E^.Tok[T]^.Ptr)^.wat),Ind,VT_NIL)
           end else
        If (E^.Tok[T]^.Typ = TK_EXPR)
           then Arg[T]:=Eval(PExpr(E^.Tok[T]^.Ptr));
@@ -296,10 +342,59 @@ Function MakeExpr(Var Tk:Array of AnsiString;Ln,T:LongInt):PExpr;
    Function ConstPrefix(C:Char):Boolean;
       begin Exit(Pos(C,'sflihob=')<>0) end;
    
-   Var E:PExpr; FPtr:PFunc; sex:PExpr; oT,A:LongWord;
-       Tok:PToken; V:PValue; PS:PStr; Nest:LongWord; CName:TStr;
-   begin
-   New(E); oT:=T;
+   Function MakeToken(Index:LongInt):PToken;
+      Var Tok:PToken; V:PValue; PS:PStr; CName:TStr;
+      begin
+      If (Tk[Index][1]='&') then begin
+         New(Tok); New(PS); Tok^.Typ:=TK_VARI; Tok^.Ptr:=PS; 
+         PS^:=Copy(Tk[Index],2,Length(Tk[Index]))
+         end else
+      If (Tk[Index][1]='$') then begin
+         New(Tok); New(PS); Tok^.Typ:=TK_REFE; Tok^.Ptr:=PS; 
+         PS^:=Copy(Tk[Index],2,Length(Tk[Index]))
+         end else
+      If (Tk[Index][1]='=') then begin
+         CName:=Copy(Tk[Index],2,Length(Tk[Index]));
+         Try    V:=Cons^.GetVal(CName);
+         Except Fatal(Ln,'Unknown constant "'+CName+'".') end;
+         New(Tok); Tok^.Typ:=TK_CONS; Tok^.Ptr:=V
+         end else
+      If (Tk[Index][1]='s') then begin
+         V:=NewVal(VT_STR,Copy(Tk[Index],3,Length(Tk[Index])-3));
+         New(Tok); Tok^.Typ:=TK_CONS; Tok^.Ptr:=V; V^.Tmp:=False
+         end else
+      If (Tk[Index][1]='i') then begin
+         V:=NewVal(VT_INT,StrToInt(Copy(Tk[Index],2,Length(Tk[Index]))));
+         New(Tok); Tok^.Typ:=TK_CONS; Tok^.Ptr:=V; V^.Tmp:=False
+         end else
+      If (Tk[Index][1]='h') then begin
+         V:=NewVal(VT_HEX,StrToHex(Copy(Tk[Index],2,Length(Tk[Index]))));
+         New(Tok); Tok^.Typ:=TK_CONS; Tok^.Ptr:=V; V^.Tmp:=False
+         end else
+      If (Tk[Index][1]='o') then begin
+         V:=NewVal(VT_OCT,StrToOct(Copy(Tk[Index],2,Length(Tk[Index]))));
+         New(Tok); Tok^.Typ:=TK_CONS; Tok^.Ptr:=V; V^.Tmp:=False
+         end else
+      If (Tk[Index][1]='b') then begin
+         V:=NewVal(VT_BIN,StrToBin(Copy(Tk[Index],2,Length(Tk[Index]))));
+         New(Tok); Tok^.Typ:=TK_CONS; Tok^.Ptr:=V; V^.Tmp:=False
+         end else
+      If (Tk[Index][1]='l') then begin
+         V:=NewVal(VT_BOO,StrToBoolDef(Copy(Tk[Index],2,Length(Tk[Index])),False));
+         New(Tok); Tok^.Typ:=TK_CONS; Tok^.Ptr:=V; V^.Tmp:=False
+         end else
+      If (Tk[Index][1]='f') then begin
+         V:=NewVal(VT_FLO,StrToReal(Copy(Tk[Index],2,Length(Tk[Index]))));
+         New(Tok); Tok^.Typ:=TK_CONS; Tok^.Ptr:=V; V^.Tmp:=False
+         end else
+         Tok:=NIL;
+      Exit(Tok)
+      end;
+   
+   Var E:PExpr; FPtr:PFunc; sex:PExpr; A:LongWord;
+       Tok,otk:PToken; V:PValue; PS:PStr; atk : PArrTk;
+       Nest:LongWord; CName:TStr;
+   begin New(E); 
    If (Tk[T][1]=':') then begin
       FPtr:=GetFunc(Copy(Tk[T],2,Length(Tk[T])));
       If (FPtr = NIL) then begin
@@ -460,69 +555,6 @@ Function MakeExpr(Var Tk:Array of AnsiString;Ln,T:LongInt):PExpr;
       If (Length(Tk[T])=0) then begin
          Writeln(StdErr,ExtractFileName(YukPath),'(',Ln,'): ',
                  'Error: Empty token (',T,').');
-         T+=1; Continue
-         end;
-      If (Tk[T][1]='&') then begin
-         SetLength(E^.Tok,Length(E^.Tok)+1);
-         New(Tok); New(PS); Tok^.Typ:=TK_VARI; Tok^.Ptr:=PS; 
-         PS^:=Copy(Tk[T],2,Length(Tk[T]));
-         E^.Tok[High(E^.Tok)]:=Tok
-         end else
-      If (Tk[T][1]='$') then begin
-         SetLength(E^.Tok,Length(E^.Tok)+1);
-         New(Tok); New(PS); Tok^.Typ:=TK_REFE; Tok^.Ptr:=PS; 
-         PS^:=Copy(Tk[T],2,Length(Tk[T]));
-         E^.Tok[High(E^.Tok)]:=Tok
-         end else
-      If (Tk[T][1]='=') then begin
-         SetLength(E^.Tok,Length(E^.Tok)+1);
-         CName:=Copy(Tk[T],2,Length(Tk[T]));
-         Try    V:=Cons^.GetVal(CName);
-         Except Fatal(Ln,'Unknown constant "'+CName+'".') end;
-         New(Tok); Tok^.Typ:=TK_CONS; Tok^.Ptr:=V;
-         E^.Tok[High(E^.Tok)]:=Tok
-         end else
-      If (Tk[T][1]='s') then begin
-         SetLength(E^.Tok,Length(E^.Tok)+1);
-         V:=NewVal(VT_STR,Copy(Tk[T],3,Length(Tk[T])-3));
-         New(Tok); Tok^.Typ:=TK_CONS; Tok^.Ptr:=V; V^.Tmp:=False;
-         E^.Tok[High(E^.Tok)]:=Tok
-         end else
-      If (Tk[T][1]='i') then begin
-         SetLength(E^.Tok,Length(E^.Tok)+1);
-         V:=NewVal(VT_INT,StrToInt(Copy(Tk[T],2,Length(Tk[T]))));
-         New(Tok); Tok^.Typ:=TK_CONS; Tok^.Ptr:=V; V^.Tmp:=False;
-         E^.Tok[High(E^.Tok)]:=Tok
-         end else
-      If (Tk[T][1]='h') then begin
-         SetLength(E^.Tok,Length(E^.Tok)+1);
-         V:=NewVal(VT_HEX,StrToHex(Copy(Tk[T],2,Length(Tk[T]))));
-         New(Tok); Tok^.Typ:=TK_CONS; Tok^.Ptr:=V; V^.Tmp:=False;
-         E^.Tok[High(E^.Tok)]:=Tok
-         end else
-      If (Tk[T][1]='o') then begin
-         SetLength(E^.Tok,Length(E^.Tok)+1);
-         V:=NewVal(VT_OCT,StrToOct(Copy(Tk[T],2,Length(Tk[T]))));
-         New(Tok); Tok^.Typ:=TK_CONS; Tok^.Ptr:=V; V^.Tmp:=False;
-         E^.Tok[High(E^.Tok)]:=Tok
-         end else
-      If (Tk[T][1]='b') then begin
-         SetLength(E^.Tok,Length(E^.Tok)+1);
-         V:=NewVal(VT_BIN,StrToBin(Copy(Tk[T],2,Length(Tk[T]))));
-         New(Tok); Tok^.Typ:=TK_CONS; Tok^.Ptr:=V; V^.Tmp:=False;
-         E^.Tok[High(E^.Tok)]:=Tok
-         end else
-      If (Tk[T][1]='l') then begin
-         SetLength(E^.Tok,Length(E^.Tok)+1);
-         V:=NewVal(VT_BOO,StrToBoolDef(Copy(Tk[T],2,Length(Tk[T])),False));
-         New(Tok); Tok^.Typ:=TK_CONS; Tok^.Ptr:=V; V^.Tmp:=False;
-         E^.Tok[High(E^.Tok)]:=Tok
-         end else
-      If (Tk[T][1]='f') then begin
-         SetLength(E^.Tok,Length(E^.Tok)+1);
-         V:=NewVal(VT_FLO,StrToReal(Copy(Tk[T],2,Length(Tk[T]))));
-         New(Tok); Tok^.Typ:=TK_CONS; Tok^.Ptr:=V; V^.Tmp:=False;
-         E^.Tok[High(E^.Tok)]:=Tok
          end else
       If (Tk[T][1]='(') then begin
          SetLength(E^.Tok,Length(E^.Tok)+1);
@@ -535,9 +567,39 @@ Function MakeExpr(Var Tk:Array of AnsiString;Ln,T:LongInt):PExpr;
             If (Tk[T][1]='(') then begin Nest+=1; T+=1 end else
             If (Tk[T][1]=')') then begin
                Nest-=1; If (Nest=0) then Break else T+=1
-               end else T+=1
+               end else T+=1;
+         If (Nest>0) then Writeln(StdErr,ExtractFileName(YukPath),'(',Ln,'): ',
+                                  'Error: Un-closed sub-expression. ("(" without a matching ")".)')
          end else
       If (Tk[T][1]=')') then begin
+         Exit(E)
+         end else
+      If (Tk[T][1]='[') then begin
+         If (Length(E^.Tok)=0) then
+            Fatal(Ln,'Array expression ("[") found, but previous token is not a variable name.');
+         otk:=E^.Tok[High(E^.Tok)];
+         If (otk^.Typ<>TK_VARI) and (otk^.Typ<>TK_REFE) then 
+            Fatal(Ln,'Array expression ("[") found, but previous token is not a variable name.');
+         Tok:=MakeToken(T+1);
+         If (Tok=NIL) then begin
+            sex:=MakeExpr(Tk,Ln,T+1);
+            New(Tok); Tok^.Typ:=TK_EXPR; Tok^.Ptr:=sex
+            end;
+         CName:=PStr(otk^.Ptr)^; Dispose(PStr(otk^.Ptr));
+         If (otk^.Typ = TK_REFE) then otk^.Typ := TK_AREF
+                                 else otk^.Typ := TK_AVAL;
+         New(atk); atk^.wat:=CName; atk^.Ind := Tok; otk^.Ptr := atk;
+         Nest:=0;
+         While (T<=High(Tk)) do 
+            If (Length(Tk[T])=0) then T+=1 else
+            If (Tk[T][1]='[') then begin Nest+=1; T+=1 end else
+            If (Tk[T][1]=']') then begin
+               Nest-=1; If (Nest=0) then Break else T+=1
+               end else T+=1;
+         If (Nest>0) then Writeln(StdErr,ExtractFileName(YukPath),'(',Ln,'): ',
+                                  'Error: Un-closed array expression. ("[" without a matching "]".)')
+         end else
+      If (Tk[T][1]=']') then begin
          Exit(E)
          end else
       If (Tk[T][1]=':') then begin
@@ -550,8 +612,13 @@ Function MakeExpr(Var Tk:Array of AnsiString;Ln,T:LongInt):PExpr;
       If (Tk[T][1]='!') then begin
          Fatal(Ln,'Language construct used as a sub-expression. ("'+Tk[T]+'").')
          end else begin
-         Writeln(StdErr,ExtractFileName(YukPath),'(',Ln,'): ',
-                       'Error: Invalid token ("',Tk[T],'").');
+         Tok:=MakeToken(T);
+         If (Tok<>NIL) then begin
+            SetLength(E^.Tok,Length(E^.Tok)+1);
+            E^.Tok[High(E^.Tok)]:=Tok
+            end else
+            Writeln(StdErr,ExtractFileName(YukPath),'(',Ln,'): ',
+                          'Error: Invalid token ("',Tk[T],'").')
          end;
       T+=1 end;
    Exit(E)
@@ -560,6 +627,10 @@ Function MakeExpr(Var Tk:Array of AnsiString;Ln,T:LongInt):PExpr;
 Function ProcessLine(L:AnsiString;N:LongWord):PExpr;
    Var Tk:Array of AnsiString; P:LongWord;
        Str:LongInt; Del:Char;
+   
+   Function BreakToken(Ch:Char):Boolean;
+      begin Exit(Pos(Ch,' (|)[#]')<>0) end;
+   
    begin
    SetLength(Tk,0); P:=1; Str:=0; Del:=#255;
    While (Length(L)>0) do begin
@@ -573,23 +644,40 @@ Function ProcessLine(L:AnsiString;N:LongWord):PExpr;
                end end
          end else
       If (Str<=0) then begin
-         If (P>Length(L)) or (L[P]=#32) or (L[P]='#') then begin
-            If (P>1) then begin
+         If (P>Length(L)) or (BreakToken(L[P])) then begin
+            //Writeln(StdErr,'Breaking line: "',L,'" at "',L[P],'".');
+            If (L[P]=' ') then begin
+               If (P>1) then begin
+                  SetLength(Tk,Length(Tk)+1);
+                  Tk[High(Tk)]:=Copy(L,1,P-1)
+                  end;
+               While (P<Length(L)) and (L[P+1]=#32) do P+=1;
+               Delete(L,1,P) 
+               end else 
+            If (L[P]='#') then begin //Comment character! 
+               If (P>1) then begin
+                  SetLength(Tk,Length(Tk)+1);
+                  Tk[High(Tk)]:=Copy(L,1,P-1)
+                  end;
+               If (Length(L)>P) and (L[P+1]='>') //begin of multi-line comment
+                  then begin Delete(L,1,P+1); mulico += 1 end 
+                  else L:='' {normal comment} end
+               else begin // paren
                SetLength(Tk,Length(Tk)+1);
-               Tk[High(Tk)]:=Copy(L,1,P-1);
+               If (P>1) then begin
+                  Tk[High(Tk)]:=Copy(L,1,P-1);
+                  Delete(L,1,P-1)
+                  end else begin
+                  Tk[High(Tk)]:=L[1];
+                  While (P<Length(L)) and (L[P+1]=#32) do P+=1;
+                  Delete(L,1,P)
+                  end;
                If (Tk[High(Tk)]='|') then begin
                   Tk[High(Tk)]:=')';
                   SetLength(Tk,Length(Tk)+1);
                   Tk[High(Tk)]:='('
                   end
                end;
-            If (L[P]<>'#') then begin
-               While (P<Length(L)) and (L[P+1]=#32) do P+=1;
-               Delete(L,1,P) 
-               end else //Comment character! 
-            If (Length(L)>P) and (L[P+1]='>') //begin of multi-line comment
-               then begin Delete(L,1,P+1); mulico += 1 end 
-               else L:=''; //normal comment
             P:=0; Str:=0
             end else
          If (Str=0) and (L[P]='s')
@@ -624,13 +712,16 @@ Function ProcessLine(L:AnsiString;N:LongWord):PExpr;
    end;
 
 Procedure ReadFile(I:PText);
-   Var L:AnsiString; A,N,E,P:LongWord; R:PExpr;
+   Var L:AnsiString; A,N,E,P:LongWord; R:PExpr; V:PValue;
    begin
    SetLength(Pr,1); N:=0; Proc:=0; ExLn:=0; mulico:=0;
    SetLength(Pr[0].Ar,0); SetLength(Pr[0].Ex,0); Pr[0].Nu:=0;
    SetLength(IfArr,0);  New(IfSta,Create());
    SetLength(WhiArr,0); New(WhiSta,Create());
    SetLength(RepArr,0); New(RepSta,Create());
+   V:=NewVal(VT_STR,ExpandFileName(YukPath)); V^.Tmp:=False; Cons^.SetVal('FILEPATH',V);
+   V:=NewVal(VT_STR,ExtractFileName(YukPath)); V^.Tmp:=False; Cons^.SetVal('FILENAME',V);
+   V:=NewVal(VT_STR,{$I %DATE%}+', '+{$I %TIME%}); V^.Tmp:=False; Cons^.SetVal('AWFULBUILD',V);
    While (Not Eof(I^)) do begin
       Readln(I^,L); N+=1;
       L:=Trim(L);
@@ -692,6 +783,7 @@ New(Func,Create('!','~'));
 Func^.SetVal('call',@F_Call);
 Func^.SetVal('return',@F_Return);
 Functions.Register(Func);
+YukSDL.Register(Func);
 
 SetLength(Vars,1); New(Vars[0],Create('!','~'));
 New(Cons,Create('!','~'));

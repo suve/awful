@@ -229,6 +229,7 @@ Function ValToInt(V:PValue):PValue;
       VT_FLO: P^:=Trunc(PFloat(V^.Ptr)^);
       VT_BOO: If (PBoolean(V^.Ptr)^ = TRUE) then P^:=1 else P^:=0;
       VT_STR: P^:=StrToInt(PStr(V^.Ptr)^);
+      VT_REC: P^:=PValTrie(V^.Ptr)^.Count;
       else P^:=0;
       end;
    Exit(R)
@@ -246,6 +247,7 @@ Function ValToHex(V:PValue):PValue;
       VT_FLO: P^:=Trunc(PFloat(V^.Ptr)^);
       VT_BOO: If (PBoolean(V^.Ptr)^ = TRUE) then P^:=1 else P^:=0;
       VT_STR: P^:=StrToHex(PStr(V^.Ptr)^);
+      VT_REC: P^:=PValTrie(V^.Ptr)^.Count;
       else P^:=0;
       end;
    Exit(R)
@@ -263,6 +265,7 @@ Function ValToOct(V:PValue):PValue;
       VT_FLO: P^:=Trunc(PFloat(V^.Ptr)^);
       VT_BOO: If (PBoolean(V^.Ptr)^ = TRUE) then P^:=1 else P^:=0;
       VT_STR: P^:=StrToOct(PStr(V^.Ptr)^);
+      VT_REC: P^:=PValTrie(V^.Ptr)^.Count;
       else P^:=0;
       end;
    Exit(R)
@@ -280,6 +283,7 @@ Function ValToBin(V:PValue):PValue;
       VT_FLO: P^:=Trunc(PFloat(V^.Ptr)^);
       VT_BOO: If (PBoolean(V^.Ptr)^ = TRUE) then P^:=1 else P^:=0;
       VT_STR: P^:=StrToBin(PStr(V^.Ptr)^);
+      VT_REC: P^:=PValTrie(V^.Ptr)^.Count;
       else P^:=0;
       end;
    Exit(R)
@@ -297,6 +301,7 @@ Function ValToFlo(V:PValue):PValue;
       VT_FLO: P^:=PFloat(V^.Ptr)^;
       VT_BOO: If (PBoolean(V^.Ptr)^ = TRUE) then P^:=1 else P^:=0;
       VT_STR: P^:=StrToReal(PStr(V^.Ptr)^);
+      VT_REC: P^:=PValTrie(V^.Ptr)^.Count;
       else P^:=0;
       end;
    Exit(R)
@@ -314,6 +319,7 @@ Function ValToBoo(V:PValue):PValue;
       VT_FLO: P^:=(PFloat(V^.Ptr)^)<>0;
       VT_BOO: P^:=PBoolean(V^.Ptr)^;
       VT_STR: P^:=StrToBoolDef(PStr(V^.Ptr)^,FALSE);
+      VT_REC: P^:=Not PValTrie(V^.Ptr)^.Empty();
       else P^:=False;
       end;
    Exit(R)
@@ -332,6 +338,7 @@ Function ValToStr(V:PValue):PValue;
       VT_BOO: If (PBoolean(V^.Ptr)^ = TRUE)
                  then P^:='TRUE' else P^:='FALSE';
       VT_STR: P^:=PStr(V^.Ptr)^;
+      VT_REC: P^:=IntToStr(PValTrie(V^.Ptr)^.Count);
       else P^:='';
       end;
    Exit(R)
@@ -339,6 +346,7 @@ Function ValToStr(V:PValue):PValue;
 
 Function ValSet(A,B:PValue):PValue;
    Var R:PValue; I:PQInt; S:PStr; L:PBoolean; D:PFloat;
+       T,AT,BT:PValTrie; V,oV:PValue; K:TStr;
    begin
    New(R); R^.Typ:=A^.Typ; R^.Tmp:=True;
    If (A^.Typ = VT_NIL) then begin 
@@ -352,6 +360,8 @@ Function ValSet(A,B:PValue):PValue;
          then (I^):=Trunc((I^)+(PFloat(B^.Ptr)^)) else
       If (B^.Typ = VT_STR)
          then (I^):=StrToNum(PStr(B^.Ptr)^,A^.Typ) else
+      If (B^.Typ = VT_REC)
+         then (I^):=PValTrie(B^.Ptr)^.Count else
       If (B^.Typ = VT_BOO)
          then If (PBoolean(B^.Ptr)^) then (I^):=1
       end else
@@ -363,6 +373,8 @@ Function ValSet(A,B:PValue):PValue;
          then (D^):=PFloat(B^.Ptr)^ else
       If (B^.Typ = VT_STR)
          then (D^):=StrToReal(PStr(B^.Ptr)^) else
+      If (B^.Typ = VT_REC)
+         then (D^):=PValTrie(B^.Ptr)^.Count else
       If (B^.Typ = VT_BOO)
          then If (PBoolean(B^.Ptr)^) then (D^):=1
       end else
@@ -380,6 +392,8 @@ Function ValSet(A,B:PValue):PValue;
          then (S^):=RealToStr(PFloat(B^.Ptr)^,RealPrec) else
       If (B^.Typ = VT_STR)
          then (S^):=(PStr(B^.Ptr)^) else
+      If (B^.Typ = VT_REC)
+         then (S^):=IntToStr(PValTrie(B^.Ptr)^.Count) else
       If (B^.Typ = VT_BOO)
          then If (PBoolean(B^.Ptr)^) then (S^):='TRUE' else (S^):='FALSE'
       end else
@@ -391,8 +405,44 @@ Function ValSet(A,B:PValue):PValue;
          then (L^):=(PFloat(B^.Ptr)^<>0) else
       If (B^.Typ = VT_STR)
          then (L^):=StrToBoolDef(PStr(B^.Ptr)^,FALSE) else
+      If (B^.Typ = VT_REC)
+         then (L^):=(Not PValTrie(B^.Ptr)^.Empty) else
       If (B^.Typ = VT_BOO)
          then (L^):=(PBoolean(B^.Ptr)^)
+      end else
+   If (A^.Typ = VT_REC) then begin
+      New(T,Create('!','~')); R^.Ptr:=T;
+      AT:=PValTrie(A^.Ptr);
+      If (AT^.IsVal('')) then begin
+         V:=CopyVal(AT^.GetVal('')); V^.Tmp:=False;
+         T^.SetVal('',V) end;
+      K:=AT^.NextKey('');
+      While (K<>'') do begin
+         V:=CopyVal(AT^.GetVal(K)); V^.Tmp:=False;
+         T^.SetVal(K,V);
+         K:=AT^.NextKey(K) end;
+      If (B^.Typ = VT_REC) then begin
+         BT:=PValTrie(B^.Ptr);
+         If (BT^.IsVal('')) then begin
+            If (T^.IsVal('')) then begin
+               oV:=AT^.GetVal('');
+               V:=ValSet(oV,BT^.GetVal(''));
+               FreeVal(oV); AT^.RemVal('')
+               end else V:=CopyVal(BT^.GetVal(''));
+            V^.Tmp:=False; T^.SetVal('',V) end;
+         K:=BT^.NextKey('');
+         While (K<>'') do begin
+            If (T^.IsVal(K)) then begin
+               oV:=AT^.GetVal(K);
+               V:=ValSet(oV,BT^.GetVal(K));
+               FreeVal(oV); AT^.RemVal(K)
+               end else V:=CopyVal(BT^.GetVal(K));
+            V^.Tmp:=False; T^.SetVal(K,V);
+            K:=BT^.NextKey(K) end;
+         //Writeln('ValSet: count(A)=',AT^.Count,'; count(B)=',BT^.Count,'; count(R)=',T^.Count);
+         end else begin
+         V:=CopyVal(B); T^.SetVal('0',V)
+         end
       end;
    Exit(R)
    end;
@@ -1070,7 +1120,7 @@ Procedure FreeVal(Var Val:PValue);
       VT_STR: Dispose(PAnsiString(Val^.Ptr));
       VT_REC: begin
               T:=PValTrie(Val^.Ptr);
-              While (Not T^.Empty()) do begin
+              While Not (T^.Empty()) do begin
                  V:=T^.GetVal();
                  FreeVal(V);
                  T^.RemVal()
@@ -1082,18 +1132,19 @@ Procedure FreeVal(Var Val:PValue);
    end;
 
 Function  EmptyVal(T:TValueType):PValue;
-   Var R:PValue; I:PQInt; S:PStr; D:PFloat; B:PBoolean;
+   Var R:PValue; I:PQInt; S:PStr; D:PFloat; B:PBoolean; A:PValTrie;
    begin
    New(R); R^.Tmp:=True; R^.Typ:=T;
    Case T of 
       VT_NIL: R^.Ptr := NIL;
-      VT_INT: begin New(I); (I^):=0;     R^.Ptr:=I end;
-      VT_HEX: begin New(I); (I^):=0;     R^.Ptr:=I end;
-      VT_OCT: begin New(I); (I^):=0;     R^.Ptr:=I end;
-      VT_BIN: begin New(I); (I^):=0;     R^.Ptr:=I end;
-      VT_FLO: begin New(D); (D^):=0.0;   R^.Ptr:=D end;
-      VT_STR: begin New(S); (S^):='';    R^.Ptr:=S end;
-      VT_BOO: begin New(B); (B^):=False; R^.Ptr:=B end;
+      VT_INT: begin New(I); (I^):=0;        R^.Ptr:=I end;
+      VT_HEX: begin New(I); (I^):=0;        R^.Ptr:=I end;
+      VT_OCT: begin New(I); (I^):=0;        R^.Ptr:=I end;
+      VT_BIN: begin New(I); (I^):=0;        R^.Ptr:=I end;
+      VT_FLO: begin New(D); (D^):=0.0;      R^.Ptr:=D end;
+      VT_STR: begin New(S); (S^):='';       R^.Ptr:=S end;
+      VT_BOO: begin New(B); (B^):=False;    R^.Ptr:=B end;
+      VT_REC: begin New(A,Create('!','~')); R^.Ptr:=A end;
       else R^.Ptr:=NIL
       end;
    Exit(R)
@@ -1104,6 +1155,7 @@ Function  CopyTyp(V:PValue):PValue;
 
 Function  CopyVal(V:PValue):PValue;
    Var R:PValue; I:PQInt; S:PStr; D:PFloat; B:PBoolean;
+       NT,OT:PValTrie; C:PValue; K:TStr;
    begin
    New(R); R^.Tmp:=True; R^.Typ:=V^.Typ;
    Case V^.Typ of 
@@ -1114,6 +1166,17 @@ Function  CopyVal(V:PValue):PValue;
       VT_FLO: begin New(D); (D^):=PFloat(V^.Ptr)^; R^.Ptr:=D end;
       VT_STR: begin New(S); (S^):=PStr(V^.Ptr)^; R^.Ptr:=S end;
       VT_BOO: begin New(B); (B^):=PBool(V^.Ptr)^; R^.Ptr:=B end;
+      VT_REC: begin
+              New(NT,Create('!','~')); R^.Ptr:=NT; OT:=PValTrie(V^.Ptr);
+              If (OT^.IsVal('')) then begin
+                 C:=CopyVal(OT^.GetVal('')); C^.Tmp:=False;
+                 NT^.SetVal('',C) end;
+              K:=OT^.NextKey('');
+              While (K<>'') do begin
+                 C:=CopyVal(OT^.GetVal(K)); C^.Tmp:=False;
+                 NT^.SetVal(K,C);
+                 K:=OT^.NextKey(K) end
+              end;
       else R^.Ptr:=NIL
       end;
    Exit(R)
@@ -1159,7 +1222,7 @@ Function NewVal(T:TValueType):PValue;
    Var R:PValue; P:PValTrie;
    begin
    If (T<>VT_REC) then Exit(NilVal);
-   New(R); R^.Typ:=VT_REC; New(P,Create('A','z'));
+   New(R); R^.Typ:=VT_REC; New(P,Create('!','~'));
    R^.Ptr:=P; R^.Tmp:=True;
    Exit(R)
    end;

@@ -18,7 +18,7 @@ Function F_FileName(Arg:Array of PValue):PValue;
 
 Function F_Sleep(Arg:Array of PValue):PValue;
 Function F_Ticks(Arg:Array of PValue):PValue;
-Function F_ScrTicks(Arg:Array of PValue):PValue;
+Function F_FileTicks(Arg:Array of PValue):PValue;
 
 Function F_Write(Arg:Array of PValue):PValue;
 Function F_Writeln(Arg:Array of PValue):PValue;
@@ -87,7 +87,7 @@ Function F_DelStr(Arg:Array of PValue):PValue;
 Function F_Doctype(Arg:Array of PValue):PValue;
 
 Function F_DateTime_Start(Arg:Array of PValue):PValue;
-Function F_DateTime_ScrStart(Arg:Array of PValue):PValue;
+Function F_DateTime_FileStart(Arg:Array of PValue):PValue;
 Function F_DateTime_Now(Arg:Array of PValue):PValue;
 Function F_DateTime_Date(Arg:Array of PValue):PValue;
 Function F_DateTime_Time(Arg:Array of PValue):PValue;
@@ -101,6 +101,7 @@ Function F_DateTime_DOW(Arg:Array of PValue):PValue;
 Function F_DateTime_Hour(Arg:Array of PValue):PValue;
 Function F_DateTime_Min(Arg:Array of PValue):PValue;
 Function F_DateTime_Sec(Arg:Array of PValue):PValue;
+Function F_DateTime_MS(Arg:Array of PValue):PValue;
 Function F_DateTime_String(Arg:Array of PValue):PValue;
 
 Function F_mkint(Arg:Array of PValue):PValue;
@@ -116,6 +117,11 @@ Function F_fork(Arg:Array of PValue):PValue;
 Function F_random(Arg:Array of PValue):PValue;
 
 Function F_sizeof(Arg:Array of PValue):PValue;
+
+Function F_array(Arg:Array of PValue):PValue;
+Function F_array_count(Arg:Array of PValue):PValue;
+Function F_array_nextkey(Arg:Array of PValue):PValue;
+Function F_array_flush(Arg:Array of PValue):PValue;
 
 implementation
    uses Math, SysUtils {$IFDEF LINUX}, Unix, Linux{$ENDIF};
@@ -135,6 +141,7 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('',@F_); FT^.SetVal('nil',@F_);
    FT^.SetVal('sleep',@F_Sleep);
    FT^.SetVal('ticks',@F_Ticks);
+   FT^.SetVal('fileticks',@F_FileTicks);
    FT^.SetVal('filename',@F_FileName);
    FT^.SetVal('filepath',@F_FilePath);
    FT^.SetVal('write',@F_Write);
@@ -195,7 +202,7 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('delstr',@F_DelStr);
    FT^.SetVal('doctype',@F_Doctype);
    FT^.SetVal('datetime-start',@F_DateTime_Start);
-   FT^.SetVal('datetime-scrstart',@F_DateTime_ScrStart);
+   FT^.SetVal('datetime-filestart',@F_DateTime_FileStart);
    FT^.SetVal('datetime-now',@F_DateTime_Now);
    FT^.SetVal('datetime-date',@F_DateTime_Date);
    FT^.SetVal('datetime-time',@F_DateTime_Time);
@@ -209,6 +216,7 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('datetime-hour',@F_DateTime_Hour);
    FT^.SetVal('datetime-min',@F_DateTime_Min);
    FT^.SetVal('datetime-sec',@F_DateTime_Sec);
+   FT^.SetVal('datetime-ms',@F_DateTime_MS);
    FT^.SetVal('datetime-string',@F_DateTime_String);
    FT^.SetVal('mkint',@F_mkint);
    FT^.SetVal('mkhex',@F_mkhex);
@@ -220,6 +228,12 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('fork',@F_fork);
    FT^.SetVal('random',@F_random);
    FT^.SetVal('sizeof',@F_sizeof);
+   // array functions, bitches!
+   FT^.SetVal('array',@F_array);
+   FT^.SetVal('array-count',@F_array_count);
+   FT^.SetVal('array-empty',@F_array_count);
+   FT^.SetVal('array-nextkey',@F_array_nextkey);
+   FT^.SetVal('array-flush',@F_array_flush);
    end;
 
 Function F_(Arg:Array of PValue):PValue;
@@ -259,7 +273,7 @@ Function F_Ticks(Arg:Array of PValue):PValue;
    Exit(NewVal(VT_INT,Trunc(TS-GLOB_ms)))
    end;
 
-Function F_ScrTicks(Arg:Array of PValue):PValue;
+Function F_FileTicks(Arg:Array of PValue):PValue;
    Var C:LongWord; TS:Comp;
    begin
    If (Length(Arg)>0) then
@@ -296,7 +310,8 @@ Function F_Sleep(Arg:Array of PValue):PValue;
    end;
 
 Function F_Write(Arg:Array of PValue):PValue;
-   Var C:LongWord;
+   Var C,I:LongWord; S:AnsiString; T:PValTrie;
+       AV:Array of PValue; V:PValue;
    begin
    If (Length(Arg)=0) then Exit(NewVal(VT_STR,''));
    For C:=Low(Arg) to High(Arg) do begin
@@ -309,6 +324,27 @@ Function F_Write(Arg:Array of PValue):PValue;
           VT_FLO: Write(PFloat(Arg[C]^.Ptr)^:0:RealPrec);
           VT_BOO: Write(PBoolean(Arg[C]^.Ptr)^);
           VT_STR: Write(PAnsiString(Arg[C]^.Ptr)^);
+          VT_REC: begin
+                  T:=PValTrie(Arg[C]^.Ptr);
+                  If (T^.IsVal('')) then begin
+                     SetLength(AV,2); 
+                     AV[0]:=NewVal(VT_STR,'array([]=');
+                     AV[1]:=T^.GetVal('') end;
+                  S:=T^.NextKey('');
+                  While (S<>'') do begin
+                     SetLength(AV,Length(AV)+2);
+                     If (Length(AV)>2) 
+                        then AV[High(AV)-1]:=NewVal(VT_STR,', ['+S+']=')
+                        else AV[High(AV)-1]:=NewVal(VT_STR,'array(['+S+']=');
+                     AV[High(AV)]:=T^.GetVal(S);
+                     S:=T^.NextKey(S) end;
+                  SetLength(AV,Length(AV)+1);
+                  If (Length(AV)>1)
+                     then AV[High(AV)]:=NewVal(VT_STR,')')
+                     else AV[High(AV)]:=NewVal(VT_STR,'array()');
+                  V:=F_Write(AV); FreeVal(V);
+                  SetLength(AV,0)
+                  end
           else Write('(',Arg[C]^.Typ,')');
           end;
        If (Arg[C]^.Tmp) then FreeVal(Arg[C])
@@ -1242,7 +1278,7 @@ Function F_DateTime_Start(Arg:Array of PValue):PValue;
    Exit(NewVal(VT_FLO,GLOB_dt))
    end;
 
-Function F_DateTime_ScrStart(Arg:Array of PValue):PValue;
+Function F_DateTime_FileStart(Arg:Array of PValue):PValue;
    Var C:LongWord;
    begin
    If (Length(Arg)>0) then
@@ -1486,6 +1522,24 @@ Function F_DateTime_Sec(Arg:Array of PValue):PValue;
    If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
    DecodeTime(dt,H,M,S,MS);
    Exit(NewVal(VT_INT,S))
+   end;
+
+Function F_DateTime_ms(Arg:Array of PValue):PValue;
+   Var C:LongWord; V:PValue; dt:TDateTime; H,M,S,MS:Word;
+   begin
+   If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
+   For C:=High(Arg) downto 1 do
+      If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+   If (Arg[0]^.Typ = VT_FLO)
+      then dt:=(PFloat(Arg[0]^.Ptr)^)
+      else begin
+      V:=ValToFlo(Arg[0]);
+      dt:=(PFloat(V^.Ptr)^);
+      FreeVal(V)
+      end;
+   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   DecodeTime(dt,H,M,S,MS);
+   Exit(NewVal(VT_INT,MS))
    end;
 
 Function dtf(S:AnsiString):AnsiString;
@@ -1965,6 +2019,87 @@ Function F_sizeof(Arg:Array of PValue):PValue;
       (* else *) C:=0;
    If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
    Exit(NewVal(VT_INT,C*8))
+   end;
+
+Function F_array(Arg:Array of PValue):PValue;
+   Var C:LongWord; T:PValTrie; K:AnsiString; A,V:PValue;
+   begin
+   A:=EmptyVal(VT_REC); T:=PValTrie(A^.Ptr);
+   If (Length(Arg)>0) then
+      For C:=Low(Arg) to High(Arg) do begin
+          K:=IntToStr(C);
+          If (Arg[C]^.Tmp) then begin
+             Arg[C]^.Tmp:=False; V:=Arg[C]
+             end else
+             V:=CopyVal(Arg[C]);
+          T^.SetVal(K,V)
+          end;
+   Exit(A)
+   end;
+
+Function F_array_count(Arg:Array of PValue):PValue;
+   Var C,R:LongWord; T:PValTrie;
+   begin R:=0;
+   If (Length(Arg)>0) then
+      For C:=High(Arg) downto Low(Arg) do begin
+          If (Arg[C]^.Typ = VT_REC) then begin
+             T:=PValTrie(Arg[C]^.Ptr);
+             R+=T^.Count end;
+          If (Arg[C]^.Tmp) then FreeVal(Arg[C])
+          end;
+   Exit(NewVal(VT_INT,R))
+   end;
+
+Function F_array_empty(Arg:Array of PValue):PValue;
+   Var C,R:LongWord; T:PValTrie; B:Boolean;
+   begin R:=0; B:=False;
+   If (Length(Arg)>0) then
+      For C:=High(Arg) downto Low(Arg) do begin
+          If (Arg[C]^.Typ = VT_REC) then begin
+             T:=PValTrie(Arg[C]^.Ptr);
+             B:=B or (Not T^.Empty) end;
+          If (Arg[C]^.Tmp) then FreeVal(Arg[C])
+          end;
+   Exit(NewVal(VT_BOO,B))
+   end;
+
+Function F_array_nextkey(Arg:Array of PValue):PValue;
+   Var C:LongWord; T:PValTrie; K:AnsiString; V:PValue;
+   begin
+   If (Length(Arg)>=3) then
+      For C:=High(Arg) downto 2 do
+          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+   If (Length(Arg)>=2) then begin
+      If (Arg[1]^.Typ = VT_STR) then K:=PStr(Arg[1]^.Ptr)^
+         else begin
+         V:=ValToStr(Arg[1]); K:=PStr(V^.Ptr)^;
+         FreeVal(V) end;
+      If (Arg[1]^.Tmp) then FreeVal(Arg[1])
+      end else K:='';
+   If (Length(Arg)>=1) then begin
+      If (Arg[0]^.Typ <> VT_REC) then begin
+         If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+         Exit(NilVal()) end;
+      T:=PValTrie(Arg[0]^.Ptr); K:=T^.NextKey(K);
+      If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+      Exit(NewVal(VT_STR,K))
+      end;
+   Exit(NilVal())
+   end;
+
+Function F_array_flush(Arg:Array of PValue):PValue;
+   Var C,I:LongWord; T:PValTrie; V:PValue;
+   begin I:=0;
+   If (Length(Arg)>0) then
+      For C:=High(Arg) downto Low(Arg) do begin
+          If (Arg[C]^.Typ = VT_REC) then begin
+             T:=PValTrie(Arg[C]^.Ptr); 
+             While (Not T^.Empty()) do begin
+                V:=T^.RemVal(); FreeVal(V); I+=1
+             end end;
+          If (Arg[C]^.Tmp) then FreeVal(Arg[C])
+          end;
+   Exit(NewVal(VT_INT,I))
    end;
 
 end.

@@ -39,6 +39,8 @@ Type ExNotSet = class(Exception);
         Function  IsVal(Const K:AnsiString;P:LongWord;N:PNode):Boolean;
         Function  GetVal(Const K:AnsiString;P:LongWord;N:PNode):Tp;
         
+        Function  NextKey(N:PNode;K:AnsiString;Var R:AnsiString):Boolean;
+        
         Function  GetVal(N:PNode):Tp;
         Function  RemVal(N:PNode):Tp;
         Procedure FreeNode(N:PNode);
@@ -51,6 +53,8 @@ Type ExNotSet = class(Exception);
         
         Function  GetVal():Tp;
         Function  RemVal():Tp;
+        
+        Function  NextKey(K:AnsiString):AnsiString;
         
         Function Empty() : Boolean;
         Property Count   : LongWord read Vals;
@@ -186,6 +190,35 @@ Function GenericTrie.RemVal(N:PNode):Tp;
 
 Function GenericTrie.RemVal():Tp;
    begin Exit(RemVal(Root)) end;
+
+Function GenericTrie.NextKey(N:PNode;K:AnsiString;Var R:AnsiString):Boolean;
+   Var C,I,S:LongWord;
+   begin
+   If (N^.Chi = 0) then Exit(False);
+   If (Length(K)>0) then begin
+      I:=Ord(K[1])-Self.Min; Delete(K,1,1);
+      If (N^.Nxt[I]<>NIL) then begin
+         If (NextKey(N^.Nxt[I],K,R)) then begin
+            R:=Chr(Self.Min+I)+R; Exit(True)
+         end end;
+      S:=(I+1) 
+      end else S:=Low(N^.Nxt);
+   For C:=S to High(N^.Nxt) do
+       If (N^.Nxt[C]<>NIL) then
+          If (N^.Nxt[C]^.Val<>NIL)
+             then begin 
+             R:=Chr(Self.Min+C)+R; Exit(True)
+             end else begin
+             If (NextKey(N^.Nxt[C],'',R)) then begin
+                R:=Chr(Self.Min+C)+R; Exit(True)
+             end end;
+   Exit(False)
+   end;
+
+Function GenericTrie.NextKey(K:AnsiString):AnsiString;
+   Var R:AnsiString;
+   begin R:='';
+   If NextKey(Root,K,R) then Exit(R) else Exit('') end;
 
 Procedure GenericTrie.FreeNode(N:PNode);
    Var I:LongWord;
