@@ -61,6 +61,7 @@ Var Func : PFunTrie;
     RepArr, WhiArr : Array of TLoop;
     IfSta, RepSta, WhiSta : PLIS;
     UsrFun : PNumTrie;
+    DoExit : Boolean;
 
 Var YukFile : Text; YukNum:LongWord;
     Pr : Array of TProc;
@@ -151,12 +152,13 @@ Function RunFunc(P:LongWord):PValue;
    begin
    If (Pr[P].Nu = 0) then Exit(NilVal);
    Proc:=P; ExLn:=0;
-   While (True) do begin
+   While (Not DoExit) do begin
       R:=Eval(Pr[P].Ex[ExLn]); ExLn+=1;
       If (ExLn < Pr[P].Nu)
          then FreeVal(R)
          else Exit(R)
-      end
+      end;
+   Exit(NilVal())
    end;
 
 Function F_If(Arg:Array of PValue):PValue;
@@ -250,10 +252,22 @@ Function F_Return(Arg:Array of PValue):PValue;
    If (Length(Arg)>1) then
       For C:=Low(Arg)+1 to High(Arg) do
           If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
-   If (Not Arg[0]^.Tmp)
-      then R:=CopyVal(Arg[0]) else R:=Arg[0];
+   If (Length(Arg)>0) then 
+      If (Not Arg[0]^.Tmp)
+         then R:=CopyVal(Arg[0]) else R:=Arg[0]
+      else R:=NilVal();
    ExLn:=Pr[Proc].Nu;
    Exit(R)
+   end;
+
+Function F_Exit(Arg:Array of PValue):PValue;
+   Var C:LongWord;
+   begin
+   If (Length(Arg)>0) then
+      For C:=Low(Arg) to High(Arg) do
+          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+   ExLn:=Pr[Proc].Nu; DoExit:=True;
+   Exit(NilVal())
    end;
 
 Function F_AutoCall(Arg:Array of PValue):PValue;
@@ -392,7 +406,7 @@ Function MakeExpr(Var Tk:Array of AnsiString;Ln,T:LongInt):PExpr;
       end;
    
    Var E:PExpr; FPtr:PFunc; sex:PExpr; A:LongWord;
-       Tok,otk:PToken; V:PValue; PS:PStr; atk : PArrTk;
+       Tok,otk:PToken; V:PValue; {PS:PStr;} atk : PArrTk;
        Nest:LongWord; CName:TStr;
    begin New(E); 
    If (Tk[T][1]=':') then begin
@@ -442,7 +456,7 @@ Function MakeExpr(Var Tk:Array of AnsiString;Ln,T:LongInt):PExpr;
          If (WhiSta^.Empty()) then Fatal(Ln,'!done without corresponding !while.');
          A:=WhiSta^.Pop();
          WhiArr[A][2]:=ExLn;
-         Tk[T]:='i'+IntToStr(High(WhiArr)); T-=1;
+         Tk[T]:='i'+IntToStr(A); T-=1;
          FPtr:=@(F_Done)
          end else
       If (Tk[T]='!repeat') then begin
@@ -458,7 +472,7 @@ Function MakeExpr(Var Tk:Array of AnsiString;Ln,T:LongInt):PExpr;
          If (RepSta^.Empty()) then Fatal(Ln,'!until without corresponding !repeat.');
          A:=RepSta^.Pop();
          RepArr[A][2]:=ExLn;
-         Tk[T]:='i'+IntToStr(High(RepArr)); T-=1;
+         Tk[T]:='i'+IntToStr(A); T-=1;
          FPtr:=@(F_Until)
          end else
       If (Tk[T]='!const') then begin
@@ -578,7 +592,7 @@ Function MakeExpr(Var Tk:Array of AnsiString;Ln,T:LongInt):PExpr;
          If (Length(E^.Tok)=0) then
             Fatal(Ln,'Array expression ("[") found, but previous token is not a variable name.');
          otk:=E^.Tok[High(E^.Tok)];
-         If (otk^.Typ<>TK_VARI) and (otk^.Typ<>TK_REFE) then 
+         If (otk^.Typ<>TK_VARI) and (otk^.Typ<>TK_REFE){ and (otk^.Typ<>TK_AREF) and (otk^.Typ<>TK_AVAL)} then 
             Fatal(Ln,'Array expression ("[") found, but previous token is not a variable name.');
          Tok:=MakeToken(T+1);
          If (Tok=NIL) then begin
@@ -586,8 +600,10 @@ Function MakeExpr(Var Tk:Array of AnsiString;Ln,T:LongInt):PExpr;
             New(Tok); Tok^.Typ:=TK_EXPR; Tok^.Ptr:=sex
             end;
          CName:=PStr(otk^.Ptr)^; Dispose(PStr(otk^.Ptr));
-         If (otk^.Typ = TK_REFE) then otk^.Typ := TK_AREF
-                                 else otk^.Typ := TK_AVAL;
+         If (otk^.Typ <> TK_AREF) and (otk^.Typ <> TK_AVAL) then begin
+            If (otk^.Typ = TK_REFE) then otk^.Typ := TK_AREF
+                                    else otk^.Typ := TK_AVAL
+            end;
          New(atk); atk^.wat:=CName; atk^.Ind := Tok; otk^.Ptr := atk;
          Nest:=0;
          While (T<=High(Tk)) do 
@@ -765,9 +781,11 @@ Procedure ReadFile(I:PText);
 Procedure Run();
    Var R:PValue;
    begin
-   GLOB_sdt:=Now(); GLOB_sms:=TimeStampToMSecs(DateTimeToTimeStamp(GLOB_sdt));
-   R:=RunFunc(0);
-   FreeVal(R)
+   DoExit:=False;
+   GLOB_sdt:=Now();
+   GLOB_sms:=TimeStampToMSecs(DateTimeToTimeStamp(GLOB_sdt));
+   
+   R:=RunFunc(0); FreeVal(R)
    end;
 
 Procedure Cleanup();
@@ -782,6 +800,7 @@ IfSta:=NIL; RepSta:=NIL; WhiSta:=NIL; Randomize();
 New(Func,Create('!','~'));
 Func^.SetVal('call',@F_Call);
 Func^.SetVal('return',@F_Return);
+Func^.SetVal('exit',@F_Exit);
 Functions.Register(Func);
 YukSDL.Register(Func);
 

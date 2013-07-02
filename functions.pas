@@ -31,6 +31,11 @@ Function F_Div(Arg:Array of PValue):PValue;
 Function F_Mod(Arg:Array of PValue):PValue;
 Function F_Pow(Arg:Array of PValue):PValue;
 
+Function F_And(Arg:Array of PValue):PValue;
+Function F_Or(Arg:Array of PValue):PValue;
+Function F_Xor(Arg:Array of PValue):PValue;
+Function F_Not(Arg:Array of PValue):PValue;
+
 Function F_Eq(Arg:Array of PValue):PValue;
 Function F_Seq(Arg:Array of PValue):PValue;
 Function F_Neq(Arg:Array of PValue):PValue;
@@ -120,8 +125,10 @@ Function F_sizeof(Arg:Array of PValue):PValue;
 
 Function F_array(Arg:Array of PValue):PValue;
 Function F_array_count(Arg:Array of PValue):PValue;
+Function F_array_empty(Arg:Array of PValue):PValue;
 Function F_array_nextkey(Arg:Array of PValue):PValue;
 Function F_array_flush(Arg:Array of PValue):PValue;
+Function F_array_values(Arg:Array of PValue):PValue;
 
 implementation
    uses Math, SysUtils {$IFDEF LINUX}, Unix, Linux{$ENDIF};
@@ -161,6 +168,10 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('ge',@F_ge);     FT^.SetVal('>=',@F_Ge);
    FT^.SetVal('lt',@F_lt);     FT^.SetVal('<',@F_Lt);
    FT^.SetVal('le',@F_le);     FT^.SetVal('<=',@F_Le);
+   FT^.SetVal('not',@F_not);   FT^.SetVal('!',@F_Not);
+   FT^.SetVal('and',@F_and);   FT^.SetVal('&&',@F_and);
+   FT^.SetVal('xor',@F_xor);   FT^.SetVal('^^',@F_xor);
+   FT^.SetVal('or' ,@F_or);    FT^.SetVal('||',@F_or);
    FT^.SetVal('floatprec',@F_SetPrecision);
    FT^.SetVal('perc',@F_Perc);
    FT^.SetVal('sqrt',@F_sqrt);
@@ -231,9 +242,10 @@ Procedure Register(FT:PFunTrie);
    // array functions, bitches!
    FT^.SetVal('array',@F_array);
    FT^.SetVal('array-count',@F_array_count);
-   FT^.SetVal('array-empty',@F_array_count);
+   FT^.SetVal('array-empty',@F_array_empty);
    FT^.SetVal('array-nextkey',@F_array_nextkey);
    FT^.SetVal('array-flush',@F_array_flush);
+   FT^.SetVal('array-values',@F_array_values);
    end;
 
 Function F_(Arg:Array of PValue):PValue;
@@ -498,6 +510,66 @@ Function F_Pow(Arg:Array of PValue):PValue;
    If (Arg[0]^.Tmp) then R:=Arg[0]
                     else R:=CopyVal(Arg[0]);
    Exit(R)
+   end;
+
+Function F_Not(Arg:Array of PValue):PValue;
+   Var C:LongWord; B:Boolean; V:PValue;
+   begin
+   If (Length(Arg)=0) then Exit(NewVal(VT_BOO,True));
+   If (Length(Arg)>1) then 
+       For C:=High(Arg) downto 1 do
+          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+   If (Arg[0]^.Typ = VT_BOO) then B:=PBool(Arg[0]^.Ptr)^
+      else begin
+      V:=ValToBoo(Arg[0]); B:=PBool(V^.Ptr)^; FreeVal(V)
+      end;
+   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   Exit(NewVal(VT_BOO,Not B))
+   end;
+
+Function F_And(Arg:Array of PValue):PValue;
+   Var C:LongWord; B:Boolean; V:PValue;
+   begin B:=True;
+   If (Length(Arg)=0) then Exit(NewVal(VT_BOO,False));
+   If (Length(Arg)>1) then 
+      For C:=High(Arg) downto 1 do begin
+          If (Arg[C]^.Typ = VT_BOO) then B:=B and (PBool(Arg[C]^.Ptr)^)
+             else begin
+             V:=ValToBoo(Arg[C]); B:=B and (PBool(Arg[C]^.Ptr)^); FreeVal(V)
+             end;
+          If (Arg[C]^.Tmp) then FreeVal(Arg[C])
+          end;
+   Exit(NewVal(VT_BOO,B))
+   end;
+
+Function F_Xor(Arg:Array of PValue):PValue;
+   Var C:LongWord; B:Boolean; V:PValue;
+   begin B:=False;
+   If (Length(Arg)=0) then Exit(NewVal(VT_BOO,False));
+   If (Length(Arg)>1) then 
+      For C:=High(Arg) downto 1 do begin
+          If (Arg[C]^.Typ = VT_BOO) then B:=B xor (PBool(Arg[C]^.Ptr)^)
+             else begin
+             V:=ValToBoo(Arg[C]); B:=B xor (PBool(Arg[C]^.Ptr)^); FreeVal(V)
+             end;
+          If (Arg[C]^.Tmp) then FreeVal(Arg[C])
+          end;
+   Exit(NewVal(VT_BOO,B))
+   end;
+
+Function F_Or(Arg:Array of PValue):PValue;
+   Var C:LongWord; B:Boolean; V:PValue;
+   begin B:=False;
+   If (Length(Arg)=0) then Exit(NewVal(VT_BOO,False));
+   If (Length(Arg)>1) then 
+      For C:=High(Arg) downto 1 do begin
+          If (Arg[C]^.Typ = VT_BOO) then B:=B or (PBool(Arg[C]^.Ptr)^)
+             else begin
+             V:=ValToBoo(Arg[C]); B:=B or (PBool(Arg[C]^.Ptr)^); FreeVal(V)
+             end;
+          If (Arg[C]^.Tmp) then FreeVal(Arg[C])
+          end;
+   Exit(NewVal(VT_BOO,B))
    end;
 
 Function F_Eq(Arg:Array of PValue):PValue;
@@ -2085,6 +2157,32 @@ Function F_array_nextkey(Arg:Array of PValue):PValue;
       Exit(NewVal(VT_STR,K))
       end;
    Exit(NilVal())
+   end;
+
+Function F_array_values(Arg:Array of PValue):PValue;
+   Var C,I:LongWord; A,T:PValTrie; K:AnsiString; aV,V:PValue;
+   begin
+   aV:=EmptyVal(VT_REC); A:=PValTrie(aV^.Ptr); I:=0;
+   If (Length(Arg)>0) then For C:=Low(Arg) to High(Arg) do begin
+      If (Arg[C]^.Typ = VT_REC) then begin
+         T:=PValTrie(Arg[C]^.Ptr);
+         If (T^.IsVal('')) then begin
+            V:=T^.GetVal(''); V:=CopyVal(V); V^.Tmp:=False;
+            A^.SetVal(IntToStr(I),V); I+=1
+            end;
+         K:=T^.NextKey('');
+         While (K<>'') do begin
+            V:=T^.GetVal(K); V:=CopyVal(V); V^.Tmp:=False;
+            A^.SetVal(IntToStr(I),V); I+=1;
+            K:=T^.NextKey(K)
+            end
+         end else begin
+         If (Arg[C]^.Tmp) then V:=Arg[C] else V:=CopyVal(Arg[C]);
+         V^.Tmp:=False; A^.SetVal(IntToStr(I),V); I+=1
+         end;
+      If (Arg[C]^.Tmp) then FreeVal(Arg[C])
+      end;
+   Exit(aV)
    end;
 
 Function F_array_flush(Arg:Array of PValue):PValue;
