@@ -126,9 +126,11 @@ Function F_sizeof(Arg:Array of PValue):PValue;
 Function F_array(Arg:Array of PValue):PValue;
 Function F_array_count(Arg:Array of PValue):PValue;
 Function F_array_empty(Arg:Array of PValue):PValue;
-Function F_array_nextkey(Arg:Array of PValue):PValue;
 Function F_array_flush(Arg:Array of PValue):PValue;
-Function F_array_values(Arg:Array of PValue):PValue;
+
+Function F_dict(Arg:Array of PValue):PValue;
+Function F_dict_nextkey(Arg:Array of PValue):PValue;
+Function F_dict_values(Arg:Array of PValue):PValue;
 
 implementation
    uses Math, SysUtils {$IFDEF LINUX}, Unix, Linux{$ENDIF};
@@ -240,12 +242,15 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('random',@F_random);
    FT^.SetVal('sizeof',@F_sizeof);
    // array functions, bitches!
-   FT^.SetVal('array',@F_array);
-   FT^.SetVal('array-count',@F_array_count);
-   FT^.SetVal('array-empty',@F_array_empty);
-   FT^.SetVal('array-nextkey',@F_array_nextkey);
-   FT^.SetVal('array-flush',@F_array_flush);
-   FT^.SetVal('array-values',@F_array_values);
+   FT^.SetVal('arr',@F_array);
+   // dict funtions
+   FT^.SetVal('dict',@F_dict);
+   FT^.SetVal('dict-values',@F_dict_values);
+   FT^.SetVal('dict-nextkey',@F_dict_nextkey);
+   // arr+dic functions
+   FT^.SetVal('arr-flush',@F_array_flush); FT^.SetVal('dict-flush',@F_array_flush);
+   FT^.SetVal('arr-count',@F_array_count); FT^.SetVal('dict-count',@F_array_count);
+   FT^.SetVal('arr-empty',@F_array_empty); FT^.SetVal('dict-empty',@F_array_empty);
    end;
 
 Function F_(Arg:Array of PValue):PValue;
@@ -253,7 +258,7 @@ Function F_(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)=0) then Exit(NilVal);
    For C:=Low(Arg) to High(Arg) do
-       If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    Exit(NilVal)
    end;
 
@@ -262,7 +267,7 @@ Function F_FilePath(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    Exit(NewVal(VT_STR,YukPath))
    end;
 
@@ -271,7 +276,7 @@ Function F_FileName(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    Exit(NewVal(VT_STR,ExtractFileName(YukPath)))
    end;
    
@@ -280,7 +285,7 @@ Function F_Ticks(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    TS:=TimeStampToMSecs(DateTimeToTimeStamp(Now()));
    Exit(NewVal(VT_INT,Trunc(TS-GLOB_ms)))
    end;
@@ -290,7 +295,7 @@ Function F_FileTicks(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    TS:=TimeStampToMSecs(DateTimeToTimeStamp(Now()));
    Exit(NewVal(VT_INT,Trunc(TS-GLOB_sms)))
    end;
@@ -304,7 +309,7 @@ Function F_Sleep(Arg:Array of PValue):PValue;
       else begin
       If (Length(Arg)>1) then
          For C:=High(Arg) downto 1 do
-             If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+             If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
       If (Arg[0]^.Typ >= VT_INT) and (Arg[0]^.Typ <= VT_BIN)
          then Dur:=PQInt(Arg[0]^.Ptr)^ else
       If (Arg[0]^.Typ = VT_FLO)
@@ -314,7 +319,7 @@ Function F_Sleep(Arg:Array of PValue):PValue;
          Dur:=PQInt(V^.Ptr)^;
          FreeVal(V)
          end;
-      If (Arg[0]^.Tmp) then FreeVal(Arg[0])
+      If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0])
       end;
    SysUtils.Sleep(Dur);
    ms_en:=TimeStampToMSecs(DateTimeToTimeStamp(Now()));
@@ -322,8 +327,7 @@ Function F_Sleep(Arg:Array of PValue):PValue;
    end;
 
 Function F_Write(Arg:Array of PValue):PValue;
-   Var C,I:LongWord; S:AnsiString; T:PValTrie;
-       AV:Array of PValue; V:PValue;
+   Var C:LongWord;
    begin
    If (Length(Arg)=0) then Exit(NewVal(VT_STR,''));
    For C:=Low(Arg) to High(Arg) do begin
@@ -336,30 +340,11 @@ Function F_Write(Arg:Array of PValue):PValue;
           VT_FLO: Write(PFloat(Arg[C]^.Ptr)^:0:RealPrec);
           VT_BOO: Write(PBoolean(Arg[C]^.Ptr)^);
           VT_STR: Write(PAnsiString(Arg[C]^.Ptr)^);
-          VT_REC: begin
-                  T:=PValTrie(Arg[C]^.Ptr);
-                  If (T^.IsVal('')) then begin
-                     SetLength(AV,2); 
-                     AV[0]:=NewVal(VT_STR,'array([]=');
-                     AV[1]:=T^.GetVal('') end;
-                  S:=T^.NextKey('');
-                  While (S<>'') do begin
-                     SetLength(AV,Length(AV)+2);
-                     If (Length(AV)>2) 
-                        then AV[High(AV)-1]:=NewVal(VT_STR,', ['+S+']=')
-                        else AV[High(AV)-1]:=NewVal(VT_STR,'array(['+S+']=');
-                     AV[High(AV)]:=T^.GetVal(S);
-                     S:=T^.NextKey(S) end;
-                  SetLength(AV,Length(AV)+1);
-                  If (Length(AV)>1)
-                     then AV[High(AV)]:=NewVal(VT_STR,')')
-                     else AV[High(AV)]:=NewVal(VT_STR,'array()');
-                  V:=F_Write(AV); FreeVal(V);
-                  SetLength(AV,0)
-                  end
+          VT_ARR: Write('array(',PValTree(Arg[C]^.Ptr)^.Count,')');
+          VT_DIC: Write('dict(',PValTrie(Arg[C]^.Ptr)^.Count,')');
           else Write('(',Arg[C]^.Typ,')');
           end;
-       If (Arg[C]^.Tmp) then FreeVal(Arg[C])
+       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
        end;
    Exit(NewVal(VT_STR,''))
    end;
@@ -379,15 +364,15 @@ Function F_Set(Arg:Array of PValue):PValue;
    If (Length(Arg)>1) then
       For C:=(High(Arg)-1) downto Low(Arg) do begin
           R:=ValSet(Arg[C],Arg[C+1]);
-          If (Arg[C+1]^.Tmp) then FreeVal(Arg[C+1]);
-          If (Arg[C]^.Tmp) then begin
+          If (Arg[C+1]^.Lev >= CurLev) then FreeVal(Arg[C+1]);
+          If (Arg[C]^.Lev >= CurLev) then begin
              FreeVal(Arg[C]); Arg[C]:=R
              end else begin
              SwapPtrs(Arg[C],R);
              FreeVal(R)
              end
           end;
-   If (Arg[0]^.Tmp) then R:=Arg[0]
+   If (Arg[0]^.Lev >= CurLev) then R:=Arg[0]
                     else R:=CopyVal(Arg[0]);
    Exit(R)
    end;
@@ -399,15 +384,15 @@ Function F_Add(Arg:Array of PValue):PValue;
    If (Length(Arg)>1) then
       For C:=(High(Arg)-1) downto Low(Arg) do begin
           R:=ValAdd(Arg[C],Arg[C+1]);
-          If (Arg[C+1]^.Tmp) then FreeVal(Arg[C+1]);
-          If (Arg[C]^.Tmp) then begin
+          If (Arg[C+1]^.Lev >= CurLev) then FreeVal(Arg[C+1]);
+          If (Arg[C]^.Lev >= CurLev) then begin
              FreeVal(Arg[C]); Arg[C]:=R
              end else begin
              SwapPtrs(Arg[C],R);
              FreeVal(R)
              end
           end;
-   If (Arg[0]^.Tmp) then R:=Arg[0]
+   If (Arg[0]^.Lev >= CurLev) then R:=Arg[0]
                     else R:=CopyVal(Arg[0]);
    Exit(R)
    end;
@@ -419,15 +404,15 @@ Function F_Sub(Arg:Array of PValue):PValue;
    If (Length(Arg)>1) then
       For C:=(High(Arg)-1) downto Low(Arg) do begin
           R:=ValSub(Arg[C],Arg[C+1]);
-          If (Arg[C+1]^.Tmp) then FreeVal(Arg[C+1]);
-          If (Arg[C]^.Tmp) then begin
+          If (Arg[C+1]^.Lev >= CurLev) then FreeVal(Arg[C+1]);
+          If (Arg[C]^.Lev >= CurLev) then begin
              FreeVal(Arg[C]); Arg[C]:=R
              end else begin
              SwapPtrs(Arg[C],R);
              FreeVal(R)
              end
           end;
-   If (Arg[0]^.Tmp) then R:=Arg[0]
+   If (Arg[0]^.Lev >= CurLev) then R:=Arg[0]
                     else R:=CopyVal(Arg[0]);
    Exit(R)
    end;
@@ -439,15 +424,15 @@ Function F_Mul(Arg:Array of PValue):PValue;
    If (Length(Arg)>1) then
       For C:=(High(Arg)-1) downto Low(Arg) do begin
           R:=ValMul(Arg[C],Arg[C+1]);
-          If (Arg[C+1]^.Tmp) then FreeVal(Arg[C+1]);
-          If (Arg[C]^.Tmp) then begin
+          If (Arg[C+1]^.Lev >= CurLev) then FreeVal(Arg[C+1]);
+          If (Arg[C]^.Lev >= CurLev) then begin
              FreeVal(Arg[C]); Arg[C]:=R
              end else begin
              SwapPtrs(Arg[C],R);
              FreeVal(R)
              end
           end;
-   If (Arg[0]^.Tmp) then R:=Arg[0]
+   If (Arg[0]^.Lev >= CurLev) then R:=Arg[0]
                     else R:=CopyVal(Arg[0]);
    Exit(R)
    end;
@@ -459,15 +444,15 @@ Function F_Div(Arg:Array of PValue):PValue;
    If (Length(Arg)>1) then
       For C:=(High(Arg)-1) downto Low(Arg) do begin
           R:=ValDiv(Arg[C],Arg[C+1]);
-          If (Arg[C+1]^.Tmp) then FreeVal(Arg[C+1]);
-          If (Arg[C]^.Tmp) then begin
+          If (Arg[C+1]^.Lev >= CurLev) then FreeVal(Arg[C+1]);
+          If (Arg[C]^.Lev >= CurLev) then begin
              FreeVal(Arg[C]); Arg[C]:=R
              end else begin
              SwapPtrs(Arg[C],R);
              FreeVal(R)
              end
           end;
-   If (Arg[0]^.Tmp) then R:=Arg[0]
+   If (Arg[0]^.Lev >= CurLev) then R:=Arg[0]
                     else R:=CopyVal(Arg[0]);
    Exit(R)
    end;
@@ -479,15 +464,15 @@ Function F_Mod(Arg:Array of PValue):PValue;
    If (Length(Arg)>1) then
       For C:=(High(Arg)-1) downto Low(Arg) do begin
           R:=ValMod(Arg[C],Arg[C+1]);
-          If (Arg[C+1]^.Tmp) then FreeVal(Arg[C+1]);
-          If (Arg[C]^.Tmp) then begin
+          If (Arg[C+1]^.Lev >= CurLev) then FreeVal(Arg[C+1]);
+          If (Arg[C]^.Lev >= CurLev) then begin
              FreeVal(Arg[C]); Arg[C]:=R
              end else begin
              SwapPtrs(Arg[C],R);
              FreeVal(R)
              end
           end;
-   If (Arg[0]^.Tmp) then R:=Arg[0]
+   If (Arg[0]^.Lev >= CurLev) then R:=Arg[0]
                     else R:=CopyVal(Arg[0]);
    Exit(R)
    end;
@@ -499,15 +484,15 @@ Function F_Pow(Arg:Array of PValue):PValue;
    If (Length(Arg)>1) then
       For C:=(High(Arg)-1) downto Low(Arg) do begin
           R:=ValPow(Arg[C],Arg[C+1]);
-          If (Arg[C+1]^.Tmp) then FreeVal(Arg[C+1]);
-          If (Arg[C]^.Tmp) then begin
+          If (Arg[C+1]^.Lev >= CurLev) then FreeVal(Arg[C+1]);
+          If (Arg[C]^.Lev >= CurLev) then begin
              FreeVal(Arg[C]); Arg[C]:=R
              end else begin
              SwapPtrs(Arg[C],R);
              FreeVal(R)
              end
           end;
-   If (Arg[0]^.Tmp) then R:=Arg[0]
+   If (Arg[0]^.Lev >= CurLev) then R:=Arg[0]
                     else R:=CopyVal(Arg[0]);
    Exit(R)
    end;
@@ -518,12 +503,12 @@ Function F_Not(Arg:Array of PValue):PValue;
    If (Length(Arg)=0) then Exit(NewVal(VT_BOO,True));
    If (Length(Arg)>1) then 
        For C:=High(Arg) downto 1 do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    If (Arg[0]^.Typ = VT_BOO) then B:=PBool(Arg[0]^.Ptr)^
       else begin
       V:=ValToBoo(Arg[0]); B:=PBool(V^.Ptr)^; FreeVal(V)
       end;
-   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    Exit(NewVal(VT_BOO,Not B))
    end;
 
@@ -537,7 +522,7 @@ Function F_And(Arg:Array of PValue):PValue;
              else begin
              V:=ValToBoo(Arg[C]); B:=B and (PBool(Arg[C]^.Ptr)^); FreeVal(V)
              end;
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C])
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
           end;
    Exit(NewVal(VT_BOO,B))
    end;
@@ -552,7 +537,7 @@ Function F_Xor(Arg:Array of PValue):PValue;
              else begin
              V:=ValToBoo(Arg[C]); B:=B xor (PBool(Arg[C]^.Ptr)^); FreeVal(V)
              end;
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C])
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
           end;
    Exit(NewVal(VT_BOO,B))
    end;
@@ -567,7 +552,7 @@ Function F_Or(Arg:Array of PValue):PValue;
              else begin
              V:=ValToBoo(Arg[C]); B:=B or (PBool(Arg[C]^.Ptr)^); FreeVal(V)
              end;
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C])
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
           end;
    Exit(NewVal(VT_BOO,B))
    end;
@@ -577,16 +562,16 @@ Function F_Eq(Arg:Array of PValue):PValue;
    begin R:=True;
    If (Length(Arg)=0) then Exit(NewVal(VT_BOO,False));
    If (Length(Arg)=1) then begin
-      If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+      If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
       Exit(NewVal(VT_BOO,False))
       end;
    For C:=(High(Arg)-1) downto Low(Arg) do begin
        V:=ValEq(Arg[C],Arg[C+1]);
-       If (Arg[C+1]^.Tmp) then FreeVal(Arg[C+1]);
+       If (Arg[C+1]^.Lev >= CurLev) then FreeVal(Arg[C+1]);
        If (Not PBool(V^.Ptr)^) then R:=False;
        FreeVal(V)
        end;
-   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    Exit(NewVal(VT_BOO,R))
    end;
 
@@ -595,16 +580,16 @@ Function F_NEq(Arg:Array of PValue):PValue;
    begin R:=True;
    If (Length(Arg)=0) then Exit(NewVal(VT_BOO,False));
    If (Length(Arg)=1) then begin
-      If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+      If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
       Exit(NewVal(VT_BOO,False))
       end;
    For C:=(High(Arg)-1) downto Low(Arg) do begin
        V:=ValNEq(Arg[C],Arg[C+1]);
-       If (Arg[C+1]^.Tmp) then FreeVal(Arg[C+1]);
+       If (Arg[C+1]^.Lev >= CurLev) then FreeVal(Arg[C+1]);
        If (Not PBool(V^.Ptr)^) then R:=False;
        FreeVal(V)
        end;
-   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    Exit(NewVal(VT_BOO,R))
    end;
 
@@ -613,16 +598,16 @@ Function F_SEq(Arg:Array of PValue):PValue;
    begin R:=True;
    If (Length(Arg)=0) then Exit(NewVal(VT_BOO,False));
    If (Length(Arg)=1) then begin
-      If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+      If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
       Exit(NewVal(VT_BOO,False))
       end;
    For C:=(High(Arg)-1) downto Low(Arg) do begin
        V:=ValSEq(Arg[C],Arg[C+1]);
-       If (Arg[C+1]^.Tmp) then FreeVal(Arg[C+1]);
+       If (Arg[C+1]^.Lev >= CurLev) then FreeVal(Arg[C+1]);
        If (Not PBool(V^.Ptr)^) then R:=False;
        FreeVal(V)
        end;
-   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    Exit(NewVal(VT_BOO,R))
    end;
 
@@ -631,16 +616,16 @@ Function F_SNEq(Arg:Array of PValue):PValue;
    begin R:=True;
    If (Length(Arg)=0) then Exit(NewVal(VT_BOO,False));
    If (Length(Arg)=1) then begin
-      If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+      If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
       Exit(NewVal(VT_BOO,False))
       end;
    For C:=(High(Arg)-1) downto Low(Arg) do begin
        V:=ValSNEq(Arg[C],Arg[C+1]);
-       If (Arg[C+1]^.Tmp) then FreeVal(Arg[C+1]);
+       If (Arg[C+1]^.Lev >= CurLev) then FreeVal(Arg[C+1]);
        If (Not PBool(V^.Ptr)^) then R:=False;
        FreeVal(V)
        end;
-   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    Exit(NewVal(VT_BOO,R))
    end;
 
@@ -649,16 +634,16 @@ Function F_Gt(Arg:Array of PValue):PValue;
    begin R:=True;
    If (Length(Arg)=0) then Exit(NewVal(VT_BOO,False));
    If (Length(Arg)=1) then begin
-      If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+      If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
       Exit(NewVal(VT_BOO,False))
       end;
    For C:=(High(Arg)-1) downto Low(Arg) do begin
        V:=ValGt(Arg[C],Arg[C+1]);
-       If (Arg[C+1]^.Tmp) then FreeVal(Arg[C+1]);
+       If (Arg[C+1]^.Lev >= CurLev) then FreeVal(Arg[C+1]);
        If (Not PBool(V^.Ptr)^) then R:=False;
        FreeVal(V)
        end;
-   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    Exit(NewVal(VT_BOO,R))
    end;
 
@@ -667,16 +652,16 @@ Function F_Ge(Arg:Array of PValue):PValue;
    begin R:=True;
    If (Length(Arg)=0) then Exit(NewVal(VT_BOO,False));
    If (Length(Arg)=1) then begin
-      If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+      If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
       Exit(NewVal(VT_BOO,False))
       end;
    For C:=(High(Arg)-1) downto Low(Arg) do begin
        V:=ValGe(Arg[C],Arg[C+1]);
-       If (Arg[C+1]^.Tmp) then FreeVal(Arg[C+1]);
+       If (Arg[C+1]^.Lev >= CurLev) then FreeVal(Arg[C+1]);
        If (Not PBool(V^.Ptr)^) then R:=False;
        FreeVal(V)
        end;
-   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    Exit(NewVal(VT_BOO,R))
    end;
 
@@ -685,16 +670,16 @@ Function F_Lt(Arg:Array of PValue):PValue;
    begin R:=True;
    If (Length(Arg)=0) then Exit(NewVal(VT_BOO,False));
    If (Length(Arg)=1) then begin
-      If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+      If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
       Exit(NewVal(VT_BOO,False))
       end;
    For C:=(High(Arg)-1) downto Low(Arg) do begin
        V:=ValLt(Arg[C],Arg[C+1]);
-       If (Arg[C+1]^.Tmp) then FreeVal(Arg[C+1]);
+       If (Arg[C+1]^.Lev >= CurLev) then FreeVal(Arg[C+1]);
        If (Not PBool(V^.Ptr)^) then R:=False;
        FreeVal(V)
        end;
-   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    Exit(NewVal(VT_BOO,R))
    end;
 
@@ -703,16 +688,16 @@ Function F_Le(Arg:Array of PValue):PValue;
    begin R:=True;
    If (Length(Arg)=0) then Exit(NewVal(VT_BOO,False));
    If (Length(Arg)=1) then begin
-      If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+      If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
       Exit(NewVal(VT_BOO,False))
       end;
    For C:=(High(Arg)-1) downto Low(Arg) do begin
        V:=ValLe(Arg[C],Arg[C+1]);
-       If (Arg[C+1]^.Tmp) then FreeVal(Arg[C+1]);
+       If (Arg[C+1]^.Lev >= CurLev) then FreeVal(Arg[C+1]);
        If (Not PBool(V^.Ptr)^) then R:=False;
        FreeVal(V)
        end;
-   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    Exit(NewVal(VT_BOO,R))
    end;
 
@@ -772,7 +757,7 @@ Function F_DecodeURL(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)=0) then Exit(NewVal(VT_STR,''));
    For C:=High(Arg) downto 1 do
-       If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    If (Arg[0]^.Typ = VT_STR)
       then S:=PStr(Arg[0]^.Ptr)^
       else begin
@@ -780,7 +765,7 @@ Function F_DecodeURL(Arg:Array of PValue):PValue;
       S:=PStr(V^.Ptr)^;
       FreeVal(V)
       end;
-   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    Exit(NewVal(VT_STR,DecodeURL(S)))
    end;
 
@@ -789,7 +774,7 @@ Function F_EncodeURL(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)=0) then Exit(NewVal(VT_STR,''));
    For C:=High(Arg) downto 1 do
-       If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    If (Arg[0]^.Typ = VT_STR)
       then S:=PStr(Arg[0]^.Ptr)^
       else begin
@@ -797,7 +782,7 @@ Function F_EncodeURL(Arg:Array of PValue):PValue;
       S:=PStr(V^.Ptr)^;
       FreeVal(V)
       end;
-   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    Exit(NewVal(VT_STR,EncodeURL(S)))
    end;
 
@@ -806,7 +791,7 @@ Function F_EncodeHTML(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)=0) then Exit(NewVal(VT_STR,''));
    For C:=High(Arg) downto 1 do
-       If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    If (Arg[0]^.Typ = VT_STR)
       then S:=PStr(Arg[0]^.Ptr)^
       else begin
@@ -814,7 +799,7 @@ Function F_EncodeHTML(Arg:Array of PValue):PValue;
       S:=PStr(V^.Ptr)^;
       FreeVal(V)
       end;
-   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    Exit(NewVal(VT_STR,EncodeHTML(S)))
    end;
 
@@ -908,7 +893,7 @@ Function F_GetProcess(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    ProcessGet();
    Exit(NilVal())
    end;
@@ -925,7 +910,7 @@ Function F_GetIs_(Arg:Array of PValue):PValue;
             FreeVal(V);
          end else
          If (Not GetSet(PStr(Arg[C]^.Ptr)^)) then B:=False;
-      If (Arg[C]^.Tmp) then FreeVal(Arg[C])
+      If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
       end;
    Exit(NewVal(VT_BOO,B))
    end;
@@ -935,7 +920,7 @@ Function F_GetVal(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)=0) then Exit(NewVal(VT_STR,''));
    For C:=High(Arg) downto 1 do
-      If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+      If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    If (Arg[0]^.Typ >= VT_INT) and (Arg[0]^.Typ <= VT_BIN)
       then S:=GetStr(PQInt(Arg[0]^.Ptr)^) else
    If (Arg[0]^.Typ = VT_STR)
@@ -945,7 +930,7 @@ Function F_GetVal(Arg:Array of PValue):PValue;
       S:=GetStr(PStr(V^.Ptr)^);
       FreeVal(V)
       end;
-   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    Exit(NewVal(VT_STR,S))
    end;
 
@@ -954,7 +939,7 @@ Function F_GetKey(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)=0) then Exit(NewVal(VT_STR,''));
    For C:=High(Arg) downto 1 do
-      If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+      If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    If (Arg[0]^.Typ >= VT_INT) and (Arg[0]^.Typ <= VT_BIN)
       then S:=GetKey(PQInt(Arg[0]^.Ptr)^)
       else begin
@@ -962,7 +947,7 @@ Function F_GetKey(Arg:Array of PValue):PValue;
       S:=GetKey(PQInt(V^.Ptr)^);
       FreeVal(V)
       end;
-   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    Exit(NewVal(VT_STR,S))
    end;
 
@@ -971,7 +956,7 @@ Function F_GetNum(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    Exit(NewVal(VT_INT,GetNum()))
    end;
 
@@ -981,7 +966,7 @@ Function F_SetPrecision(Arg:Array of PValue):PValue;
    If (Length(Arg)=0) then Exit(NewVal(VT_INT,Values.RealPrec));
    If (Length(Arg)>1) then
       For C:=High(Arg) downto 1 do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    If (Arg[0]^.Typ >= VT_INT) and (Arg[0]^.Typ <= VT_BIN)
       then Values.RealPrec:=PQInt(Arg[0]^.Ptr)^
       else begin
@@ -989,7 +974,7 @@ Function F_SetPrecision(Arg:Array of PValue):PValue;
       Values.RealPrec:=PQInt(V^.Ptr)^;
       FreeVal(V)
       end;
-   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    Exit(NewVal(VT_INT,Values.RealPrec))
    end;
 
@@ -999,7 +984,7 @@ Function F_Perc(Arg:Array of PValue):PValue;
    If (Length(Arg)=0) then Exit(NewVal(VT_STR,'0%'));
    If (Length(Arg)>2) then
       For C:=High(Arg) downto 2 do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    If (Length(Arg)>=2) then begin
       If (Arg[0]^.Typ = VT_FLO) then begin
          A:=CopyVal(Arg[0]); D:=PFloat(A^.Ptr); (D^)*=100;
@@ -1023,8 +1008,8 @@ Function F_Perc(Arg:Array of PValue):PValue;
          FreeVal(A)
          end
       end;
-   If (Length(Arg) >= 2) and (Arg[1]^.Tmp) then FreeVal(Arg[1]);
-   If (Length(Arg) >= 1) and (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   If (Length(Arg) >= 2) and (Arg[1]^.Lev >= CurLev) then FreeVal(Arg[1]);
+   If (Length(Arg) >= 1) and (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    Exit(NewVal(VT_STR,S))
    end;
 
@@ -1043,7 +1028,7 @@ Function F_SysInfo_Get(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    Exit(NewVal(VT_BOO,GetSysInfo()))
    end;
 
@@ -1052,7 +1037,7 @@ Function F_SysInfo_Uptime(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    Exit(NewVal(VT_INT,SI^.Uptime))
    end;
 
@@ -1061,7 +1046,7 @@ Function F_SysInfo_Load(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)=0) then Exit(NewVal(VT_FLO,SI^.Loads[0]/65535));
    For C:=High(Arg) downto 1 do
-       If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    If (Arg[0]^.Typ >= VT_INT) and (Arg[0]^.Typ <= VT_BIN)
       then L:=PQInt(Arg[0]^.Ptr)^
       else begin
@@ -1069,7 +1054,7 @@ Function F_SysInfo_Load(Arg:Array of PValue):PValue;
       L:=PQInt(V^.Ptr)^;
       FreeVal(V)
       end;
-   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    If (L < 0) or (L > 2) then L:=0;
    Exit(NewVal(VT_FLO,SI^.Loads[L]/65535))
    end;
@@ -1079,7 +1064,7 @@ Function F_SysInfo_RAMtotal(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    Exit(NewVal(VT_INT,SI^.TotalRam))
    end;
 
@@ -1088,7 +1073,7 @@ Function F_SysInfo_RAMfree(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    Exit(NewVal(VT_INT,SI^.FreeRam))
    end;
 
@@ -1097,7 +1082,7 @@ Function F_SysInfo_RAMused(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    Exit(NewVal(VT_INT,(SI^.TotalRam - SI^.FreeRam - SI^.BufferRam)))
    end;
 
@@ -1106,7 +1091,7 @@ Function F_SysInfo_RAMbuffer(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    Exit(NewVal(VT_INT,SI^.BufferRam))
    end;
 
@@ -1115,7 +1100,7 @@ Function F_SysInfo_SwapTotal(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    Exit(NewVal(VT_INT,SI^.TotalSwap))
    end;
 
@@ -1124,7 +1109,7 @@ Function F_SysInfo_SwapFree(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    Exit(NewVal(VT_INT,SI^.FreeSwap))
    end;
 
@@ -1133,7 +1118,7 @@ Function F_SysInfo_SwapUsed(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    Exit(NewVal(VT_INT,(SI^.TotalSwap - SI^.FreeSwap)))
    end;
 
@@ -1142,7 +1127,7 @@ Function F_SysInfo_Procnum(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    Exit(NewVal(VT_INT,SI^.Procs))
    end;
 
@@ -1151,7 +1136,7 @@ Function F_SysInfo_DiskTotal(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    Exit(NewVal(VT_INT,DiskSize(ROOTDISK)))
    end;
 
@@ -1160,7 +1145,7 @@ Function F_SysInfo_DiskFree(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    Exit(NewVal(VT_INT,DiskFree(ROOTDISK)))
    end;
 
@@ -1169,7 +1154,7 @@ Function F_SysInfo_DiskUsed(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    Exit(NewVal(VT_INT,(DiskSize(ROOTDISK) - DiskFree(ROOTDISK))))
    end;
 
@@ -1178,7 +1163,7 @@ Function F_SysInfo_Thermal(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)=0) then Z:=0 else begin
       For C:=High(Arg) downto 1 do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
       If (Arg[0]^.Typ >= VT_INT) and (Arg[0]^.Typ <= VT_BIN)
          then Z:=PQInt(Arg[0]^.Ptr)^
          else begin
@@ -1186,7 +1171,7 @@ Function F_SysInfo_Thermal(Arg:Array of PValue):PValue;
          Z:=PQInt(V^.Ptr)^;
          FreeVal(V)
          end;
-      If (Arg[0]^.Tmp) then FreeVal(Arg[0])
+      If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0])
       end;
    If (Z < 0) then Z:=0;
    Assign(F,'/sys/class/thermal/thermal_zone'+IntToStr(Z)+'/temp');
@@ -1202,7 +1187,7 @@ Function F_SysInfo_Hostname(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    Exit(NewVal(VT_STR,GetHostName()))
    end;
 
@@ -1211,7 +1196,7 @@ Function F_SysInfo_DomainName(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    Exit(NewVal(VT_INT,GetDomainName()))
    end;
 {$ENDIF} //end of Linux-only functions
@@ -1221,7 +1206,7 @@ Function F_Trim(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)=0) then Exit(NewVal(VT_STR,''));
    For C:=High(Arg) downto 1 do
-      If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+      If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    If (Arg[0]^.Typ = VT_STR)
       then S:=Trim(PStr(Arg[0]^.Ptr)^)
       else begin
@@ -1229,7 +1214,7 @@ Function F_Trim(Arg:Array of PValue):PValue;
       S:=Trim(PStr(V^.Ptr)^);
       FreeVal(V)
       end;
-   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    Exit(NewVal(VT_STR,S))
    end;
 
@@ -1238,7 +1223,7 @@ Function F_TrimLeft(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)=0) then Exit(NewVal(VT_STR,''));
    For C:=High(Arg) downto 1 do
-      If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+      If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    If (Arg[0]^.Typ = VT_STR)
       then S:=TrimLeft(PStr(Arg[0]^.Ptr)^)
       else begin
@@ -1246,7 +1231,7 @@ Function F_TrimLeft(Arg:Array of PValue):PValue;
       S:=TrimLeft(PStr(V^.Ptr)^);
       FreeVal(V)
       end;
-   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    Exit(NewVal(VT_STR,S))
    end;
 
@@ -1255,7 +1240,7 @@ Function F_TrimRight(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)=0) then Exit(NewVal(VT_STR,''));
    For C:=High(Arg) downto 1 do
-      If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+      If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    If (Arg[0]^.Typ = VT_STR)
       then S:=TrimRight(PStr(Arg[0]^.Ptr)^)
       else begin
@@ -1263,7 +1248,7 @@ Function F_TrimRight(Arg:Array of PValue):PValue;
       S:=TrimRight(PStr(V^.Ptr)^);
       FreeVal(V)
       end;
-   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    Exit(NewVal(VT_STR,S))
    end;
 
@@ -1272,7 +1257,7 @@ Function F_UpperCase(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)=0) then Exit(NewVal(VT_STR,''));
    For C:=High(Arg) downto 1 do
-      If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+      If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    If (Arg[0]^.Typ = VT_STR)
       then S:=UpperCase(PStr(Arg[0]^.Ptr)^)
       else begin
@@ -1280,7 +1265,7 @@ Function F_UpperCase(Arg:Array of PValue):PValue;
       S:=UpperCase(PStr(V^.Ptr)^);
       FreeVal(V)
       end;
-   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    Exit(NewVal(VT_STR,S))
    end;
 
@@ -1289,7 +1274,7 @@ Function F_LowerCase(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)=0) then Exit(NewVal(VT_STR,''));
    For C:=High(Arg) downto 1 do
-      If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+      If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    If (Arg[0]^.Typ = VT_STR)
       then S:=LowerCase(PStr(Arg[0]^.Ptr)^)
       else begin
@@ -1297,7 +1282,7 @@ Function F_LowerCase(Arg:Array of PValue):PValue;
       S:=LowerCase(PStr(V^.Ptr)^);
       FreeVal(V)
       end;
-   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    Exit(NewVal(VT_STR,S))
    end;
 
@@ -1307,11 +1292,11 @@ Function F_Doctype(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)=0) then Exit(NewVal(VT_STR,DEFAULT));
    For C:=High(Arg) downto 1 do
-      If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+      If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    If (Arg[0]^.Typ = VT_STR)
       then begin
       S:=PStr(Arg[0]^.Ptr)^;
-      If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+      If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
       If (S='html5') then
          R:=('<!DOCTYPE html>') else
       If (S='html4-strict') then
@@ -1331,7 +1316,7 @@ Function F_Doctype(Arg:Array of PValue):PValue;
          {else} R:=DEFAULT
       end else begin
       V:=ValToInt(Arg[0]); I:=(PQInt(V^.Ptr)^); FreeVal(V);
-      If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+      If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
       If (I = 5) then 
          R:=('<!DOCTYPE html>') else
       If (I = 4) then 
@@ -1346,7 +1331,7 @@ Function F_DateTime_Start(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    Exit(NewVal(VT_FLO,GLOB_dt))
    end;
 
@@ -1355,7 +1340,7 @@ Function F_DateTime_FileStart(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    Exit(NewVal(VT_FLO,GLOB_sdt))
    end;
 
@@ -1364,7 +1349,7 @@ Function F_DateTime_Now(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    Exit(NewVal(VT_FLO,SysUtils.Now()))
    end;
 
@@ -1373,7 +1358,7 @@ Function F_DateTime_Date(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    Exit(NewVal(VT_FLO,SysUtils.Date()))
    end;
 
@@ -1382,7 +1367,7 @@ Function F_DateTime_Time(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    Exit(NewVal(VT_FLO,SysUtils.Time()))
    end;
 
@@ -1393,7 +1378,7 @@ Function F_DateTime_Encode(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)>ARRLEN) then begin H:=ARRHI;
       For C:=High(Arg) downto ARRLEN do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C])
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
       end else H:=High(Arg);
    For C:=0 to ARRHI do dt[C]:=0;
    For C:=H downto 0 do begin
@@ -1404,7 +1389,7 @@ Function F_DateTime_Encode(Arg:Array of PValue):PValue;
           dt[C]:=PQInt(V^.Ptr)^;
           FreeVal(V)
           end;
-       If (Arg[C]^.Tmp) then FreeVal(Arg[C])
+       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
        end;
    Try R:=SysUtils.EncodeDate(dt[0],dt[1],dt[2]);
        R+=SysUtils.EncodeTime(dt[3],dt[4],dt[5],dt[6]);
@@ -1419,7 +1404,7 @@ Function F_DateTime_Make(Arg:Array of PValue):PValue;
    begin R:=0;
    If (Length(Arg)>ARRLEN) then begin H:=ARRHI;
       For C:=High(Arg) downto ARRLEN do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C])
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
       end else H:=High(Arg);
    For C:=0 to ARRHI do dt[C]:=0;
    For C:=H downto 0 do begin
@@ -1430,7 +1415,7 @@ Function F_DateTime_Make(Arg:Array of PValue):PValue;
           dt[C]:=PQInt(V^.Ptr)^;
           FreeVal(V)
           end;
-       If (Arg[C]^.Tmp) then FreeVal(Arg[C])
+       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
        end;
    R+=dt[4]; R/=1000; //Add milisecs
    R+=dt[3]; R/=60;   //Add secs
@@ -1446,7 +1431,7 @@ Function F_DateTime_Decode(Arg:Array of PValue):PValue;
    If (Length(Arg)<2) then Exit(NewVal(VT_BOO,False));
    If (Length(Arg)>9) then begin H:=8;
       For C:=High(Arg) downto 9 do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C])
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
       end else H:=High(Arg);
    If (Arg[0]^.Typ = VT_FLO)
       then dt:=(PFloat(Arg[0]^.Ptr)^)
@@ -1458,14 +1443,14 @@ Function F_DateTime_Decode(Arg:Array of PValue):PValue;
    DecodeDateFully(dt,dec[1],dec[2],dec[3],dec[4]);
    DecodeTime(dt,dec[5],dec[6],dec[7],dec[8]);
    For C:=H downto 1 do
-       If (Arg[C]^.Tmp) then FreeVal(Arg[C]) 
+       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]) 
        else begin
        T:=NewVal(VT_INT,dec[C]);
        V:=ValSet(Arg[C],T);
        SwapPtrs(Arg[C],V);
        FreeVal(T); FreeVal(V)
        end;
-   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    Exit(NewVal(VT_BOO,True))
    end;
 
@@ -1475,7 +1460,7 @@ Function F_DateTime_Day(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
    For C:=High(Arg) downto 1 do
-      If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+      If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    If (Arg[0]^.Typ = VT_FLO)
       then dt:=(PFloat(Arg[0]^.Ptr)^)
       else begin
@@ -1483,7 +1468,7 @@ Function F_DateTime_Day(Arg:Array of PValue):PValue;
       dt:=(PFloat(V^.Ptr)^);
       FreeVal(V)
       end;
-   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    DecodeDate(dt,Y,M,D);
    Exit(NewVal(VT_INT,D))
    end;
@@ -1493,7 +1478,7 @@ Function F_DateTime_Month(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
    For C:=High(Arg) downto 1 do
-      If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+      If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    If (Arg[0]^.Typ = VT_FLO)
       then dt:=(PFloat(Arg[0]^.Ptr)^)
       else begin
@@ -1501,7 +1486,7 @@ Function F_DateTime_Month(Arg:Array of PValue):PValue;
       dt:=(PFloat(V^.Ptr)^);
       FreeVal(V)
       end;
-   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    DecodeDate(dt,Y,M,D);
    Exit(NewVal(VT_INT,M))
    end;
@@ -1511,7 +1496,7 @@ Function F_DateTime_Year(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
    For C:=High(Arg) downto 1 do
-      If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+      If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    If (Arg[0]^.Typ = VT_FLO)
       then dt:=(PFloat(Arg[0]^.Ptr)^)
       else begin
@@ -1519,7 +1504,7 @@ Function F_DateTime_Year(Arg:Array of PValue):PValue;
       dt:=(PFloat(V^.Ptr)^);
       FreeVal(V)
       end;
-   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    DecodeDate(dt,Y,M,D);
    Exit(NewVal(VT_INT,Y))
    end;
@@ -1529,7 +1514,7 @@ Function F_DateTime_DOW(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
    For C:=High(Arg) downto 1 do
-      If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+      If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    If (Arg[0]^.Typ = VT_FLO)
       then dt:=(PFloat(Arg[0]^.Ptr)^)
       else begin
@@ -1537,7 +1522,7 @@ Function F_DateTime_DOW(Arg:Array of PValue):PValue;
       dt:=(PFloat(V^.Ptr)^);
       FreeVal(V)
       end;
-   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    DecodeDateFully(dt,Y,M,D,DOW);
    Exit(NewVal(VT_INT,DOW))
    end;
@@ -1547,7 +1532,7 @@ Function F_DateTime_Hour(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
    For C:=High(Arg) downto 1 do
-      If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+      If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    If (Arg[0]^.Typ = VT_FLO)
       then dt:=(PFloat(Arg[0]^.Ptr)^)
       else begin
@@ -1555,7 +1540,7 @@ Function F_DateTime_Hour(Arg:Array of PValue):PValue;
       dt:=(PFloat(V^.Ptr)^);
       FreeVal(V)
       end;
-   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    DecodeTime(dt,H,M,S,MS);
    Exit(NewVal(VT_INT,H))
    end;
@@ -1565,7 +1550,7 @@ Function F_DateTime_Min(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
    For C:=High(Arg) downto 1 do
-      If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+      If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    If (Arg[0]^.Typ = VT_FLO)
       then dt:=(PFloat(Arg[0]^.Ptr)^)
       else begin
@@ -1573,7 +1558,7 @@ Function F_DateTime_Min(Arg:Array of PValue):PValue;
       dt:=(PFloat(V^.Ptr)^);
       FreeVal(V)
       end;
-   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    DecodeTime(dt,H,M,S,MS);
    Exit(NewVal(VT_INT,M))
    end;
@@ -1583,7 +1568,7 @@ Function F_DateTime_Sec(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
    For C:=High(Arg) downto 1 do
-      If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+      If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    If (Arg[0]^.Typ = VT_FLO)
       then dt:=(PFloat(Arg[0]^.Ptr)^)
       else begin
@@ -1591,7 +1576,7 @@ Function F_DateTime_Sec(Arg:Array of PValue):PValue;
       dt:=(PFloat(V^.Ptr)^);
       FreeVal(V)
       end;
-   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    DecodeTime(dt,H,M,S,MS);
    Exit(NewVal(VT_INT,S))
    end;
@@ -1601,7 +1586,7 @@ Function F_DateTime_ms(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
    For C:=High(Arg) downto 1 do
-      If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+      If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    If (Arg[0]^.Typ = VT_FLO)
       then dt:=(PFloat(Arg[0]^.Ptr)^)
       else begin
@@ -1609,7 +1594,7 @@ Function F_DateTime_ms(Arg:Array of PValue):PValue;
       dt:=(PFloat(V^.Ptr)^);
       FreeVal(V)
       end;
-   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    DecodeTime(dt,H,M,S,MS);
    Exit(NewVal(VT_INT,MS))
    end;
@@ -1698,7 +1683,7 @@ Function F_DateTime_String(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg) > 2) then
       For C:=High(Arg) downto 2 do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    If (Length(Arg) >= 2) and (Arg[1]^.Typ = VT_STR)
       then F:=dtf(PStr(Arg[1]^.Ptr)^)
       else F:=dtf_def;
@@ -1709,8 +1694,8 @@ Function F_DateTime_String(Arg:Array of PValue):PValue;
       dt:=(PFloat(V^.Ptr)^);
       FreeVal(V)
       end else dt:=SysUtils.Now();
-   If (Length(Arg) >= 2) and (Arg[1]^.Tmp) then FreeVal(Arg[1]);
-   If (Length(Arg) >= 1) and (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   If (Length(Arg) >= 2) and (Arg[1]^.Lev >= CurLev) then FreeVal(Arg[1]);
+   If (Length(Arg) >= 1) and (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    DateTimeToString(S,F,dt);
    Exit(NewVal(VT_STR,S))
    end;
@@ -1720,20 +1705,20 @@ Function F_mkint(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
    For C:=High(Arg) downto (Low(Arg)+1) do
-       If (Arg[C]^.Tmp) then FreeVal(Arg[C]) else
+       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]) else
        If (Arg[C]^.Typ <> VT_INT) then begin
-          V:=ValToInt(Arg[C]); V^.Tmp:=False;
+          V:=ValToInt(Arg[C]); 
           SwapPtrs(Arg[C],V); FreeVal(V)
           end;
-   If (Arg[0]^.Tmp) then begin
+   If (Arg[0]^.Lev >= CurLev) then begin
       If (Arg[0]^.Typ <> VT_INT) then begin
          V:=ValToInt(Arg[0]); FreeVal(Arg[0])
          end else V:=Arg[0];
       Exit(V)
       end else begin
       If (Arg[0]^.Typ<>VT_INT) then begin
-         V:=ValToInt(Arg[0]); V^.Tmp:=False;
-         SwapPtrs(Arg[C],V); FreeVal(V)
+         V:=ValToInt(Arg[0]); 
+         SwapPtrs(Arg[0],V); FreeVal(V)
          end;
       Exit(CopyVal(Arg[0]))
       end
@@ -1744,20 +1729,20 @@ Function F_mkhex(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
    For C:=High(Arg) downto (Low(Arg)+1) do
-       If (Arg[C]^.Tmp) then FreeVal(Arg[C]) else
+       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]) else
        If (Arg[C]^.Typ <> VT_Hex) then begin
-          V:=ValToHex(Arg[C]); V^.Tmp:=False;
+          V:=ValToHex(Arg[C]);
           SwapPtrs(Arg[C],V); FreeVal(V)
           end;
-   If (Arg[0]^.Tmp) then begin
+   If (Arg[0]^.Lev >= CurLev) then begin
       If (Arg[0]^.Typ <> VT_Hex) then begin
          V:=ValToHex(Arg[0]); FreeVal(Arg[0])
          end else V:=Arg[0];
       Exit(V)
       end else begin
       If (Arg[0]^.Typ<>VT_Hex) then begin
-         V:=ValToHex(Arg[0]); V^.Tmp:=False;
-         SwapPtrs(Arg[C],V); FreeVal(V)
+         V:=ValToHex(Arg[0]); 
+         SwapPtrs(Arg[0],V); FreeVal(V)
          end;
       Exit(CopyVal(Arg[0]))
       end
@@ -1768,20 +1753,20 @@ Function F_mkoct(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)=0) then Exit(NewVal(VT_OCT,0));
    For C:=High(Arg) downto (Low(Arg)+1) do
-       If (Arg[C]^.Tmp) then FreeVal(Arg[C]) else
+       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]) else
        If (Arg[C]^.Typ <> VT_OCT) then begin
-          V:=ValToOct(Arg[C]); V^.Tmp:=False;
+          V:=ValToOct(Arg[C]); 
           SwapPtrs(Arg[C],V); FreeVal(V)
           end;
-   If (Arg[0]^.Tmp) then begin
+   If (Arg[0]^.Lev >= CurLev) then begin
       If (Arg[0]^.Typ <> VT_OCT) then begin
          V:=ValToOct(Arg[0]); FreeVal(Arg[0])
          end else V:=Arg[0];
       Exit(V)
       end else begin
       If (Arg[0]^.Typ<>VT_OCT) then begin
-         V:=ValToOct(Arg[0]); V^.Tmp:=False;
-         SwapPtrs(Arg[C],V); FreeVal(V)
+         V:=ValToOct(Arg[0]);
+         SwapPtrs(Arg[0],V); FreeVal(V)
          end;
       Exit(CopyVal(Arg[0]))
       end
@@ -1792,20 +1777,20 @@ Function F_mkbin(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)=0) then Exit(NewVal(VT_BIN,0));
    For C:=High(Arg) downto (Low(Arg)+1) do
-       If (Arg[C]^.Tmp) then FreeVal(Arg[C]) else
+       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]) else
        If (Arg[C]^.Typ <> VT_BIN) then begin
-          V:=ValToBin(Arg[C]); V^.Tmp:=False;
+          V:=ValToBin(Arg[C]); 
           SwapPtrs(Arg[C],V); FreeVal(V)
           end;
-   If (Arg[0]^.Tmp) then begin
+   If (Arg[0]^.Lev >= CurLev) then begin
       If (Arg[0]^.Typ <> VT_BIN) then begin
          V:=ValToBin(Arg[0]); FreeVal(Arg[0])
          end else V:=Arg[0];
       Exit(V)
       end else begin
       If (Arg[0]^.Typ<>VT_BIN) then begin
-         V:=ValToBin(Arg[0]); V^.Tmp:=False;
-         SwapPtrs(Arg[C],V); FreeVal(V)
+         V:=ValToBin(Arg[0]); 
+         SwapPtrs(Arg[0],V); FreeVal(V)
          end;
       Exit(CopyVal(Arg[0]))
       end
@@ -1816,20 +1801,20 @@ Function F_mkflo(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
    For C:=High(Arg) downto (Low(Arg)+1) do
-       If (Arg[C]^.Tmp) then FreeVal(Arg[C]) else
+       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]) else
        If (Arg[C]^.Typ <> VT_INT) then begin
-          V:=ValToFlo(Arg[C]); V^.Tmp:=False;
+          V:=ValToFlo(Arg[C]); 
           SwapPtrs(Arg[C],V); FreeVal(V)
           end;
-   If (Arg[0]^.Tmp) then begin
+   If (Arg[0]^.Lev >= CurLev) then begin
       If (Arg[0]^.Typ <> VT_FLO) then begin
          V:=ValToFlo(Arg[0]); FreeVal(Arg[0])
          end else V:=Arg[0];
       Exit(V)
       end else begin
       If (Arg[0]^.Typ<>VT_INT) then begin
-         V:=ValToFlo(Arg[0]); V^.Tmp:=False;
-         SwapPtrs(Arg[C],V); FreeVal(V)
+         V:=ValToFlo(Arg[0]); 
+         SwapPtrs(Arg[0],V); FreeVal(V)
          end;
       Exit(CopyVal(Arg[0]))
       end
@@ -1840,20 +1825,20 @@ Function F_mkstr(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)=0) then Exit(NewVal(VT_STR,0));
    For C:=High(Arg) downto (Low(Arg)+1) do
-       If (Arg[C]^.Tmp) then FreeVal(Arg[C]) else
+       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]) else
        If (Arg[C]^.Typ <> VT_STR) then begin
-          V:=ValToStr(Arg[C]); V^.Tmp:=False;
+          V:=ValToStr(Arg[C]);
           SwapPtrs(Arg[C],V); FreeVal(V)
           end;
-   If (Arg[0]^.Tmp) then begin
+   If (Arg[0]^.Lev >= CurLev) then begin
       If (Arg[0]^.Typ <> VT_STR) then begin
          V:=ValToStr(Arg[0]); FreeVal(Arg[0])
          end else V:=Arg[0];
       Exit(V)
       end else begin
       If (Arg[0]^.Typ<>VT_STR) then begin
-         V:=ValToStr(Arg[0]); V^.Tmp:=False;
-         SwapPtrs(Arg[C],V); FreeVal(V)
+         V:=ValToStr(Arg[0]);
+         SwapPtrs(Arg[0],V); FreeVal(V)
          end;
       Exit(CopyVal(Arg[0]))
       end
@@ -1864,20 +1849,20 @@ Function F_mklog(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)=0) then Exit(NewVal(VT_BOO,0));
    For C:=High(Arg) downto (Low(Arg)+1) do
-       If (Arg[C]^.Tmp) then FreeVal(Arg[C]) else
+       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]) else
        If (Arg[C]^.Typ <> VT_BOO) then begin
-          V:=ValToBoo(Arg[C]); V^.Tmp:=False;
+          V:=ValToBoo(Arg[C]); 
           SwapPtrs(Arg[C],V); FreeVal(V)
           end;
-   If (Arg[0]^.Tmp) then begin
+   If (Arg[0]^.Lev >= CurLev) then begin
       If (Arg[0]^.Typ <> VT_BOO) then begin
          V:=ValToBoo(Arg[0]); FreeVal(Arg[0])
          end else V:=Arg[0];
       Exit(V)
       end else begin
       If (Arg[0]^.Typ<>VT_BOO) then begin
-         V:=ValToBoo(Arg[0]); V^.Tmp:=False;
-         SwapPtrs(Arg[C],V); FreeVal(V)
+         V:=ValToBoo(Arg[0]);
+         SwapPtrs(Arg[0],V); FreeVal(V)
          end;
       Exit(CopyVal(Arg[0]))
       end
@@ -1888,25 +1873,25 @@ Function F_fork(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)=0) then Exit(NewVal(VT_BOO,False));
    If (Length(Arg)>3) then For C:=High(Arg) downto 3 do
-      If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+      If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    If (Arg[0]^.Typ = VT_BOO) then begin
       R:=PBool(Arg[0]^.Ptr)^;
-      If (Arg[0]^.Tmp) then FreeVal(Arg[0])
+      If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0])
       end else begin
       V:=ValToBoo(Arg[0]); R:=PBool(V^.Ptr)^;
-      If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+      If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
       FreeVal(V)
       end;
    If (R) then begin
       If (Length(Arg)=1) then Exit(NewVal(VT_BOO,True));
-      If (Length(Arg)>2) then If (Arg[2]^.Tmp) then FreeVal(Arg[2]);
-      If (Arg[1]^.Tmp) then Exit(Arg[1]) else Exit(CopyVal(Arg[1]))
+      If (Length(Arg)>2) then If (Arg[2]^.Lev >= CurLev) then FreeVal(Arg[2]);
+      If (Arg[1]^.Lev >= CurLev) then Exit(Arg[1]) else Exit(CopyVal(Arg[1]))
       end else begin
       If (Length(Arg)<3) then begin
-         If (Length(Arg)=2) then If (Arg[1]^.Tmp) then FreeVal(Arg[1]);
+         If (Length(Arg)=2) then If (Arg[1]^.Lev >= CurLev) then FreeVal(Arg[1]);
          Exit(NewVal(VT_BOO,False))
          end;
-      If (Arg[2]^.Tmp) then Exit(Arg[2]) else Exit(CopyVal(Arg[2]))
+      If (Arg[2]^.Lev >= CurLev) then Exit(Arg[2]) else Exit(CopyVal(Arg[2]))
       end
    end;
 
@@ -1915,49 +1900,49 @@ Function F_random(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)>2) then
       For C:=High(Arg) downto 2 do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    If (Length(Arg)=2) then begin
       If (Arg[0]^.Typ = VT_FLO) then begin
          If (Arg[1]^.Typ <> VT_FLO) then begin
             V:=ValToFlo(Arg[1]);
-            If (Arg[1]^.Tmp) then FreeVal(Arg[1]);
+            If (Arg[1]^.Lev >= CurLev) then FreeVal(Arg[1]);
             Arg[1]:=V 
             end;
          If (PFloat(Arg[0]^.Ptr)^ <= PFloat(Arg[1]^.Ptr)^)
             then begin DL:=PFloat(Arg[0]^.Ptr)^; DH:=PFloat(Arg[1]^.Ptr)^ end
             else begin DL:=PFloat(Arg[1]^.Ptr)^; DH:=PFloat(Arg[0]^.Ptr)^ end;
          DH:=DL+((DH-DL)*System.Random());
-         For C:=1 downto 0 do If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+         For C:=1 downto 0 do If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
          Exit(NewVal(VT_FLO,DH))
          end else begin
          For C:=1 downto 0 do
              If (Arg[C]^.Typ<VT_INT) or (Arg[C]^.Typ>VT_BIN) then begin
-                V:=ValToInt(Arg[C]); If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+                V:=ValToInt(Arg[C]); If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
                 Arg[C]:=V end;
          If (PQInt(Arg[0]^.Ptr)^ <= PQInt(Arg[1]^.Ptr)^)
             then begin IL:=PQInt(Arg[0]^.Ptr)^; IH:=PQInt(Arg[1]^.Ptr)^ end
             else begin IL:=PQInt(Arg[1]^.Ptr)^; IH:=PQInt(Arg[0]^.Ptr)^ end;
          IH:=IL+System.Random(IH-IL+1);
          V:=NewVal(Arg[0]^.Typ,IH);
-         For C:=1 downto 0 do If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+         For C:=1 downto 0 do If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
          Exit(V)
       end end else
    If (Length(Arg)=1) then begin
       If (Arg[0]^.Typ = VT_STR) then begin
          If (Length(PStr(Arg[0]^.Ptr)^)=0) then begin
-            If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+            If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
             Exit(NewVal(VT_STR,''))
             end;
          Ch:=(PStr(Arg[0]^.Ptr)^)[1+Random(Length(PStr(Arg[0]^.Ptr)^))];
-         If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+         If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
          Exit(NewVal(VT_STR,Ch))
          end else begin
          If (Arg[0]^.Typ < VT_INT) or (Arg[0]^.Typ > VT_BIN) then begin
-            V:=ValToInt(Arg[0]); If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+            V:=ValToInt(Arg[0]); If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
             Arg[0]:=V end;
          IH:=Random(PQInt(Arg[0]^.Ptr)^);
          V:=NewVal(Arg[0]^.Typ,IH);
-         If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+         If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
          Exit(V)
       end end else
       Exit(NewVal(VT_FLO,System.Random()))
@@ -1969,12 +1954,12 @@ Function F_StrLen(Arg:Array of PValue):PValue;
    If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
    If (Length(Arg)>1) then
       For C:=High(Arg) downto 1 do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    If (Arg[0]^.Typ<>VT_STR) then begin
-      V:=ValToStr(Arg[0]); If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+      V:=ValToStr(Arg[0]); If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
       Arg[0]:=V end;
    L:=Length(PStr(Arg[0]^.Ptr)^);
-   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    Exit(NewVal(VT_INT,L))
    end;
 
@@ -1984,13 +1969,13 @@ Function F_StrPos(Arg:Array of PValue):PValue;
    If (Length(Arg)<2) then Exit(NewVal(VT_INT,0));
    If (Length(Arg)>2) then
       For C:=High(Arg) downto 1 do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    For C:=1 downto 0 do 
       If (Arg[C]^.Typ<>VT_STR) then begin
-         V:=ValToStr(Arg[C]); If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+         V:=ValToStr(Arg[C]); If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
          Arg[C]:=V end;
    P:=Pos(PStr(Arg[0]^.Ptr)^,PStr(Arg[1]^.Ptr)^);
-   For C:=1 downto 0 do If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+   For C:=1 downto 0 do If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    Exit(NewVal(VT_INT,P))
    end;
 
@@ -2000,7 +1985,7 @@ Function F_SubStr(Arg:Array of PValue):PValue;
    If (Length(Arg)=0) then Exit(NewVal(VT_STR,''));
    If (Length(Arg)>3) then
       For C:=High(Arg) downto 3 do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    For C:=2 downto 1 do
        If (Length(Arg)>C) then
           If (Arg[C]^.Typ >= VT_INT) and (Arg[C]^.Typ<= VT_BIN)
@@ -2015,7 +2000,7 @@ Function F_SubStr(Arg:Array of PValue):PValue;
       V:=ValToStr(Arg[0]); R:=Copy(PStr(V^.Ptr)^,i[1],i[2]); 
       FreeVal(V) end;
    For C:=2 downto 0 do
-       If (Length(Arg)>C) and (Arg[C]^.Tmp)
+       If (Length(Arg)>C) and (Arg[C]^.Lev >= CurLev)
           then FreeVal(Arg[C]);
    Exit(NewVal(VT_STR,R))
    end;
@@ -2026,7 +2011,7 @@ Function F_DelStr(Arg:Array of PValue):PValue;
    If (Length(Arg)=0) then Exit(NewVal(VT_STR,''));
    If (Length(Arg)>3) then
       For C:=High(Arg) downto 3 do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    For C:=2 downto 1 do
        If (Length(Arg)>C) then
           If (Arg[C]^.Typ >= VT_INT) and (Arg[C]^.Typ<= VT_BIN)
@@ -2040,7 +2025,7 @@ Function F_DelStr(Arg:Array of PValue):PValue;
       else V:=ValToStr(Arg[0]);
    Delete(PStr(V^.Ptr)^,i[1],i[2]); 
    For C:=2 downto 0 do
-       If (Length(Arg)>C) and (Arg[C]^.Tmp)
+       If (Length(Arg)>C) and (Arg[C]^.Lev >= CurLev)
           then FreeVal(Arg[C]);
    Exit(V)
    end;
@@ -2051,7 +2036,7 @@ Function F_sqrt(Arg:Array of PValue):PValue;
    If (Length(Arg)=0) then Exit(NewVal(VT_FLO,0.0));
    If (Length(Arg)>1) then
       For C:=High(Arg) downto 1 do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    If (Arg[0]^.Typ = VT_FLO) then begin
       F:=Sqrt(PFloat(Arg[0]^.Ptr)^)
       end else
@@ -2062,7 +2047,7 @@ Function F_sqrt(Arg:Array of PValue):PValue;
       F:=Sqrt(PFLoat(V^.Ptr)^);
       FreeVal(V)
       end;
-   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    Exit(NewVal(VT_FLO,F))
    end;
 
@@ -2072,10 +2057,10 @@ Function F_sizeof(Arg:Array of PValue):PValue;
    If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
    If (Length(Arg)>1) then
       For C:=High(Arg) downto 1 do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    If (Arg[0]^.Typ <> VT_STR) then begin
       V:=ValToStr(Arg[0]);
-      If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+      If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
       Arg[0]:=V
       end;
    If (PStr(Arg[0]^.Ptr)^ = 'flo') then C:=SizeOf(TFloat) else
@@ -2089,115 +2074,148 @@ Function F_sizeof(Arg:Array of PValue):PValue;
    If (PStr(Arg[0]^.Ptr)^ = 'string') then C:=SizeOf(TStr) else
    If (PStr(Arg[0]^.Ptr)^ = 'bool') then C:=SizeOf(Bool) else
       (* else *) C:=0;
-   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    Exit(NewVal(VT_INT,C*8))
    end;
 
 Function F_array(Arg:Array of PValue):PValue;
-   Var C:LongWord; T:PValTrie; K:AnsiString; A,V:PValue;
+   Var C:LongWord; T:PValTree; A,V:PValue;
    begin
-   A:=EmptyVal(VT_REC); T:=PValTrie(A^.Ptr);
+   A:=EmptyVal(VT_ARR); T:=PValTree(A^.Ptr);
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do begin
-          K:=IntToStr(C);
-          If (Arg[C]^.Tmp) then begin
-             Arg[C]^.Tmp:=False; V:=Arg[C]
-             end else
-             V:=CopyVal(Arg[C]);
-          T^.SetVal(K,V)
+          If (Arg[C]^.Lev >= CurLev)
+             then V:=Arg[C]
+             else V:=CopyVal(Arg[C]);
+          T^.SetValNaive(C,V)
           end;
+   T^.Rebalance();
+   Exit(A)
+   end;
+
+Function F_dict(Arg:Array of PValue):PValue;
+   Var C:LongWord; T:PValTrie; Key:AnsiString; A,V,oV:PValue;
+   begin
+   A:=EmptyVal(VT_DIC); T:=PValTrie(A^.Ptr);
+   If (Length(Arg)>0) then
+      For C:=Low(Arg) to High(Arg) do
+          If ((C mod 2)=0) then begin
+             If (Arg[C]^.Typ <> VT_STR) then begin
+                V:=ValToStr(Arg[C]); Key:=PStr(V^.Ptr)^; FreeVal(V)
+                end else Key:=PStr(Arg[C]^.Ptr)^;
+             If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
+             end else begin
+             If (Arg[C]^.Lev >= CurLev)
+                then V:=Arg[C]
+                else V:=CopyVal(Arg[C]);
+             If (T^.IsVal(Key)) then begin oV:=T^.GetVal(Key); FreeVal(oV) end;
+                T^.SetVal(Key, V)
+             end;
+   If ((Length(Arg) mod 2) = 1) then begin
+      If (T^.IsVal(Key)) then begin oV:=T^.GetVal(Key); FreeVal(oV) end;
+      T^.SetVal(Key, NilVal)
+      end;
    Exit(A)
    end;
 
 Function F_array_count(Arg:Array of PValue):PValue;
-   Var C,R:LongWord; T:PValTrie;
+   Var C,R:LongWord;
    begin R:=0;
    If (Length(Arg)>0) then
       For C:=High(Arg) downto Low(Arg) do begin
-          If (Arg[C]^.Typ = VT_REC) then begin
-             T:=PValTrie(Arg[C]^.Ptr);
-             R+=T^.Count end;
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C])
+          If (Arg[C]^.Typ = VT_ARR) then R += PValTree(Arg[C]^.Ptr)^.Count else
+          If (Arg[C]^.Typ = VT_DIC) then R += PValTrie(Arg[C]^.Ptr)^.Count;
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
           end;
    Exit(NewVal(VT_INT,R))
    end;
 
 Function F_array_empty(Arg:Array of PValue):PValue;
-   Var C,R:LongWord; T:PValTrie; B:Boolean;
-   begin R:=0; B:=False;
+   Var C : LongWord; B:Boolean;
+   begin B:=False;
    If (Length(Arg)>0) then
       For C:=High(Arg) downto Low(Arg) do begin
-          If (Arg[C]^.Typ = VT_REC) then begin
-             T:=PValTrie(Arg[C]^.Ptr);
-             B:=B or (Not T^.Empty) end;
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C])
+          If (Arg[C]^.Typ = VT_ARR) then B:=(B or (Not PValTree(Arg[C]^.Ptr)^.Empty)) else
+          If (Arg[C]^.Typ = VT_DIC) then B:=(B or (Not PValTrie(Arg[C]^.Ptr)^.Empty));
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
           end;
    Exit(NewVal(VT_BOO,B))
    end;
 
-Function F_array_nextkey(Arg:Array of PValue):PValue;
+Function F_dict_nextkey(Arg:Array of PValue):PValue;
    Var C:LongWord; T:PValTrie; K:AnsiString; V:PValue;
    begin
    If (Length(Arg)>=3) then
       For C:=High(Arg) downto 2 do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    If (Length(Arg)>=2) then begin
       If (Arg[1]^.Typ = VT_STR) then K:=PStr(Arg[1]^.Ptr)^
          else begin
          V:=ValToStr(Arg[1]); K:=PStr(V^.Ptr)^;
          FreeVal(V) end;
-      If (Arg[1]^.Tmp) then FreeVal(Arg[1])
+      If (Arg[1]^.Lev >= CurLev) then FreeVal(Arg[1])
       end else K:='';
    If (Length(Arg)>=1) then begin
-      If (Arg[0]^.Typ <> VT_REC) then begin
-         If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+      If (Arg[0]^.Typ <> VT_DIC) then begin
+         If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
          Exit(NilVal()) end;
       T:=PValTrie(Arg[0]^.Ptr); K:=T^.NextKey(K);
-      If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+      If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
       Exit(NewVal(VT_STR,K))
       end;
    Exit(NilVal())
    end;
 
-Function F_array_values(Arg:Array of PValue):PValue;
+Function F_dict_values(Arg:Array of PValue):PValue;
    Var C,I:LongWord; A,T:PValTrie; K:AnsiString; aV,V:PValue;
    begin
-   aV:=EmptyVal(VT_REC); A:=PValTrie(aV^.Ptr); I:=0;
+   aV:=EmptyVal(VT_DIC); A:=PValTrie(aV^.Ptr); I:=0;
    If (Length(Arg)>0) then For C:=Low(Arg) to High(Arg) do begin
-      If (Arg[C]^.Typ = VT_REC) then begin
+      If (Arg[C]^.Typ = VT_DIC) then begin
          T:=PValTrie(Arg[C]^.Ptr);
          If (T^.IsVal('')) then begin
-            V:=T^.GetVal(''); V:=CopyVal(V); V^.Tmp:=False;
+            V:=T^.GetVal(''); V:=CopyVal(V); //V^.Tmp:=False;
             A^.SetVal(IntToStr(I),V); I+=1
             end;
          K:=T^.NextKey('');
          While (K<>'') do begin
-            V:=T^.GetVal(K); V:=CopyVal(V); V^.Tmp:=False;
+            V:=T^.GetVal(K); V:=CopyVal(V); //V^.Tmp:=False;
             A^.SetVal(IntToStr(I),V); I+=1;
             K:=T^.NextKey(K)
             end
          end else begin
-         If (Arg[C]^.Tmp) then V:=Arg[C] else V:=CopyVal(Arg[C]);
-         V^.Tmp:=False; A^.SetVal(IntToStr(I),V); I+=1
+         If (Arg[C]^.Lev >= CurLev) then V:=Arg[C] else V:=CopyVal(Arg[C]);
+         {V^.Tmp:=False;} A^.SetVal(IntToStr(I),V); I+=1
          end;
-      If (Arg[C]^.Tmp) then FreeVal(Arg[C])
+      If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
       end;
    Exit(aV)
    end;
 
 Function F_array_flush(Arg:Array of PValue):PValue;
-   Var C,I:LongWord; T:PValTrie; V:PValue;
-   begin I:=0;
+   Var C,I,R:LongWord; V:PValue;
+       Arr:PValTree; AEA:TValTree.TEntryArr;
+       Dic:PValTrie; DEA:TValTrie.TEntryArr;
+   begin R:=0;
    If (Length(Arg)>0) then
       For C:=High(Arg) downto Low(Arg) do begin
-          If (Arg[C]^.Typ = VT_REC) then begin
-             T:=PValTrie(Arg[C]^.Ptr); 
-             While (Not T^.Empty()) do begin
-                V:=T^.RemVal(); FreeVal(V); I+=1
+          If (Arg[C]^.Typ = VT_ARR) then begin
+             Arr:=PValTree(Arg[C]^.Ptr); 
+             If (Not Arr^.Empty()) then begin
+                AEA:=Arr^.ToArray(); Arr^.Flush(); R += Length(AEA);
+                For I:=Low(AEA) to High(AEA) do
+                    FreeVal(AEA[I].Val)
              end end;
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C])
+          If (Arg[C]^.Typ = VT_DIC) then begin
+             Dic:=PValTrie(Arg[C]^.Ptr); 
+             If (Not Dic^.Empty()) then begin
+                DEA:=Dic^.ToArray(); Dic^.Flush(); R += Length(DEA);
+                For I:=Low(DEA) to High(DEA) do
+                    FreeVal(DEA[I].Val)
+             end end;
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
           end;
-   Exit(NewVal(VT_INT,I))
+   Exit(NewVal(VT_INT,R))
    end;
 
 end.

@@ -3,7 +3,7 @@ program awful;
 {$MODE OBJFPC} {$COPERATORS ON} {$LONGSTRINGS ON}
 
 uses SysUtils, Math, Trie, Values, Stack,
-     Functions, YukSDL;
+     Functions;//, heapTrc;//, YukSDL;
 
 const VMAJOR = 0;
       VMINOR = 0;
@@ -17,8 +17,8 @@ Type TTokenType = (
      
      PArrTk = ^TArrTk;
      TArrTk = record
-     wat : TStr;
-     Ind : PToken
+     Nam : TStr;
+     Ind : Array of PToken
      end;
      
      TToken = record
@@ -69,49 +69,69 @@ Var YukFile : Text; YukNum:LongWord;
     mulico:LongWord;
     ParMod:TParamMode;
 
-Function GetVar(Name:AnsiString;Typ:TValueType):PValue;
-   Var C:LongInt; R:PValue;
-   begin
-   //Writeln(StdErr,'GetVar: ',Name,'; ',Typ);
-   C:=High(Vars);
-   While (C>=0) do
-      Try    R:=Vars[C]^.GetVal(Name);
-             Exit(R)
-      Except C-=1 end;
-   //Writeln(StdErr,'Vars[',High(Vars),']^.SetVal(',Name,',',Typ,')');
-   R:=EmptyVal(Typ); R^.Tmp:=False;
-   Vars[High(Vars)]^.SetVal(Name,R);
-   Exit(R)
-   end;
-
-Function GetArr(Name,Index:AnsiString;Typ:TValueType):PValue;
-   Var A,V:PValue; T:PValTrie;
-   begin
-   //Writeln(StdErr,'GetArr(): Trying to get $',Name,'[',Index,']...');
-   A:=GetVar(Name,VT_REC); T:=PValTrie(A^.Ptr);
-   Try    V:=T^.GetVal(Index)
-   Except V:=EmptyVal(Typ); V^.Tmp:=False;
-          T^.SetVal(Index,V)
-          end;
-   Exit(V)
-   end;
-
 Function Eval(E:PExpr):PValue;
    
-   Function ArrayIndex(Tk:PToken):TStr;
+   Function GetVar(Name:AnsiString;Typ:TValueType):PValue;
+      Var C:LongInt; R:PValue;
+      begin
+      //Writeln(StdErr,'GetVar: ',Name,'; ',Typ);
+      C:=High(Vars);
+      While (C>=0) do
+         Try    R:=Vars[C]^.GetVal(Name);
+                Exit(R)
+         Except C-=1 end;
+      //Writeln(StdErr,'Vars[',High(Vars),']^.SetVal(',Name,',',Typ,')');
+      R:=EmptyVal(Typ); R^.Lev -= 1;
+      Vars[High(Vars)]^.SetVal(Name,R);
+      Exit(R)
+      end;
+   
+   Function ArrayIndex(Tk:PToken):QInt;
+      Var V,H:PValue; I:QInt;
+      begin
+      If (Tk^.Typ = TK_EXPR) then V:=Eval(PExpr(Tk^.Ptr)) else
+      If (Tk^.Typ = TK_CONS) then V:=CopyVal(PValue(Tk^.Ptr)) else
+      If (Tk^.Typ = TK_VARI) then V:=CopyVal(GetVar(PStr(Tk^.Ptr)^, VT_INT)) else
+      If (Tk^.Typ = TK_REFE) then V:=CopyVal(GetVar(PStr(Tk^.Ptr)^, VT_INT));
+      If (V^.Typ <> VT_Int) then begin
+         H:=ValToInt(V); I:=PQInt(H^.Ptr)^; FreeVal(H)
+         end else I:=PQInt(V^.Ptr)^; 
+      FreeVal(V); Exit(I)
+      end;
+   
+   Function DictIndex(Tk:PToken):TStr;
       Var V,H:PValue; S:TStr;
       begin
       If (Tk^.Typ = TK_EXPR) then V:=Eval(PExpr(Tk^.Ptr)) else
       If (Tk^.Typ = TK_CONS) then V:=CopyVal(PValue(Tk^.Ptr)) else
-      If (Tk^.Typ = TK_VARI) then V:=CopyVal(GetVar(PStr(Tk^.Ptr)^,VT_STR)) else
-      If (Tk^.Typ = TK_REFE) then V:=CopyVal(GetVar(PStr(Tk^.Ptr)^,VT_STR));
+      If (Tk^.Typ = TK_VARI) then V:=CopyVal(GetVar(PStr(Tk^.Ptr)^, VT_STR)) else
+      If (Tk^.Typ = TK_REFE) then V:=CopyVal(GetVar(PStr(Tk^.Ptr)^, VT_STR));
       If (V^.Typ <> VT_STR) then begin
          H:=ValToStr(V); S:=PStr(H^.Ptr)^; FreeVal(H)
          end else S:=PStr(V^.Ptr)^; 
       FreeVal(V); Exit(S)
       end;
    
-   Var Arg:Array of PValue; T:LongWord; V:PValue; Ind:TStr;
+   Function GetArr(A:PValue; Index:PToken; Typ:TValueType):PValue;
+      Var V:PValue; Arr:PValTree; Dic:PValTrie; KeyStr : TStr; KeyInt : QInt;
+      begin
+      If (A^.Typ = VT_ARR) then begin
+         Arr:=PValTree(A^.Ptr); KeyInt:=ArrayIndex(Index);
+         Try    V:=Arr^.GetVal(KeyInt)
+         Except V:=EmptyVal(Typ); V^.Lev := A^.Lev;
+                Arr^.SetVal(KeyInt, V)
+         end end else
+      If (A^.Typ = VT_DIC) then begin
+         Dic:=PValTrie(A^.Ptr); KeyStr:=DictIndex(Index);
+         Try    V:=Dic^.GetVal(KeyStr)
+         Except V:=EmptyVal(Typ); V^.Lev := A^.Lev;
+                Dic^.SetVal(KeyStr, V)
+         end end else
+         V:=NilVal();
+      Exit(V)
+      end;
+   
+   Var Arg:Array of PValue; T:LongWord; V:PValue; I:LongWord; atk:PArrTk;
    begin
    SetLength(Arg,Length(E^.Tok));
    If (Length(E^.Tok)=0) then Exit(E^.Fun(Arg));
@@ -130,17 +150,20 @@ Function Eval(E:PExpr):PValue;
              else Arg[T]:=GetVar(PStr(E^.Tok[T]^.Ptr)^,VT_NIL);
           end else
        If (E^.Tok[T]^.Typ = TK_AVAL) then begin
-          Ind:=ArrayIndex(PArrTk(E^.Tok[T]^.Ptr)^.Ind);
-          If (T<High(E^.Tok)) 
-             then V:=GetArr(TStr(PArrTk(E^.Tok[T]^.Ptr)^.wat),Ind,Arg[T+1]^.Typ)
-             else V:=GetArr(TStr(PArrTk(E^.Tok[T]^.Ptr)^.wat),Ind,VT_NIL);
+          atk := PArrTk(E^.Tok[T]^.Ptr); V:=GetVar(atk^.Nam, VT_DIC);
+          For I:=Low(atk^.Ind) to High(atk^.Ind) do 
+              If (T<High(E^.Tok)) 
+                 then V:=GetArr(V, atk^.Ind[I], Arg[T+1]^.Typ)
+                 else V:=GetArr(V, atk^.Ind[I], VT_NIL);
           Arg[T]:=CopyVal(V)
           end else
        If (E^.Tok[T]^.Typ = TK_AREF) then begin
-          Ind:=ArrayIndex(PArrTk(E^.Tok[T]^.Ptr)^.Ind);
-          If (T<High(E^.Tok)) 
-             then Arg[T]:=GetArr(TStr(PArrTk(E^.Tok[T]^.Ptr)^.wat),Ind,Arg[T+1]^.Typ)
-             else Arg[T]:=GetArr(TStr(PArrTk(E^.Tok[T]^.Ptr)^.wat),Ind,VT_NIL)
+          atk := PArrTk(E^.Tok[T]^.Ptr); V:=GetVar(atk^.Nam, VT_DIC);
+          For I:=Low(atk^.Ind) to High(atk^.Ind) do 
+              If (T<High(E^.Tok)) 
+                 then V:=GetArr(V, atk^.Ind[I], Arg[T+1]^.Typ)
+                 else V:=GetArr(V, atk^.Ind[I], VT_NIL);
+          Arg[T]:=V
           end else
        If (E^.Tok[T]^.Typ = TK_EXPR)
           then Arg[T]:=Eval(PExpr(E^.Tok[T]^.Ptr));
@@ -151,13 +174,14 @@ Function RunFunc(P:LongWord):PValue;
    Var R:PValue;
    begin
    If (Pr[P].Nu = 0) then Exit(NilVal);
-   Proc:=P; ExLn:=0;
+   Proc:=P; ExLn:=0; CurLev += 1;
    While (Not DoExit) do begin
       R:=Eval(Pr[P].Ex[ExLn]); ExLn+=1;
       If (ExLn < Pr[P].Nu)
          then FreeVal(R)
-         else Exit(R)
+         else begin CurLev -= 1; Exit(R) end
       end;
+   CurLev -= 1;
    Exit(NilVal())
    end;
 
@@ -174,7 +198,7 @@ Function F_If(Arg:Array of PValue):PValue;
              If (Not PBool(V^.Ptr)^) then R:=False;
              FreeVal(V)
              end;
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C])
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
           end
       end else R:=False;
    IfNum:=PQInt(Arg[0]^.Ptr)^; FreeVal(Arg[0]);
@@ -187,7 +211,7 @@ Function F_Else(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)>1) then
       For C:=High(Arg) downto 1 do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    IfNum:=PQInt(Arg[0]^.Ptr)^; FreeVal(Arg[0]);
    ExLn:=IfArr[IfNum][2];
    Exit(NilVal)
@@ -206,7 +230,7 @@ Function F_While(Arg:Array of PValue):PValue;
              If (Not PBool(V^.Ptr)^) then R:=False;
              FreeVal(V)
              end;
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C])
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
           end
       end else R:=False;
    WhiNum:=PQInt(Arg[0]^.Ptr)^; FreeVal(Arg[0]);
@@ -219,7 +243,7 @@ Function F_Done(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)>1) then
       For C:=High(Arg) downto 1 do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    WhiNum:=PQInt(Arg[0]^.Ptr)^; FreeVal(Arg[0]);
    ExLn:=WhiArr[WhiNum][1];
    Exit(NilVal)
@@ -238,7 +262,7 @@ Function F_Until(Arg:Array of PValue):PValue;
              If (Not PBool(V^.Ptr)^) then R:=False;
              FreeVal(V)
              end;
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C])
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
           end
       end else R:=False;
    RepNum:=PQInt(Arg[0]^.Ptr)^; FreeVal(Arg[0]);
@@ -251,9 +275,9 @@ Function F_Return(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)>1) then
       For C:=Low(Arg)+1 to High(Arg) do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    If (Length(Arg)>0) then 
-      If (Not Arg[0]^.Tmp)
+      If (Not Arg[0]^.Lev >= CurLev)
          then R:=CopyVal(Arg[0]) else R:=Arg[0]
       else R:=NilVal();
    ExLn:=Pr[Proc].Nu;
@@ -265,38 +289,44 @@ Function F_Exit(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    ExLn:=Pr[Proc].Nu; DoExit:=True;
    Exit(NilVal())
    end;
 
 Function F_AutoCall(Arg:Array of PValue):PValue;
-   Var P,E,V:LongWord; A,H,PA,CA:LongInt; R,TV:PValue;
+   Var P,E,V:LongWord; A,H,PA,CA:LongInt; R,TV,ArrV:PValue; Arr:PValTree;
    begin
-   P:=Proc; E:=ExLn; Proc:=PQInt(Arg[0]^.Ptr)^;
+   P:=Proc; E:=ExLn; Proc:=PQInt(Arg[0]^.Ptr)^; CurLev += 1;
    SetLength(Vars,Length(Vars)+1); V:=High(Vars);
+   
    New(Vars[V],Create('A','z'));
-   If (Length(Pr[Proc].Ar)>0) then begin
-      PA:=Length(Pr[Proc].Ar); CA:=Length(Arg)-1;
-      H:=Min(PA,CA);
-      If (H>0) then For A:=0 to (H-1) do begin
-         Vars[V]^.SetVal(Pr[Proc].Ar[A],Arg[A+1]);
-         Arg[A+1]^.Tmp:=False end;
-      If (PA>CA) then For A:=H to (PA-1) do begin
-         TV:=NilVal(); TV^.Tmp:=False;
-         Vars[V]^.SetVal(Pr[Proc].Ar[A],TV) end else
-      If (CA<PA) then For A:=H to (CA-1) do begin
-         Vars[V]^.SetVal('ARG'+IntToStr(A),Arg[A+1]);
-         Arg[A+1]^.Tmp:=False end
-      end;
+   PA:=Length(Pr[Proc].Ar); CA:=Length(Arg)-1;
+   H:=Min(PA,CA);
+   
+   If (H>0) then For A:=0 to (H-1) do begin
+      Vars[V]^.SetVal(Pr[Proc].Ar[A],Arg[A+1]);
+      {Arg[A+1]^.Tmp:=False} end;
+   
+   If (PA>CA) then For A:=H to (PA-1) do begin
+      TV:=NilVal(); {TV^.Tmp:=False;}
+      Vars[V]^.SetVal(Pr[Proc].Ar[A],TV) end;
+   
+   //If (CA>PA) then begin
+   ArrV:=EmptyVal(VT_ARR); Arr:=PValTree(ArrV^.Ptr);
+   For A:=0 to (CA-1) do Arr^.SetValNaive(A, Arg[A+1]);
+   Arr^.Rebalance(); Vars[V]^.SetVal('ARG',ArrV);
+   //end;
+   
    Vars[V]^.SetVal('ARGNUM',NewVal(VT_INT,CA));
+   //Vars[V]^.SetVal('ARGWNT',NewVal(VT_INT,PA));
    R:=RunFunc(Proc);
    //Writeln(StdErr,'F_AutoCall(',Proc,'): Trie size: ',Vars[V]^.Count);
    If (Length(Pr[Proc].Ar)>0) then begin
       For A:=0 to High(Pr[Proc].Ar) do Vars[V]^.RemVal(Pr[Proc].Ar[A]);
       A+=1 end else A:=1;
-   While (A<=High(Arg)) do begin
-      Vars[V]^.RemVal('ARG'+IntToStr(A-1)); A+=1 end;
+   //While (A<=High(Arg)) do begin
+   // Vars[V]^.RemVal('ARG'+IntToStr(A-1)); A+=1 end;
    While (Vars[V]^.Count > 0) do begin
       //Writeln(StdErr,'F_AutoCall(',Proc,'): Vars[',V,']; Count: ',Vars[V]^.Count,'; RemVal()');
       TV:=Vars[V]^.RemVal();
@@ -306,8 +336,8 @@ Function F_AutoCall(Arg:Array of PValue):PValue;
    //Writeln(StdErr,'F_AutoCall(',Proc,'): Trie size: ',Vars[V]^.Count);
    Dispose(Vars[V],Destroy()); SetLength(Vars,Length(Vars)-1);
    For A:=Low(Arg) to High(Arg) do
-       If (Arg[A]^.Tmp) then FreeVal(Arg[A]);
-   Proc:=P; ExLn:=E;
+       If (Arg[A]^.Lev >= CurLev) then FreeVal(Arg[A]);
+   Proc:=P; ExLn:=E; CurLev -= 1;
    Exit(R)
    end;
 
@@ -316,11 +346,11 @@ Function F_Call(Arg:Array of PValue):PValue;
    begin
    If (Length(Arg)=0) then Exit(NilVal());
    If (Arg[0]^.Typ <> VT_STR) then begin
-      V:=ValToStr(Arg[0]); If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+      V:=ValToStr(Arg[0]); If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
       Arg[0]:=V end;
    S:=PStr(Arg[0]^.Ptr)^;
    If (Length(S)>0) and (S[1]=':') then Delete(S,1,1);
-   If (Arg[0]^.Tmp) then FreeVal(Arg[0]);
+   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    Try
       UFN:=UsrFun^.GetVal(S);
       Arg[0]:=NewVal(VT_INT,UFN);
@@ -332,7 +362,7 @@ Function F_Call(Arg:Array of PValue):PValue;
       Except
          If (Length(Arg)>1) then
             For C:=High(Arg) downto 1 do
-                If (Arg[C]^.Tmp) then FreeVal(Arg[C]);
+                If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
          Exit(NilVal())
    end end end;
 
@@ -375,31 +405,31 @@ Function MakeExpr(Var Tk:Array of AnsiString;Ln,T:LongInt):PExpr;
          end else
       If (Tk[Index][1]='s') then begin
          V:=NewVal(VT_STR,Copy(Tk[Index],3,Length(Tk[Index])-3));
-         New(Tok); Tok^.Typ:=TK_CONS; Tok^.Ptr:=V; V^.Tmp:=False
+         New(Tok); Tok^.Typ:=TK_CONS; Tok^.Ptr:=V; V^.Lev := 0
          end else
       If (Tk[Index][1]='i') then begin
          V:=NewVal(VT_INT,StrToInt(Copy(Tk[Index],2,Length(Tk[Index]))));
-         New(Tok); Tok^.Typ:=TK_CONS; Tok^.Ptr:=V; V^.Tmp:=False
+         New(Tok); Tok^.Typ:=TK_CONS; Tok^.Ptr:=V; V^.Lev := 0
          end else
       If (Tk[Index][1]='h') then begin
          V:=NewVal(VT_HEX,StrToHex(Copy(Tk[Index],2,Length(Tk[Index]))));
-         New(Tok); Tok^.Typ:=TK_CONS; Tok^.Ptr:=V; V^.Tmp:=False
+         New(Tok); Tok^.Typ:=TK_CONS; Tok^.Ptr:=V; V^.Lev := 0
          end else
       If (Tk[Index][1]='o') then begin
          V:=NewVal(VT_OCT,StrToOct(Copy(Tk[Index],2,Length(Tk[Index]))));
-         New(Tok); Tok^.Typ:=TK_CONS; Tok^.Ptr:=V; V^.Tmp:=False
+         New(Tok); Tok^.Typ:=TK_CONS; Tok^.Ptr:=V; V^.Lev := 0
          end else
       If (Tk[Index][1]='b') then begin
          V:=NewVal(VT_BIN,StrToBin(Copy(Tk[Index],2,Length(Tk[Index]))));
-         New(Tok); Tok^.Typ:=TK_CONS; Tok^.Ptr:=V; V^.Tmp:=False
+         New(Tok); Tok^.Typ:=TK_CONS; Tok^.Ptr:=V; V^.Lev := 0
          end else
       If (Tk[Index][1]='l') then begin
          V:=NewVal(VT_BOO,StrToBoolDef(Copy(Tk[Index],2,Length(Tk[Index])),False));
-         New(Tok); Tok^.Typ:=TK_CONS; Tok^.Ptr:=V; V^.Tmp:=False
+         New(Tok); Tok^.Typ:=TK_CONS; Tok^.Ptr:=V; V^.Lev := 0
          end else
       If (Tk[Index][1]='f') then begin
          V:=NewVal(VT_FLO,StrToReal(Copy(Tk[Index],2,Length(Tk[Index]))));
-         New(Tok); Tok^.Typ:=TK_CONS; Tok^.Ptr:=V; V^.Tmp:=False
+         New(Tok); Tok^.Typ:=TK_CONS; Tok^.Ptr:=V; V^.Lev := 0
          end else
          Tok:=NIL;
       Exit(Tok)
@@ -501,7 +531,7 @@ Function MakeExpr(Var Tk:Array of AnsiString;Ln,T:LongInt):PExpr;
          If (Tk[T+2][1]='=') then
             Try    V:=Cons^.GetVal(Copy(Tk[T+2],2,Length(Tk[T+2])))
             Except Fatal(Ln,'Unknown const "'+Copy(Tk[T+2],2,Length(Tk[T+2]))+'".') end;
-         V^.Tmp:=False; Cons^.SetVal(CName,V);
+         V^.Lev := 0; Cons^.SetVal(CName,V);
          Dispose(E); Exit(NIL)
          end else
       If (Tk[T]='!fun') then begin
@@ -592,19 +622,30 @@ Function MakeExpr(Var Tk:Array of AnsiString;Ln,T:LongInt):PExpr;
          If (Length(E^.Tok)=0) then
             Fatal(Ln,'Array expression ("[") found, but previous token is not a variable name.');
          otk:=E^.Tok[High(E^.Tok)];
-         If (otk^.Typ<>TK_VARI) and (otk^.Typ<>TK_REFE){ and (otk^.Typ<>TK_AREF) and (otk^.Typ<>TK_AVAL)} then 
-            Fatal(Ln,'Array expression ("[") found, but previous token is not a variable name.');
-         Tok:=MakeToken(T+1);
-         If (Tok=NIL) then begin
-            sex:=MakeExpr(Tk,Ln,T+1);
-            New(Tok); Tok^.Typ:=TK_EXPR; Tok^.Ptr:=sex
-            end;
-         CName:=PStr(otk^.Ptr)^; Dispose(PStr(otk^.Ptr));
-         If (otk^.Typ <> TK_AREF) and (otk^.Typ <> TK_AVAL) then begin
+         If (otk^.Typ = TK_VARI) or (otk^.Typ = TK_REFE) then begin
+            Tok:=MakeToken(T+1);
+            If (Tok=NIL) then begin
+               sex:=MakeExpr(Tk,Ln,T+1);
+               New(Tok); Tok^.Typ:=TK_EXPR; Tok^.Ptr:=sex
+               end;
+            CName:=PStr(otk^.Ptr)^; Dispose(PStr(otk^.Ptr));
             If (otk^.Typ = TK_REFE) then otk^.Typ := TK_AREF
-                                    else otk^.Typ := TK_AVAL
-            end;
-         New(atk); atk^.wat:=CName; atk^.Ind := Tok; otk^.Ptr := atk;
+                                    else otk^.Typ := TK_AVAL;
+            New(atk); atk^.Nam:=CName;
+            SetLength(atk^.Ind, 1); atk^.Ind[0] := Tok;
+            otk^.Ptr := atk
+            end else
+         If (otk^.Typ = TK_AREF) or (otk^.Typ = TK_AVAL) then begin
+            Tok:=MakeToken(T+1);
+            If (Tok=NIL) then begin
+               sex:=MakeExpr(Tk,Ln,T+1);
+               New(Tok); Tok^.Typ:=TK_EXPR; Tok^.Ptr:=sex
+               end;
+            atk := PArrTk(otk^.Ptr);
+            SetLength(atk^.Ind, Length(atk^.Ind) + 1);
+            atk^.Ind[High(atk^.Ind)] := Tok
+            end else
+            Fatal(Ln,'Array expression ("[") found, but previous token is not a variable name.');
          Nest:=0;
          While (T<=High(Tk)) do 
             If (Length(Tk[T])=0) then T+=1 else
@@ -735,9 +776,9 @@ Procedure ReadFile(I:PText);
    SetLength(IfArr,0);  New(IfSta,Create());
    SetLength(WhiArr,0); New(WhiSta,Create());
    SetLength(RepArr,0); New(RepSta,Create());
-   V:=NewVal(VT_STR,ExpandFileName(YukPath)); V^.Tmp:=False; Cons^.SetVal('FILEPATH',V);
-   V:=NewVal(VT_STR,ExtractFileName(YukPath)); V^.Tmp:=False; Cons^.SetVal('FILENAME',V);
-   V:=NewVal(VT_STR,{$I %DATE%}+', '+{$I %TIME%}); V^.Tmp:=False; Cons^.SetVal('AWFULBUILD',V);
+   V:=NewVal(VT_STR,ExpandFileName(YukPath)); V^.Lev := 0; Cons^.SetVal('FILEPATH',V);
+   V:=NewVal(VT_STR,ExtractFileName(YukPath)); V^.Lev := 0; Cons^.SetVal('FILENAME',V);
+   V:=NewVal(VT_STR,{$I %DATE%}+', '+{$I %TIME%}); V^.Lev := 0; Cons^.SetVal('AWFULBUILD',V);
    While (Not Eof(I^)) do begin
       Readln(I^,L); N+=1;
       L:=Trim(L);
@@ -802,7 +843,7 @@ Func^.SetVal('call',@F_Call);
 Func^.SetVal('return',@F_Return);
 Func^.SetVal('exit',@F_Exit);
 Functions.Register(Func);
-YukSDL.Register(Func);
+//YukSDL.Register(Func);
 
 SetLength(Vars,1); New(Vars[0],Create('!','~'));
 New(Cons,Create('!','~'));

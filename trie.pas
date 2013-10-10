@@ -14,7 +14,7 @@ interface
 {$MACRO ON}
 {$IFDEF TRIE_CLASS}  {$DEFINE TRIETYPE:=Class(TObject)} {$ELSE}
 {$IFDEF TRIE_OBJECT} {$DEFINE TRIETYPE:=Object}         {$ELSE}
-   {$FATAL No OBJECT/CLASS symbol set!} {$ENDIF} {$ENDIF}
+   {$FATAL trie.pas: No OBJECT/CLASS symbol set!} {$ENDIF} {$ENDIF}
 
 Type ExNotSet = class(Exception);
      
@@ -28,10 +28,12 @@ Type ExNotSet = class(Exception);
            Chi : LongWord;
            Val : PTp;
            end;
+        
         Var
         Min, ArrS : LongInt;
         Vals : LongWord;
         Root : PNode;
+        
         {Method}
         Procedure SetVal(Const K:AnsiString;P:LongWord;N:PNode;Const V:Tp);
         Procedure RemVal(Const K:AnsiString;P:LongWord;N:PNode);
@@ -45,6 +47,14 @@ Type ExNotSet = class(Exception);
         Function  RemVal(N:PNode):Tp;
         Procedure FreeNode(N:PNode);
      Public
+        Type
+        TEntry = record
+           Key : AnsiString;
+           Val : Tp
+           end;
+        TEntryArr = Array of TEntry;
+        
+        {Method}
         Procedure SetVal(Key:AnsiString;Val:Tp);
         Procedure RemVal(Key:AnsiString);
         
@@ -55,12 +65,14 @@ Type ExNotSet = class(Exception);
         Function  RemVal():Tp;
         
         Function  NextKey(K:AnsiString):AnsiString;
+        Function  ToArray():TEntryArr;
         
-        Function Empty() : Boolean;
-        Property Count   : LongWord read Vals;
+        Function  Empty() : Boolean;
+        Property  Count   : LongWord read Vals;
         
         Procedure Flush();
         
+        Constructor Create();
         Constructor Create(argMin, argMax : Char);
         Destructor  Destroy(); {$IFDEF TRIE_CLASS} Override; {$ENDIF}
      end;
@@ -145,17 +157,6 @@ Function GenericTrie.GetVal(Key:AnsiString):Tp;
 Function GenericTrie.Empty():Boolean;
    begin Exit(Self.Vals = 0) end;
 
-Constructor GenericTrie.Create(argMin, argMax : Char);
-   Var C:LongWord;
-   begin
-   {$IFDEF TRIE_CLASS} Inherited Create(); {$ENDIF}
-   Min:=ord(argMin); ArrS:=Ord(argMax)-Ord(argMin)+1;
-   New(Root); SetLength(Root^.Nxt,ArrS);
-   Root^.Chi:=0; Root^.Val:=NIL;
-   For C:=Low(Root^.Nxt) to High(Root^.Nxt) do Root^.Nxt[C]:=NIL;
-   Self.Vals:=0
-   end;
-
 Function GenericTrie.GetVal(N:PNode):Tp;
    Var C:LongWord;
    begin
@@ -220,6 +221,23 @@ Function GenericTrie.NextKey(K:AnsiString):AnsiString;
    begin R:='';
    If NextKey(Root,K,R) then Exit(R) else Exit('') end;
 
+Function GenericTrie.ToArray():TEntryArr;
+   Var Res:Array of TEntry; K:AnsiString;
+   begin
+   If (IsVal('')) then begin
+      SetLength(Res,1);
+      Res[0].Key:=''; Res[0].Val := GetVal('')
+      end else SetLength(Res,0);
+   K:=NextKey('');
+   While (K<>'') do begin
+      SetLength(Res,Length(Res)+1);
+      Res[High(Res)].Key := K;
+      Res[High(Res)].Val := GetVal(K);
+      K:=NextKey(K)
+      end;
+   Exit(Res)
+   end;
+
 Procedure GenericTrie.FreeNode(N:PNode);
    Var I:LongWord;
    begin
@@ -233,6 +251,28 @@ Procedure GenericTrie.FreeNode(N:PNode);
       N^.Chi:=0
       end;
    If (N^.Val <> NIL) then begin Dispose(N^.Val); Self.Vals-=1 end
+   end;
+
+Constructor GenericTrie.Create();
+   Var C:LongWord;
+   begin
+   {$IFDEF TRIE_CLASS} Inherited Create(); {$ENDIF}
+   Min:=0; ArrS:=256;
+   New(Root); SetLength(Root^.Nxt,ArrS);
+   Root^.Chi:=0; Root^.Val:=NIL;
+   For C:=Low(Root^.Nxt) to High(Root^.Nxt) do Root^.Nxt[C]:=NIL;
+   Self.Vals:=0
+   end;
+
+Constructor GenericTrie.Create(argMin, argMax : Char);
+   Var C:LongWord;
+   begin
+   {$IFDEF TRIE_CLASS} Inherited Create(); {$ENDIF}
+   Min:=ord(argMin); ArrS:=Ord(argMax)-Ord(argMin)+1;
+   New(Root); SetLength(Root^.Nxt,ArrS);
+   Root^.Chi:=0; Root^.Val:=NIL;
+   For C:=Low(Root^.Nxt) to High(Root^.Nxt) do Root^.Nxt[C]:=NIL;
+   Self.Vals:=0
    end;
 
 Procedure GenericTrie.Flush();
