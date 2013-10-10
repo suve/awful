@@ -5,15 +5,18 @@ program awful;
 uses SysUtils, Math, Trie, Values, Stack,
      Functions;//, heapTrc;//, YukSDL;
 
-const VMAJOR = 0;
-      VMINOR = 0;
-      VREVISION = 11;
+const VMAJOR = '0';
+      VMINOR = '1';
+      VBUGFX = '0';
+      VREVISION = '15';
+      VERSION = VMAJOR + '.' + VMINOR + '.' + VBUGFX;
 
 Type TTokenType = (
      TK_EXPR, TK_CONS, TK_VARI, TK_REFE, TK_AVAL, TK_AREF, TK_BADT);
      
      PExpr = ^TExpr;
      PToken = ^TToken;
+     Array_PExpr = Array of PExpr;
      
      PArrTk = ^TArrTk;
      TArrTk = record
@@ -72,14 +75,14 @@ Var YukFile : Text; YukNum:LongWord;
 Function Eval(E:PExpr):PValue;
    
    Function GetVar(Name:AnsiString;Typ:TValueType):PValue;
-      Var C:LongInt; R:PValue;
+      Var R:PValue;
       begin
       //Writeln(StdErr,'GetVar: ',Name,'; ',Typ);
-      C:=High(Vars);
-      While (C>=0) do
-         Try    R:=Vars[C]^.GetVal(Name);
-                Exit(R)
-         Except C-=1 end;
+      Try R:=Vars[High(Vars)]^.GetVal(Name);
+          Exit(R)
+      Except Try R:=Vars[0]^.GetVal(Name);
+                 Exit(R);
+             Except end end;
       //Writeln(StdErr,'Vars[',High(Vars),']^.SetVal(',Name,',',Typ,')');
       R:=EmptyVal(Typ); R^.Lev -= 1;
       Vars[High(Vars)]^.SetVal(Name,R);
@@ -90,26 +93,28 @@ Function Eval(E:PExpr):PValue;
       Var V,H:PValue; I:QInt;
       begin
       If (Tk^.Typ = TK_EXPR) then V:=Eval(PExpr(Tk^.Ptr)) else
-      If (Tk^.Typ = TK_CONS) then V:=CopyVal(PValue(Tk^.Ptr)) else
-      If (Tk^.Typ = TK_VARI) then V:=CopyVal(GetVar(PStr(Tk^.Ptr)^, VT_INT)) else
-      If (Tk^.Typ = TK_REFE) then V:=CopyVal(GetVar(PStr(Tk^.Ptr)^, VT_INT));
+      If (Tk^.Typ = TK_CONS) then V:=PValue(Tk^.Ptr) else
+      If (Tk^.Typ = TK_VARI) then V:=GetVar(PStr(Tk^.Ptr)^, VT_INT) else
+      If (Tk^.Typ = TK_REFE) then V:=GetVar(PStr(Tk^.Ptr)^, VT_INT);
       If (V^.Typ <> VT_Int) then begin
          H:=ValToInt(V); I:=PQInt(H^.Ptr)^; FreeVal(H)
          end else I:=PQInt(V^.Ptr)^; 
-      FreeVal(V); Exit(I)
+      If (Tk^.Typ = TK_EXPR) then FreeVal(V);
+      Exit(I)
       end;
    
    Function DictIndex(Tk:PToken):TStr;
       Var V,H:PValue; S:TStr;
       begin
       If (Tk^.Typ = TK_EXPR) then V:=Eval(PExpr(Tk^.Ptr)) else
-      If (Tk^.Typ = TK_CONS) then V:=CopyVal(PValue(Tk^.Ptr)) else
-      If (Tk^.Typ = TK_VARI) then V:=CopyVal(GetVar(PStr(Tk^.Ptr)^, VT_STR)) else
-      If (Tk^.Typ = TK_REFE) then V:=CopyVal(GetVar(PStr(Tk^.Ptr)^, VT_STR));
+      If (Tk^.Typ = TK_CONS) then V:=PValue(Tk^.Ptr) else
+      If (Tk^.Typ = TK_VARI) then V:=GetVar(PStr(Tk^.Ptr)^, VT_STR) else
+      If (Tk^.Typ = TK_REFE) then V:=GetVar(PStr(Tk^.Ptr)^, VT_STR);
       If (V^.Typ <> VT_STR) then begin
          H:=ValToStr(V); S:=PStr(H^.Ptr)^; FreeVal(H)
          end else S:=PStr(V^.Ptr)^; 
-      FreeVal(V); Exit(S)
+      If (Tk^.Typ = TK_EXPR) then FreeVal(V);
+      Exit(S)
       end;
    
    Function GetArr(A:PValue; Index:PToken; Typ:TValueType):PValue;
@@ -681,9 +686,9 @@ Function MakeExpr(Var Tk:Array of AnsiString;Ln,T:LongInt):PExpr;
    Exit(E)
    end;
 
-Function ProcessLine(L:AnsiString;N:LongWord):PExpr;
+Function ProcessLine(L:AnsiString;N:LongWord):Array_PExpr;
    Var Tk:Array of AnsiString; P:LongWord;
-       Str:LongInt; Del:Char;
+       Str:LongInt; Del:Char; R:Array_PExpr; Rs:LongWord;
    
    Function BreakToken(Ch:Char):Boolean;
       begin Exit(Pos(Ch,' (|)[#]')<>0) end;
@@ -765,31 +770,53 @@ Function ProcessLine(L:AnsiString;N:LongWord):PExpr;
       P+=1
       end;
    If (Length(Tk)=0) then Exit(NIL);
-   Exit(MakeExpr(Tk,N,0))
+   SetLength(R, 0); Rs:=0;
+   For P:=1 to High(Tk) do 
+       If (Tk[P][1]='!') then begin
+          SetLength(R, Length(R)+1);
+          R[High(R)] := MakeExpr(Tk[Rs..P-1], N, 0);
+          Rs := P
+          end;
+   SetLength(R, Length(R)+1);
+   R[High(R)] := MakeExpr(Tk[Rs..High(Tk)], N, 0);
+   Exit(R)
    end;
 
 Procedure ReadFile(I:PText);
-   Var L:AnsiString; A,N,E,P:LongWord; R:PExpr; V:PValue;
+   
+   Function BuildNum():AnsiString;
+      Var D,T:AnsiString;
+      begin
+      D:={$I %DATE%}; Delete(D, 8, 1);
+      T:={$I %TIME%}; Delete(T, 3, 1); Delete(T, 5, 3);
+      Exit(D+'/'+T)
+      end;
+   
+   Var L:AnsiString; A,N,E,P:LongWord; R:Array_PExpr; V:PValue;
    begin
    SetLength(Pr,1); N:=0; Proc:=0; ExLn:=0; mulico:=0;
    SetLength(Pr[0].Ar,0); SetLength(Pr[0].Ex,0); Pr[0].Nu:=0;
    SetLength(IfArr,0);  New(IfSta,Create());
    SetLength(WhiArr,0); New(WhiSta,Create());
    SetLength(RepArr,0); New(RepSta,Create());
-   V:=NewVal(VT_STR,ExpandFileName(YukPath)); V^.Lev := 0; Cons^.SetVal('FILEPATH',V);
+   V:=NewVal(VT_STR,ExpandFileName(YukPath));  V^.Lev := 0; Cons^.SetVal('FILEPATH',V);
    V:=NewVal(VT_STR,ExtractFileName(YukPath)); V^.Lev := 0; Cons^.SetVal('FILENAME',V);
-   V:=NewVal(VT_STR,{$I %DATE%}+', '+{$I %TIME%}); V^.Lev := 0; Cons^.SetVal('AWFULBUILD',V);
+   V:=NewVal(VT_STR,BuildNum()); V^.Lev := 0; Cons^.SetVal('AWFUL-BUILD',V);
+   V:=NewVal(VT_STR,VERSION);    V^.Lev := 0; Cons^.SetVal('AWFUL-VERSION',V);
+   V:=NewVal(VT_STR,VREVISION);  V^.Lev := 0; Cons^.SetVal('AWFUL-REVISION',V);
    While (Not Eof(I^)) do begin
       Readln(I^,L); N+=1;
       L:=Trim(L);
       If (Length(L)>0) {and (L[1]<>'#')} then begin
          P:=Proc; E:=Pr[P].Nu; ExLn:=E;
-         R:=ProcessLine(L,N);
-         If (R<>NIL) then begin
-            SetLength(Pr[P].Ex,Length(Pr[P].Ex)+1);
-            Pr[P].Ex[E]:=R;
-            Pr[P].Nu+=1
-            end
+         R:=ProcessLine(L, N);
+         If (R<>NIL) then 
+            For A:=Low(R) to High(R) do
+                If (R[A] <> NIL) then begin
+                   SetLength(Pr[P].Ex,Length(Pr[P].Ex)+1);
+                   Pr[P].Ex[E] := R[A];
+                   Pr[P].Nu += 1; E += 1
+                   end;
          end
       end;
    {For P:=Low(Pr) to High(Pr) do begin

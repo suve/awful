@@ -54,6 +54,7 @@ Function F_GetIs_(Arg:Array of PValue):PValue;
 Function F_GetVal(Arg:Array of PValue):PValue;
 Function F_GetKey(Arg:Array of PValue):PValue;
 Function F_GetNum(Arg:Array of PValue):PValue;
+Function F_GetDict(Arg:Array of PValue):PValue;
 
 Function F_SetPrecision(Arg:Array of PValue):PValue;
 Function F_Perc(Arg:Array of PValue):PValue;
@@ -122,6 +123,7 @@ Function F_fork(Arg:Array of PValue):PValue;
 Function F_random(Arg:Array of PValue):PValue;
 
 Function F_sizeof(Arg:Array of PValue):PValue;
+Function F_typeof(Arg:Array of PValue):PValue;
 
 Function F_array(Arg:Array of PValue):PValue;
 Function F_array_count(Arg:Array of PValue):PValue;
@@ -130,6 +132,7 @@ Function F_array_flush(Arg:Array of PValue):PValue;
 
 Function F_dict(Arg:Array of PValue):PValue;
 Function F_dict_nextkey(Arg:Array of PValue):PValue;
+Function F_dict_keys(Arg:Array of PValue):PValue;
 Function F_dict_values(Arg:Array of PValue):PValue;
 
 implementation
@@ -177,14 +180,21 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('floatprec',@F_SetPrecision);
    FT^.SetVal('perc',@F_Perc);
    FT^.SetVal('sqrt',@F_sqrt);
+   FT^.SetVal('fork',@F_fork);
+   FT^.SetVal('random',@F_random);
+   FT^.SetVal('sizeof',@F_sizeof);
+   FT^.SetVal('typeof',@F_typeof);
+   // CGI related functions
    FT^.SetVal('get-prepare',@F_GetProcess);
    FT^.SetVal('get-is',@F_GetIs_);
    FT^.SetVal('get-val',@F_GetVal);
    FT^.SetVal('get-key',@F_GetKey);
    FT^.SetVal('get-num',@F_GetNum);
+   FT^.SetVal('get-dict',@F_GetDict);
    FT^.SetVal('decodeURL',@F_DecodeURL);
    FT^.SetVal('encodeURL',@F_DecodeURL);
    FT^.SetVal('encodeHTML',@F_EncodeHTML);
+   FT^.SetVal('doctype',@F_Doctype);
    {$IFDEF LINUX}
    FT^.SetVal('sysinfo-get',@F_SysInfo_Get);
    FT^.SetVal('sysinfo-uptime',@F_SysInfo_Uptime);
@@ -204,6 +214,7 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('sysinfo-domainname',@F_SysInfo_DomainName);
    FT^.SetVal('sysinfo-hostname',@F_SysInfo_Hostname);
    {$ENDIF}
+   // String functions
    FT^.SetVal('trim',@F_Trim);
    FT^.SetVal('trimle',@F_TrimLeft);
    FT^.SetVal('trimri',@F_TrimRight);
@@ -213,7 +224,7 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('strpos',@F_StrPos);
    FT^.SetVal('substr',@F_SubStr);
    FT^.SetVal('delstr',@F_DelStr);
-   FT^.SetVal('doctype',@F_Doctype);
+   // DateTime functions
    FT^.SetVal('datetime-start',@F_DateTime_Start);
    FT^.SetVal('datetime-filestart',@F_DateTime_FileStart);
    FT^.SetVal('datetime-now',@F_DateTime_Now);
@@ -231,6 +242,7 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('datetime-sec',@F_DateTime_Sec);
    FT^.SetVal('datetime-ms',@F_DateTime_MS);
    FT^.SetVal('datetime-string',@F_DateTime_String);
+   // Typecast functions
    FT^.SetVal('mkint',@F_mkint);
    FT^.SetVal('mkhex',@F_mkhex);
    FT^.SetVal('mkoct',@F_mkoct);
@@ -238,13 +250,11 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('mkflo',@F_mkflo); FT^.SetVal('mkfloat',@F_mkflo);
    FT^.SetVal('mkstr',@F_mkstr); FT^.SetVal('mkstring',@F_mkstr);
    FT^.SetVal('mklog',@F_mklog); FT^.SetVal('mkbool',@F_mklog);
-   FT^.SetVal('fork',@F_fork);
-   FT^.SetVal('random',@F_random);
-   FT^.SetVal('sizeof',@F_sizeof);
    // array functions, bitches!
    FT^.SetVal('arr',@F_array);
    // dict funtions
    FT^.SetVal('dict',@F_dict);
+   FT^.SetVal('dict-keys',@F_dict_keys);
    FT^.SetVal('dict-values',@F_dict_values);
    FT^.SetVal('dict-nextkey',@F_dict_nextkey);
    // arr+dic functions
@@ -958,6 +968,19 @@ Function F_GetNum(Arg:Array of PValue):PValue;
       For C:=Low(Arg) to High(Arg) do
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    Exit(NewVal(VT_INT,GetNum()))
+   end;
+
+Function F_GetDict(Arg:Array of PValue):PValue;
+   Var C:LongWord; V:PValue; Dic:PValTrie;
+   begin
+   If (Length(Arg)>0) then
+      For C:=Low(Arg) to High(Arg) do
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
+   V:=EmptyVal(VT_DIC); Dic:=PValTrie(V^.Ptr);
+   If (Length(GetArr) > 0) then 
+      For C:=Low(GetArr) to High(GetArr) do
+          Dic^.SetVal(GetArr[C].Key, NewVal(VT_STR, GetArr[C].Val));
+   Exit(V)
    end;
 
 Function F_SetPrecision(Arg:Array of PValue):PValue;
@@ -2063,19 +2086,47 @@ Function F_sizeof(Arg:Array of PValue):PValue;
       If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
       Arg[0]:=V
       end;
-   If (PStr(Arg[0]^.Ptr)^ = 'flo') then C:=SizeOf(TFloat) else
-   If (PStr(Arg[0]^.Ptr)^ = 'int') then C:=SizeOf(QInt) else
-   If (PStr(Arg[0]^.Ptr)^ = 'hex') then C:=SizeOf(QInt) else
-   If (PStr(Arg[0]^.Ptr)^ = 'oct') then C:=SizeOf(QInt) else
-   If (PStr(Arg[0]^.Ptr)^ = 'bin') then C:=SizeOf(QInt) else
-   If (PStr(Arg[0]^.Ptr)^ = 'str') then C:=SizeOf(TStr) else
-   If (PStr(Arg[0]^.Ptr)^ = 'log') then C:=SizeOf(Bool) else
-   If (PStr(Arg[0]^.Ptr)^ = 'float') then C:=SizeOf(TFloat) else
+   If (PStr(Arg[0]^.Ptr)^ = 'flo'   ) then C:=SizeOf(TFloat) else
+   If (PStr(Arg[0]^.Ptr)^ = 'int'   ) then C:=SizeOf(QInt) else
+   If (PStr(Arg[0]^.Ptr)^ = 'hex'   ) then C:=SizeOf(QInt) else
+   If (PStr(Arg[0]^.Ptr)^ = 'oct'   ) then C:=SizeOf(QInt) else
+   If (PStr(Arg[0]^.Ptr)^ = 'bin'   ) then C:=SizeOf(QInt) else
+   If (PStr(Arg[0]^.Ptr)^ = 'str'   ) then C:=SizeOf(TStr) else
+   If (PStr(Arg[0]^.Ptr)^ = 'log'   ) then C:=SizeOf(Bool) else
+   If (PStr(Arg[0]^.Ptr)^ = 'float' ) then C:=SizeOf(TFloat) else
    If (PStr(Arg[0]^.Ptr)^ = 'string') then C:=SizeOf(TStr) else
-   If (PStr(Arg[0]^.Ptr)^ = 'bool') then C:=SizeOf(Bool) else
+   If (PStr(Arg[0]^.Ptr)^ = 'bool'  ) then C:=SizeOf(Bool) else
+   If (PStr(Arg[0]^.Ptr)^ = 'arr'   ) then C:=SizeOf(TValTree) else
+   If (PStr(Arg[0]^.Ptr)^ = 'array' ) then C:=SizeOf(TValTree) else
+   If (PStr(Arg[0]^.Ptr)^ = 'dict'  ) then C:=SizeOf(TValTrie) else
       (* else *) C:=0;
    If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    Exit(NewVal(VT_INT,C*8))
+   end;
+
+Function F_typeof(Arg:Array of PValue):PValue;
+   Var C:LongWord; V:PValue;
+   begin
+   If (Length(Arg)=0) then Exit(NewVal(VT_STR,''));
+   If (Length(Arg)>1) then
+      For C:=High(Arg) downto 1 do
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
+   Case (Arg[0]^.Typ) of
+      VT_NIL: V:=NewVal(VT_STR, 'nil');
+      VT_NEW: V:=NewVal(VT_STR, 'new');
+      VT_BOO: V:=NewVal(VT_STR, 'bool');
+      VT_BIN: V:=NewVal(VT_STR, 'bin');
+      VT_OCT: V:=NewVal(VT_STR, 'oct');
+      VT_INT: V:=NewVal(VT_STR, 'int');
+      VT_HEX: V:=NewVal(VT_STR, 'hex');
+      VT_FLO: V:=NewVal(VT_STR, 'float');
+      VT_STR: V:=NewVal(VT_STR, 'string');
+      VT_ARR: V:=NewVal(VT_STR, 'array');
+      VT_DIC: V:=NewVal(VT_STR, 'dict');
+      else V:=NewVal(VT_STR, '?')
+      end;
+   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
+   Exit(V)
    end;
 
 Function F_array(Arg:Array of PValue):PValue;
@@ -2166,34 +2217,44 @@ Function F_dict_nextkey(Arg:Array of PValue):PValue;
    Exit(NilVal())
    end;
 
-Function F_dict_values(Arg:Array of PValue):PValue;
-   Var C,I:LongWord; A,T:PValTrie; K:AnsiString; aV,V:PValue;
+Function F_dict_keys(Arg:Array of PValue):PValue;
+   Var C,D,I:LongWord; R :PValue; Arr:PValTree; Dic:PValTrie; DEA:TValTrie.TEntryArr;
    begin
-   aV:=EmptyVal(VT_DIC); A:=PValTrie(aV^.Ptr); I:=0;
+   R:=EmptyVal(VT_ARR); Arr:=PValTree(R^.Ptr); I:=0;
    If (Length(Arg)>0) then For C:=Low(Arg) to High(Arg) do begin
       If (Arg[C]^.Typ = VT_DIC) then begin
-         T:=PValTrie(Arg[C]^.Ptr);
-         If (T^.IsVal('')) then begin
-            V:=T^.GetVal(''); V:=CopyVal(V); //V^.Tmp:=False;
-            A^.SetVal(IntToStr(I),V); I+=1
-            end;
-         K:=T^.NextKey('');
-         While (K<>'') do begin
-            V:=T^.GetVal(K); V:=CopyVal(V); //V^.Tmp:=False;
-            A^.SetVal(IntToStr(I),V); I+=1;
-            K:=T^.NextKey(K)
-            end
-         end else begin
-         If (Arg[C]^.Lev >= CurLev) then V:=Arg[C] else V:=CopyVal(Arg[C]);
-         {V^.Tmp:=False;} A^.SetVal(IntToStr(I),V); I+=1
+         Dic := PValTrie(Arg[C]^.Ptr); DEA := Dic^.ToArray();
+         If (Not Dic^.Empty()) then
+            For D:=Low(DEA) to High(DEA) do begin
+                Arr^.SetValNaive(I, NewVal(VT_STR, DEA[D].Key));
+                I += 1 end
          end;
       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
       end;
-   Exit(aV)
+   Arr^.Rebalance();
+   Exit(R)
+   end;
+
+Function F_dict_values(Arg:Array of PValue):PValue;
+   Var C,D,I:LongWord; R :PValue; Arr:PValTree; Dic:PValTrie; DEA:TValTrie.TEntryArr;
+   begin
+   R:=EmptyVal(VT_ARR); Arr:=PValTree(R^.Ptr); I:=0;
+   If (Length(Arg)>0) then For C:=Low(Arg) to High(Arg) do begin
+      If (Arg[C]^.Typ = VT_DIC) then begin
+         Dic := PValTrie(Arg[C]^.Ptr); DEA := Dic^.ToArray();
+         If (Not Dic^.Empty()) then
+            For D:=Low(DEA) to High(DEA) do begin
+                Arr^.SetValNaive(I, CopyVal(DEA[D].Val));
+                I += 1 end
+         end;
+      If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
+      end;
+   Arr^.Rebalance();
+   Exit(R)
    end;
 
 Function F_array_flush(Arg:Array of PValue):PValue;
-   Var C,I,R:LongWord; V:PValue;
+   Var C,I,R:LongWord;
        Arr:PValTree; AEA:TValTree.TEntryArr;
        Dic:PValTrie; DEA:TValTrie.TEntryArr;
    begin R:=0;
