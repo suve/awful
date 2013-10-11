@@ -48,6 +48,7 @@ Function F_Le(Arg:Array of PValue):PValue;
 Function F_DecodeURL(Arg:Array of PValue):PValue;
 Function F_EncodeURL(Arg:Array of PValue):PValue;
 Function F_EncodeHTML(Arg:Array of PValue):PValue;
+Function F_Doctype(Arg:Array of PValue):PValue;
 
 Function F_GetProcess(Arg:Array of PValue):PValue;
 Function F_GetIs_(Arg:Array of PValue):PValue;
@@ -90,7 +91,8 @@ Function F_StrPos(Arg:Array of PValue):PValue;
 Function F_SubStr(Arg:Array of PValue):PValue;
 Function F_DelStr(Arg:Array of PValue):PValue;
 
-Function F_Doctype(Arg:Array of PValue):PValue;
+Function F_Chr(Arg:Array of PValue):PValue;
+Function F_Ord(Arg:Array of PValue):PValue;
 
 Function F_DateTime_Start(Arg:Array of PValue):PValue;
 Function F_DateTime_FileStart(Arg:Array of PValue):PValue;
@@ -129,6 +131,7 @@ Function F_array(Arg:Array of PValue):PValue;
 Function F_array_count(Arg:Array of PValue):PValue;
 Function F_array_empty(Arg:Array of PValue):PValue;
 Function F_array_flush(Arg:Array of PValue):PValue;
+Function F_array_print(Arg:Array of PValue):PValue;
 
 Function F_dict(Arg:Array of PValue):PValue;
 Function F_dict_nextkey(Arg:Array of PValue):PValue;
@@ -215,6 +218,8 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('sysinfo-hostname',@F_SysInfo_Hostname);
    {$ENDIF}
    // String functions
+   FT^.SetVal('chr',@F_chr);
+   FT^.SetVal('ord',@F_ord);
    FT^.SetVal('trim',@F_Trim);
    FT^.SetVal('trimle',@F_TrimLeft);
    FT^.SetVal('trimri',@F_TrimRight);
@@ -261,6 +266,7 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('arr-flush',@F_array_flush); FT^.SetVal('dict-flush',@F_array_flush);
    FT^.SetVal('arr-count',@F_array_count); FT^.SetVal('dict-count',@F_array_count);
    FT^.SetVal('arr-empty',@F_array_empty); FT^.SetVal('dict-empty',@F_array_empty);
+   FT^.SetVal('arr-print',@F_array_print); FT^.SetVal('dict-print',@F_array_print);
    end;
 
 Function F_(Arg:Array of PValue):PValue;
@@ -342,7 +348,9 @@ Function F_Write(Arg:Array of PValue):PValue;
    If (Length(Arg)=0) then Exit(NewVal(VT_STR,''));
    For C:=Low(Arg) to High(Arg) do begin
        Case Arg[C]^.Typ of
-          //VT_NIL: Write('(nilvar)');
+          VT_NIL: Write('{NIL}');
+          VT_NEW: Write('{NEW}');
+          VT_PTR: Write('{PTR}');
           VT_INT: Write(PQInt(Arg[C]^.Ptr)^);
           VT_HEX: Write(HexToStr(PQInt(Arg[C]^.Ptr)^));
           VT_OCT: Write(OctToStr(PQInt(Arg[C]^.Ptr)^));
@@ -350,6 +358,7 @@ Function F_Write(Arg:Array of PValue):PValue;
           VT_FLO: Write(PFloat(Arg[C]^.Ptr)^:0:RealPrec);
           VT_BOO: Write(PBoolean(Arg[C]^.Ptr)^);
           VT_STR: Write(PAnsiString(Arg[C]^.Ptr)^);
+          VT_UTF: Write('{UTF8}');
           VT_ARR: Write('array(',PValTree(Arg[C]^.Ptr)^.Count,')');
           VT_DIC: Write('dict(',PValTrie(Arg[C]^.Ptr)^.Count,')');
           else Write('(',Arg[C]^.Typ,')');
@@ -1307,6 +1316,39 @@ Function F_LowerCase(Arg:Array of PValue):PValue;
       end;
    If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    Exit(NewVal(VT_STR,S))
+   end;
+
+Function F_Ord(Arg:Array of PValue):PValue;
+   Var C:LongWord; V:PValue; S:AnsiString;
+   begin
+   If (Length(Arg)=0) then Exit(NilVal());
+   For C:=High(Arg) downto 1 do
+      If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
+   If (Arg[0]^.Typ = VT_STR) then begin
+      S:=PStr(Arg[0]^.Ptr)^;
+      If (Length(S) = 0) then V:=NilVal()
+                         else V:=NewVal(VT_INT, Ord(S[1]));
+      end;
+   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
+   Exit(V)
+   end;
+
+Function F_Chr(Arg:Array of PValue):PValue;
+   Var C:LongWord; V:PValue; I:QInt; F:TFloat;
+   begin
+   If (Length(Arg)=0) then Exit(NilVal());
+   For C:=High(Arg) downto 1 do
+      If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
+   If (Arg[0]^.Typ >= VT_INT) and (Arg[0]^.Typ <= VT_BIN) then begin
+      I:=PQInt(Arg[0]^.Ptr)^;
+      V:=NewVal(VT_STR, Chr(I));
+      end else
+   If (Arg[0]^.Typ = VT_FLO) then begin
+      F:=PFloat(Arg[0]^.Ptr)^;
+      V:=NewVal(VT_STR, Chr(Trunc(F)));
+      end else V:=NilVal();
+   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
+   Exit(V)
    end;
 
 Function F_Doctype(Arg:Array of PValue):PValue;
@@ -2277,6 +2319,54 @@ Function F_array_flush(Arg:Array of PValue):PValue;
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
           end;
    Exit(NewVal(VT_INT,R))
+   end;
+
+Function F_array_print(Arg:Array of PValue):PValue;
+   Var C,I:LongWord; R:Boolean; V:PValue; S:AnsiString;
+       Arr:PValTree; AEA:TValTree.TEntryArr;
+       Dic:PValTrie; DEA:TValTrie.TEntryArr;
+   begin R:=False;
+   If (Length(Arg) >= 2) then begin
+      For C:=High(Arg) downto 2 do
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
+      If (Arg[1]^.Typ <> VT_BOO) then begin
+         V:=ValToBoo(Arg[1]); R:=PBool(V^.Ptr)^; FreeVal(V)
+         end else R:=PBool(Arg[1]^.Ptr)^;
+      If (Arg[1]^.Lev >= CurLev) then FreeVal(Arg[1])
+      end;
+   If (Length(Arg) > 0) then begin
+       If (Arg[0]^.Typ = VT_ARR) then begin
+          S:='array(';
+          Arr:=PValTree(Arg[0]^.Ptr); 
+          If (Not Arr^.Empty()) then begin
+             AEA:=Arr^.ToArray(); 
+             For I:=Low(AEA) to High(AEA) do begin
+                 S += '[' + IntToStr(AEA[I].Key) + ']: ';
+                 If (AEA[I].Val^.Typ <> VT_STR) then begin
+                    V:=ValToStr(AEA[I].Val); S += PStr(V^.Ptr)^; FreeVal(V)
+                    end else S += PStr(AEA[I].Val^.Ptr)^;
+                 If (I < High(AEA)) then S += ', '
+                 end;
+          S += ')'
+          end end;
+       If (Arg[0]^.Typ = VT_DIC) then begin
+          S := 'dict(';
+          Dic:=PValTrie(Arg[0]^.Ptr); 
+          If (Not Dic^.Empty()) then begin
+             DEA:=Dic^.ToArray(); 
+             For I:=Low(DEA) to High(DEA) do begin
+                 S += '[' + DEA[I].Key +']: ';
+                 If (DEA[I].Val^.Typ <> VT_STR) then begin
+                    V:=ValToStr(DEA[I].Val); S += PStr(V^.Ptr)^; FreeVal(V)
+                    end else S += PStr(DEA[I].Val^.Ptr)^;
+                 If (I < High(DEA)) then S += ', '
+                 end;
+          S += ')'
+          end end else S := '';
+       If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0])
+       end;
+   V := NewVal(VT_STR,S);
+   If (Not R) then Exit(F_Writeln(V)) else Exit(V)
    end;
 
 end.

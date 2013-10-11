@@ -1250,14 +1250,18 @@ Function  CopyVal(V:PValue):PValue;
               If (Not OArr^.Empty()) then begin
                   AEA := OArr^.ToArray();
                   For C:=Low(AEA) to High(AEA) do
-                      NArr^.SetVal(AEA[C].Key, CopyVal(AEA[C].Val))
+                      If (AEA[C].Val^.Lev >= V^.Lev)
+                         then NArr^.SetVal(AEA[C].Key, CopyVal(AEA[C].Val))
+                         else NArr^.SetVal(AEA[C].Key, AEA[C].Val)
               end end;
       VT_DIC: begin
               New(NDic,Create('!','~')); R^.Ptr:=NDic; ODic:=PValTrie(V^.Ptr);
               If (Not ODic^.Empty()) then begin
                   DEA := ODic^.ToArray();
                   For C:=Low(DEA) to High(DEA) do
-                      NDic^.SetVal(DEA[C].Key, CopyVal(DEA[C].Val))
+                      If (DEA[C].Val^.Lev >= V^.Lev)
+                         then NDic^.SetVal(DEA[C].Key, CopyVal(DEA[C].Val))
+                         else NDic^.SetVal(DEA[C].Key, DEA[C].Val)
               end end;
       else R^.Ptr:=NIL
       end;
@@ -1265,11 +1269,27 @@ Function  CopyVal(V:PValue):PValue;
    end;
 
 Procedure SwapPtrs(A,B:PValue);
-   Var P:Pointer; T:TValueType;
+   Var P:Pointer; T:TValueType; C:LongWord;
+       Arr:PValTree; AEA:TValTree.TEntryArr;
+       Dic:PValTrie; DEA:TValTrie.TEntryArr;
    begin
    P:=A^.Ptr; T:=A^.Typ;
    A^.Ptr:=B^.Ptr; A^.Typ:=B^.Typ;
-   B^.Ptr:=P; B^.Typ:=T
+   B^.Ptr:=P; B^.Typ:=T;
+   If (A^.Typ = VT_ARR) then begin
+      Arr := A^.Ptr;
+      If (Not Arr^.Empty()) then begin
+         AEA:=Arr^.ToArray();
+         For C:=Low(AEA) to High(AEA) do
+             If (AEA[C].Val^.Lev > A^.Lev) then AEA[C].Val^.Lev := A^.Lev
+      end end else
+   If (A^.Typ = VT_DIC) then begin
+      Dic := A^.Ptr;
+      If (Not Dic^.Empty()) then begin
+         DEA:=Dic^.ToArray();
+         For C:=Low(DEA) to High(DEA) do
+             If (DEA[C].Val^.Lev > A^.Lev) then DEA[C].Val^.Lev := A^.Lev
+      end end else
    end;
 
 Function NewVal(T:TValueType;V:TFloat):PValue;
