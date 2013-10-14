@@ -2,46 +2,23 @@ program awful;
 
 {$MODE OBJFPC} {$COPERATORS ON} {$LONGSTRINGS ON}
 
-uses SysUtils, Math, Trie, Values, Stack,
-     Functions;//, heapTrc;//, YukSDL;
+uses SysUtils, Math,
+     Trie, Stack,
+     Values, TokExpr, EmptyFunc,
+     Functions,
+     Functions_ArrDict,
+     Functions_CGI,
+     Functions_DateTime,
+     Functions_Strings, Functions_SysInfo,
+     Functions_TypeCast;
 
 const VMAJOR = '0';
       VMINOR = '1';
-      VBUGFX = '2';
-      VREVISION = 17;
+      VBUGFX = '3';
+      VREVISION = 18;
       VERSION = VMAJOR + '.' + VMINOR + '.' + VBUGFX;
 
-Type TTokenType = (
-     TK_EXPR, TK_CONS, TK_VARI, TK_REFE, TK_AVAL, TK_AREF, TK_BADT);
-     
-     PExpr = ^TExpr;
-     PToken = ^TToken;
-     Array_PExpr = Array of PExpr;
-     
-     PArrTk = ^TArrTk;
-     TArrTk = record
-     Nam : TStr;
-     Ind : Array of PToken
-     end;
-     
-     TToken = record
-     Typ : TTokenType;
-     Ptr : Pointer
-     end;
-     
-     TExpr = record
-     //Lin : LongWord;
-     Fun : PFunc;
-     Tok : Array of PToken
-     end;
-     
-     TProc = record
-     Nu : LongWord;
-     Ex : Array of PExpr;
-     Ar : Array of AnsiString;
-     end;
-     
-     PText = ^System.Text;
+Type PText = ^System.Text;
      
      TLineInfo = LongInt; //This will probably become a record when functions get implemented
      TIf = Array[0..2] of TLineInfo;
@@ -804,18 +781,32 @@ Procedure ReadFile(I:PText);
       end;
    
    Var L:AnsiString; A,N,E,P,Rn:LongWord; R:Array_PExpr; V:PValue;
+       PTV:PValue; //tik:Comp;
    begin
+   //tik:=TimeStampToMSecs(DateTimeToTimeStamp(Now()));
+   
+   New(UsrFun,Create('!','~'));
    SetLength(Pr,1); N:=0; Proc:=0; ExLn:=0; mulico:=0;
    SetLength(Pr[0].Ar,0); SetLength(Pr[0].Ex,0); Pr[0].Nu:=0;
+   
    SetLength(IfArr,0);  New(IfSta,Create());
    SetLength(WhiArr,0); New(WhiSta,Create());
    SetLength(RepArr,0); New(RepSta,Create());
+   
+   New(Cons,Create('!','~'));
+   V:=NilVal(); V^.Lev := 0; Cons^.SetVal('NIL', V);
+   
    V:=NewVal(VT_STR,ExpandFileName(YukPath));  V^.Lev := 0; Cons^.SetVal('FILEPATH',V);
    V:=NewVal(VT_STR,ExtractFileName(YukPath)); V^.Lev := 0; Cons^.SetVal('FILENAME',V);
+   PTV:=EmptyVal(VT_INT);                    PTV^.Lev := 0; Cons^.SetVal('FILE-PARSETIME', PTV);
+   
    V:=NewVal(VT_STR,ParamStr(0)); V^.Lev := 0; Cons^.SetVal('AWFUL-PATH',V);
    V:=NewVal(VT_STR,BuildNum());  V^.Lev := 0; Cons^.SetVal('AWFUL-BUILD',V);
    V:=NewVal(VT_STR,VERSION);     V^.Lev := 0; Cons^.SetVal('AWFUL-VERSION',V);
    V:=NewVal(VT_INT,VREVISION);   V^.Lev := 0; Cons^.SetVal('AWFUL-REVISION',V);
+   
+   SetLength(Vars,1); New(Vars[0],Create('!','~')); 
+   
    While (Not Eof(I^)) do begin
       Readln(I^,L); N+=1;
       L:=Trim(L);
@@ -847,21 +838,17 @@ Procedure ReadFile(I:PText);
        end;}
    If (Not IfSta^.Empty()) then begin
       A:=IfSta^.Peek(); A:=IfArr[A][0];
-      Writeln(StdErr,ExtractFileName(YukPath),'(',A,'): ',
-              'Fatal: !if stretches past end of code.');
-      Halt(1) end;
+      Fatal(A, '!if stretches past end of code.') end;
    If (Not WhiSta^.Empty()) then begin
       A:=WhiSta^.Peek(); A:=WhiArr[A][0];
-      Writeln(StdErr,ExtractFileName(YukPath),'(',A,'): ',
-              'Fatal: !while stretches past end of code.');
-      Halt(1) end;
+      Fatal(A, 'Fatal: !while stretches past end of code.') end;
    If (Not RepSta^.Empty()) then begin
       A:=RepSta^.Peek(); A:=RepArr[A][0];
-      Writeln(StdErr,ExtractFileName(YukPath),'(',A,'): ',
-              'Fatal: !repeat stretches past end of code.');
-      Halt(1) end;
+      Fatal(A, '!repeat stretches past end of code.') end;
    Dispose(WhiSta,Destroy()); Dispose(RepSta,Destroy());
-   Dispose(IfSta,Destroy())
+   Dispose(IfSta,Destroy());
+   
+   PQInt(PTV^.Ptr)^ := Ceil(TimeStampToMSecs(DateTimeToTimeStamp(Now()))-GLOB_ms);
    end;
 
 Procedure Run();
@@ -875,8 +862,28 @@ Procedure Run();
    end;
 
 Procedure Cleanup();
+   Var C,I:LongWord; VEA:TValTrie.TEntryArr;
    begin
-   
+   // Free all the user-functions, their expressions and tokens
+   UsrFun^.Flush(); Dispose(UsrFun, Destroy());
+   If (Length(Pr)>0) then
+      For C:=Low(Pr) to High(Pr) do
+          FreeProc(Pr[C]);
+   // Free any remaining variable tries
+   If (Length(Vars)>0) then
+      For C:=High(Vars) to Low(Vars) do begin
+          If (Not Vars[C]^.Empty) then begin
+             VEA := Vars[C]^.ToArray(); Vars[C]^.Flush();
+             For I:=Low(VEA) to High(VEA) do FreeVal(VEA[I].Val)
+             end;
+          Dispose(Vars[C],Destroy());
+          end;
+   // Free the constants trie
+   If (Not Cons^.Empty) then begin
+      VEA := Cons^.ToArray(); Cons^.Flush();
+      For I:=Low(VEA) to High(VEA) do FreeVal(VEA[I].Val)
+      end;
+   Dispose(Cons,Destroy());
    end;
 
 begin //MAIN
@@ -887,12 +894,15 @@ New(Func,Create('!','~'));
 Func^.SetVal('call',@F_Call);
 Func^.SetVal('return',@F_Return);
 Func^.SetVal('exit',@F_Exit);
+EmptyFunc.Register(Func);
 Functions.Register(Func);
+Functions_ArrDict.Register(Func);
+Functions_CGI.Register(Func);
+Functions_DateTime.Register(Func);
+Functions_Strings.Register(Func);
+Functions_SysInfo.Register(Func);
+Functions_TypeCast.Register(Func);
 //YukSDL.Register(Func);
-
-SetLength(Vars,1); New(Vars[0],Create('!','~'));
-New(Cons,Create('!','~'));
-New(UsrFun,Create('!','~'));
 
 If (ParamCount()>0) then begin
    ParMod:=PAR_INPUT;
@@ -924,7 +934,6 @@ If (ParamCount()>0) then begin
    Run()
    end;
 
-Dispose(Vars[0],Destroy());
-Dispose(Cons,Destroy());
+// At the very end, destroy the trie of built-in functions.
 Dispose(Func,Destroy())
 end.
