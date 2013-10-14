@@ -11,132 +11,132 @@ Var GLOB_MS:Comp; GLOB_dt:TDateTime;
 
 Procedure Register(FT:PFunTrie);
 
-Function F_(Arg:Array of PValue):PValue;
+Function F_(DoReturn:Boolean; Arg:Array of PValue):PValue;
 
-Function F_FilePath(Arg:Array of PValue):PValue;
-Function F_FileName(Arg:Array of PValue):PValue;
+Function F_FilePath(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_FileName(DoReturn:Boolean; Arg:Array of PValue):PValue;
 
-Function F_Sleep(Arg:Array of PValue):PValue;
-Function F_Ticks(Arg:Array of PValue):PValue;
-Function F_FileTicks(Arg:Array of PValue):PValue;
+Function F_Sleep(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_Ticks(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_FileTicks(DoReturn:Boolean; Arg:Array of PValue):PValue;
 
-Function F_Write(Arg:Array of PValue):PValue;
-Function F_Writeln(Arg:Array of PValue):PValue;
+Function F_Write(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_Writeln(DoReturn:Boolean; Arg:Array of PValue):PValue;
 
-Function F_Set(Arg:Array of PValue):PValue;
-Function F_Add(Arg:Array of PValue):PValue;
-Function F_Sub(Arg:Array of PValue):PValue;
-Function F_Mul(Arg:Array of PValue):PValue;
-Function F_Div(Arg:Array of PValue):PValue;
-Function F_Mod(Arg:Array of PValue):PValue;
-Function F_Pow(Arg:Array of PValue):PValue;
+Function F_Set(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_Add(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_Sub(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_Mul(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_Div(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_Mod(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_Pow(DoReturn:Boolean; Arg:Array of PValue):PValue;
 
-Function F_And(Arg:Array of PValue):PValue;
-Function F_Or(Arg:Array of PValue):PValue;
-Function F_Xor(Arg:Array of PValue):PValue;
-Function F_Not(Arg:Array of PValue):PValue;
+Function F_And(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_Or(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_Xor(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_Not(DoReturn:Boolean; Arg:Array of PValue):PValue;
 
-Function F_Eq(Arg:Array of PValue):PValue;
-Function F_Seq(Arg:Array of PValue):PValue;
-Function F_Neq(Arg:Array of PValue):PValue;
-Function F_SNeq(Arg:Array of PValue):PValue;
-Function F_Gt(Arg:Array of PValue):PValue;
-Function F_Ge(Arg:Array of PValue):PValue;
-Function F_Lt(Arg:Array of PValue):PValue;
-Function F_Le(Arg:Array of PValue):PValue;
+Function F_Eq(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_Seq(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_Neq(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_SNeq(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_Gt(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_Ge(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_Lt(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_Le(DoReturn:Boolean; Arg:Array of PValue):PValue;
 
-Function F_DecodeURL(Arg:Array of PValue):PValue;
-Function F_EncodeURL(Arg:Array of PValue):PValue;
-Function F_EncodeHTML(Arg:Array of PValue):PValue;
-Function F_Doctype(Arg:Array of PValue):PValue;
+Function F_DecodeURL(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_EncodeURL(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_EncodeHTML(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_Doctype(DoReturn:Boolean; Arg:Array of PValue):PValue;
 
-Function F_GetProcess(Arg:Array of PValue):PValue;
-Function F_GetIs_(Arg:Array of PValue):PValue;
-Function F_GetVal(Arg:Array of PValue):PValue;
-Function F_GetKey(Arg:Array of PValue):PValue;
-Function F_GetNum(Arg:Array of PValue):PValue;
-Function F_GetDict(Arg:Array of PValue):PValue;
+Function F_GetProcess(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_GetIs_(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_GetVal(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_GetKey(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_GetNum(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_GetDict(DoReturn:Boolean; Arg:Array of PValue):PValue;
 
-Function F_SetPrecision(Arg:Array of PValue):PValue;
-Function F_Perc(Arg:Array of PValue):PValue;
-Function F_sqrt(Arg:Array of PValue):PValue;
+Function F_SetPrecision(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_Perc(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_sqrt(DoReturn:Boolean; Arg:Array of PValue):PValue;
 
 {$IFDEF LINUX}
-Function F_SysInfo_Get(Arg:Array of PValue):PValue;
-Function F_SysInfo_Uptime(Arg:Array of PValue):PValue;
-Function F_SysInfo_Load(Arg:Array of PValue):PValue;
-Function F_SysInfo_RAMtotal(Arg:Array of PValue):PValue;
-Function F_SysInfo_RAMfree(Arg:Array of PValue):PValue;
-Function F_SysInfo_RAMbuffer(Arg:Array of PValue):PValue;
-Function F_SysInfo_RAMused(Arg:Array of PValue):PValue;
-Function F_SysInfo_SwapTotal(Arg:Array of PValue):PValue;
-Function F_SysInfo_SwapFree(Arg:Array of PValue):PValue;
-Function F_SysInfo_SwapUsed(Arg:Array of PValue):PValue;
-Function F_SysInfo_DiskFree(Arg:Array of PValue):PValue;
-Function F_SysInfo_DiskTotal(Arg:Array of PValue):PValue;
-Function F_SysInfo_DiskUsed(Arg:Array of PValue):PValue;
-Function F_SysInfo_Procnum(Arg:Array of PValue):PValue;
-Function F_SysInfo_Thermal(Arg:Array of PValue):PValue;
-Function F_SysInfo_Hostname(Arg:Array of PValue):PValue;
-Function F_SysInfo_DomainName(Arg:Array of PValue):PValue;
+Function F_SysInfo_Get(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_SysInfo_Uptime(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_SysInfo_Load(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_SysInfo_RAMtotal(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_SysInfo_RAMfree(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_SysInfo_RAMbuffer(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_SysInfo_RAMused(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_SysInfo_SwapTotal(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_SysInfo_SwapFree(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_SysInfo_SwapUsed(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_SysInfo_DiskFree(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_SysInfo_DiskTotal(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_SysInfo_DiskUsed(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_SysInfo_Procnum(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_SysInfo_Thermal(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_SysInfo_Hostname(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_SysInfo_DomainName(DoReturn:Boolean; Arg:Array of PValue):PValue;
 {$ENDIF}
 
-Function F_Trim(Arg:Array of PValue):PValue;
-Function F_TrimLeft(Arg:Array of PValue):PValue;
-Function F_TrimRight(Arg:Array of PValue):PValue;
-Function F_UpperCase(Arg:Array of PValue):PValue;
-Function F_LowerCase(Arg:Array of PValue):PValue;
-Function F_StrLen(Arg:Array of PValue):PValue;
-Function F_StrPos(Arg:Array of PValue):PValue;
-Function F_SubStr(Arg:Array of PValue):PValue;
-Function F_DelStr(Arg:Array of PValue):PValue;
+Function F_Trim(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_TrimLeft(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_TrimRight(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_UpperCase(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_LowerCase(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_StrLen(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_StrPos(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_SubStr(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_DelStr(DoReturn:Boolean; Arg:Array of PValue):PValue;
 
-Function F_Chr(Arg:Array of PValue):PValue;
-Function F_Ord(Arg:Array of PValue):PValue;
+Function F_Chr(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_Ord(DoReturn:Boolean; Arg:Array of PValue):PValue;
 
-Function F_DateTime_Start(Arg:Array of PValue):PValue;
-Function F_DateTime_FileStart(Arg:Array of PValue):PValue;
-Function F_DateTime_Now(Arg:Array of PValue):PValue;
-Function F_DateTime_Date(Arg:Array of PValue):PValue;
-Function F_DateTime_Time(Arg:Array of PValue):PValue;
-Function F_DateTime_Encode(Arg:Array of PValue):PValue;
-Function F_DateTime_Decode(Arg:Array of PValue):PValue;
-Function F_DateTime_Make(Arg:Array of PValue):PValue;
-Function F_DateTime_Day(Arg:Array of PValue):PValue;
-Function F_DateTime_Month(Arg:Array of PValue):PValue;
-Function F_DateTime_Year(Arg:Array of PValue):PValue;
-Function F_DateTime_DOW(Arg:Array of PValue):PValue;
-Function F_DateTime_Hour(Arg:Array of PValue):PValue;
-Function F_DateTime_Min(Arg:Array of PValue):PValue;
-Function F_DateTime_Sec(Arg:Array of PValue):PValue;
-Function F_DateTime_MS(Arg:Array of PValue):PValue;
-Function F_DateTime_String(Arg:Array of PValue):PValue;
+Function F_DateTime_Start(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_DateTime_FileStart(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_DateTime_Now(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_DateTime_Date(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_DateTime_Time(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_DateTime_Encode(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_DateTime_Decode(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_DateTime_Make(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_DateTime_Day(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_DateTime_Month(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_DateTime_Year(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_DateTime_DOW(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_DateTime_Hour(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_DateTime_Min(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_DateTime_Sec(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_DateTime_MS(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_DateTime_String(DoReturn:Boolean; Arg:Array of PValue):PValue;
 
-Function F_mkint(Arg:Array of PValue):PValue;
-Function F_mkhex(Arg:Array of PValue):PValue;
-Function F_mkoct(Arg:Array of PValue):PValue;
-Function F_mkbin(Arg:Array of PValue):PValue;
-Function F_mkflo(Arg:Array of PValue):PValue;
-Function F_mkstr(Arg:Array of PValue):PValue;
-Function F_mklog(Arg:Array of PValue):PValue;
+Function F_mkint(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_mkhex(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_mkoct(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_mkbin(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_mkflo(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_mkstr(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_mklog(DoReturn:Boolean; Arg:Array of PValue):PValue;
 
-Function F_fork(Arg:Array of PValue):PValue;
+Function F_fork(DoReturn:Boolean; Arg:Array of PValue):PValue;
 
-Function F_random(Arg:Array of PValue):PValue;
+Function F_random(DoReturn:Boolean; Arg:Array of PValue):PValue;
 
-Function F_sizeof(Arg:Array of PValue):PValue;
-Function F_typeof(Arg:Array of PValue):PValue;
+Function F_sizeof(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_typeof(DoReturn:Boolean; Arg:Array of PValue):PValue;
 
-Function F_array(Arg:Array of PValue):PValue;
-Function F_array_count(Arg:Array of PValue):PValue;
-Function F_array_empty(Arg:Array of PValue):PValue;
-Function F_array_flush(Arg:Array of PValue):PValue;
-Function F_array_print(Arg:Array of PValue):PValue;
+Function F_array(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_array_count(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_array_empty(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_array_flush(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_array_print(DoReturn:Boolean; Arg:Array of PValue):PValue;
 
-Function F_dict(Arg:Array of PValue):PValue;
-Function F_dict_nextkey(Arg:Array of PValue):PValue;
-Function F_dict_keys(Arg:Array of PValue):PValue;
-Function F_dict_values(Arg:Array of PValue):PValue;
+Function F_dict(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_dict_nextkey(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_dict_keys(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_dict_values(DoReturn:Boolean; Arg:Array of PValue):PValue;
 
 implementation
    uses Math, SysUtils {$IFDEF LINUX}, Unix, Linux{$ENDIF};
@@ -269,54 +269,56 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('arr-print',@F_array_print); FT^.SetVal('dict-print',@F_array_print);
    end;
 
-Function F_(Arg:Array of PValue):PValue;
+Function F_(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord;
    begin
-   If (Length(Arg)=0) then Exit(NilVal);
-   For C:=Low(Arg) to High(Arg) do
-       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   Exit(NilVal)
+   If (Length(Arg) > 0) then
+      For C:=Low(Arg) to High(Arg) do
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
+   If (DoReturn) then Exit(NilVal) else Exit(NIL)
    end;
 
-Function F_FilePath(Arg:Array of PValue):PValue;
+Function F_FilePath(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   Exit(NewVal(VT_STR,YukPath))
+   If (DoReturn) then Exit(NewVal(VT_STR,YukPath)) else Exit(NIL)
    end;
 
-Function F_FileName(Arg:Array of PValue):PValue;
+Function F_FileName(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   Exit(NewVal(VT_STR,ExtractFileName(YukPath)))
+   If (DoReturn) then Exit(NewVal(VT_STR,ExtractFileName(YukPath))) else Exit(NIL)
    end;
    
-Function F_Ticks(Arg:Array of PValue):PValue;
+Function F_Ticks(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; TS:Comp;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
+   If (Not DoReturn) then Exit(NIL);
    TS:=TimeStampToMSecs(DateTimeToTimeStamp(Now()));
    Exit(NewVal(VT_INT,Trunc(TS-GLOB_ms)))
    end;
 
-Function F_FileTicks(Arg:Array of PValue):PValue;
+Function F_FileTicks(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; TS:Comp;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
+   If (Not DoReturn) then Exit(NIL);
    TS:=TimeStampToMSecs(DateTimeToTimeStamp(Now()));
    Exit(NewVal(VT_INT,Trunc(TS-GLOB_sms)))
    end;
 
-Function F_Sleep(Arg:Array of PValue):PValue;
+Function F_Sleep(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; Dur:LongWord;
        ms_st, ms_en : Comp;
    begin
@@ -338,48 +340,50 @@ Function F_Sleep(Arg:Array of PValue):PValue;
       If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0])
       end;
    SysUtils.Sleep(Dur);
+   If (Not DoReturn) then Exit(NIL);
    ms_en:=TimeStampToMSecs(DateTimeToTimeStamp(Now()));
    Exit(NewVal(VT_INT,Trunc(ms_en - ms_st)))
    end;
 
-Function F_Write(Arg:Array of PValue):PValue;
+Function F_Write(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord;
    begin
-   If (Length(Arg)=0) then Exit(NewVal(VT_STR,''));
-   For C:=Low(Arg) to High(Arg) do begin
-       Case Arg[C]^.Typ of
-          VT_NIL: Write('{NIL}');
-          VT_NEW: Write('{NEW}');
-          VT_PTR: Write('{PTR}');
-          VT_INT: Write(PQInt(Arg[C]^.Ptr)^);
-          VT_HEX: Write(HexToStr(PQInt(Arg[C]^.Ptr)^));
-          VT_OCT: Write(OctToStr(PQInt(Arg[C]^.Ptr)^));
-          VT_BIN: Write(BinToStr(PQInt(Arg[C]^.Ptr)^));
-          VT_FLO: Write(PFloat(Arg[C]^.Ptr)^:0:RealPrec);
-          VT_BOO: Write(PBoolean(Arg[C]^.Ptr)^);
-          VT_STR: Write(PAnsiString(Arg[C]^.Ptr)^);
-          VT_UTF: Write('{UTF8}');
-          VT_ARR: Write('array(',PValTree(Arg[C]^.Ptr)^.Count,')');
-          VT_DIC: Write('dict(',PValTrie(Arg[C]^.Ptr)^.Count,')');
-          else Write('(',Arg[C]^.Typ,')');
+   If (Length(Arg) > 0) then
+      For C:=Low(Arg) to High(Arg) do begin
+          Case Arg[C]^.Typ of
+             VT_NIL: Write('{NIL}');
+             VT_NEW: Write('{NEW}');
+             VT_PTR: Write('{PTR}');
+             VT_INT: Write(PQInt(Arg[C]^.Ptr)^);
+             VT_HEX: Write(HexToStr(PQInt(Arg[C]^.Ptr)^));
+             VT_OCT: Write(OctToStr(PQInt(Arg[C]^.Ptr)^));
+             VT_BIN: Write(BinToStr(PQInt(Arg[C]^.Ptr)^));
+             VT_FLO: Write(PFloat(Arg[C]^.Ptr)^:0:RealPrec);
+             VT_BOO: Write(PBoolean(Arg[C]^.Ptr)^);
+             VT_STR: Write(PAnsiString(Arg[C]^.Ptr)^);
+             VT_UTF: Write('{UTF8}');
+             VT_ARR: Write('array(',PValTree(Arg[C]^.Ptr)^.Count,')');
+             VT_DIC: Write('dict(',PValTrie(Arg[C]^.Ptr)^.Count,')');
+             else Write('(',Arg[C]^.Typ,')');
+             end;
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
           end;
-       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
-       end;
-   Exit(NewVal(VT_STR,''))
+   If (DoReturn) then Exit(NewVal(VT_STR,'')) else Exit(NIL)
    end;
 
-Function F_Writeln(Arg:Array of PValue):PValue;
+Function F_Writeln(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var R:PValue;
    begin
-   R:=F_Write(Arg);
+   R:=F_Write(DoReturn, Arg);
    Writeln();
    Exit(R)
    end;
 
-Function F_Set(Arg:Array of PValue):PValue;
+Function F_Set(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; R:PValue;
    begin
-   If (Length(Arg)=0) then Exit(NilVal) else
+   If (Length(Arg)=0) then begin
+      If (DoReturn) then Exit(NilVal()) else Exit(NIL) end;
    If (Length(Arg)>1) then
       For C:=(High(Arg)-1) downto Low(Arg) do begin
           R:=ValSet(Arg[C],Arg[C+1]);
@@ -391,15 +395,16 @@ Function F_Set(Arg:Array of PValue):PValue;
              FreeVal(R)
              end
           end;
-   If (Arg[0]^.Lev >= CurLev) then R:=Arg[0]
-                    else R:=CopyVal(Arg[0]);
-   Exit(R)
+   If (Not DoReturn) then Exit(NIL);
+   If (Arg[0]^.Lev >= CurLev) then Exit(Arg[0])
+                              else Exit(CopyVal(Arg[0]))
    end;
 
-Function F_Add(Arg:Array of PValue):PValue;
+Function F_Add(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; R:PValue;
    begin
-   If (Length(Arg)=0) then Exit(NilVal) else
+   If (Length(Arg)=0) then begin
+      If (DoReturn) then Exit(NilVal()) else Exit(NIL) end;
    If (Length(Arg)>1) then
       For C:=(High(Arg)-1) downto Low(Arg) do begin
           R:=ValAdd(Arg[C],Arg[C+1]);
@@ -411,15 +416,16 @@ Function F_Add(Arg:Array of PValue):PValue;
              FreeVal(R)
              end
           end;
-   If (Arg[0]^.Lev >= CurLev) then R:=Arg[0]
-                    else R:=CopyVal(Arg[0]);
-   Exit(R)
+   If (Not DoReturn) then Exit(NIL);
+   If (Arg[0]^.Lev >= CurLev) then Exit(Arg[0])
+                              else Exit(CopyVal(Arg[0]))
    end;
 
-Function F_Sub(Arg:Array of PValue):PValue;
+Function F_Sub(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; R:PValue;
    begin
-   If (Length(Arg)=0) then Exit(NilVal) else
+   If (Length(Arg)=0) then begin
+      If (DoReturn) then Exit(NilVal()) else Exit(NIL) end;
    If (Length(Arg)>1) then
       For C:=(High(Arg)-1) downto Low(Arg) do begin
           R:=ValSub(Arg[C],Arg[C+1]);
@@ -431,15 +437,16 @@ Function F_Sub(Arg:Array of PValue):PValue;
              FreeVal(R)
              end
           end;
-   If (Arg[0]^.Lev >= CurLev) then R:=Arg[0]
-                    else R:=CopyVal(Arg[0]);
-   Exit(R)
+   If (Not DoReturn) then Exit(NIL);
+   If (Arg[0]^.Lev >= CurLev) then Exit(Arg[0])
+                              else Exit(CopyVal(Arg[0]))
    end;
 
-Function F_Mul(Arg:Array of PValue):PValue;
+Function F_Mul(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; R:PValue;
    begin
-   If (Length(Arg)=0) then Exit(NilVal) else
+   If (Length(Arg)=0) then begin
+      If (DoReturn) then Exit(NilVal()) else Exit(NIL) end;
    If (Length(Arg)>1) then
       For C:=(High(Arg)-1) downto Low(Arg) do begin
           R:=ValMul(Arg[C],Arg[C+1]);
@@ -451,15 +458,16 @@ Function F_Mul(Arg:Array of PValue):PValue;
              FreeVal(R)
              end
           end;
-   If (Arg[0]^.Lev >= CurLev) then R:=Arg[0]
-                    else R:=CopyVal(Arg[0]);
-   Exit(R)
+   If (Not DoReturn) then Exit(NIL);
+   If (Arg[0]^.Lev >= CurLev) then Exit(Arg[0])
+                              else Exit(CopyVal(Arg[0]))
    end;
 
-Function F_Div(Arg:Array of PValue):PValue;
+Function F_Div(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; R:PValue;
    begin
-   If (Length(Arg)=0) then Exit(NilVal) else
+   If (Length(Arg)=0) then begin
+      If (DoReturn) then Exit(NilVal()) else Exit(NIL) end;
    If (Length(Arg)>1) then
       For C:=(High(Arg)-1) downto Low(Arg) do begin
           R:=ValDiv(Arg[C],Arg[C+1]);
@@ -471,15 +479,16 @@ Function F_Div(Arg:Array of PValue):PValue;
              FreeVal(R)
              end
           end;
-   If (Arg[0]^.Lev >= CurLev) then R:=Arg[0]
-                    else R:=CopyVal(Arg[0]);
-   Exit(R)
+   If (Not DoReturn) then Exit(NIL);
+   If (Arg[0]^.Lev >= CurLev) then Exit(Arg[0])
+                              else Exit(CopyVal(Arg[0]))
    end;
 
-Function F_Mod(Arg:Array of PValue):PValue;
+Function F_Mod(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; R:PValue;
    begin
-   If (Length(Arg)=0) then Exit(NilVal) else
+   If (Length(Arg)=0) then begin
+      If (DoReturn) then Exit(NilVal()) else Exit(NIL) end;
    If (Length(Arg)>1) then
       For C:=(High(Arg)-1) downto Low(Arg) do begin
           R:=ValMod(Arg[C],Arg[C+1]);
@@ -491,15 +500,16 @@ Function F_Mod(Arg:Array of PValue):PValue;
              FreeVal(R)
              end
           end;
-   If (Arg[0]^.Lev >= CurLev) then R:=Arg[0]
-                    else R:=CopyVal(Arg[0]);
-   Exit(R)
+   If (Not DoReturn) then Exit(NIL);
+   If (Arg[0]^.Lev >= CurLev) then Exit(Arg[0])
+                              else Exit(CopyVal(Arg[0]))
    end;
 
-Function F_Pow(Arg:Array of PValue):PValue;
+Function F_Pow(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; R:PValue;
    begin
-   If (Length(Arg)=0) then Exit(NilVal) else
+   If (Length(Arg)=0) then begin
+      If (DoReturn) then Exit(NilVal()) else Exit(NIL) end;
    If (Length(Arg)>1) then
       For C:=(High(Arg)-1) downto Low(Arg) do begin
           R:=ValPow(Arg[C],Arg[C+1]);
@@ -511,15 +521,16 @@ Function F_Pow(Arg:Array of PValue):PValue;
              FreeVal(R)
              end
           end;
-   If (Arg[0]^.Lev >= CurLev) then R:=Arg[0]
-                    else R:=CopyVal(Arg[0]);
-   Exit(R)
+   If (Not DoReturn) then Exit(NIL);
+   If (Arg[0]^.Lev >= CurLev) then Exit(Arg[0])
+                              else Exit(CopyVal(Arg[0]))
    end;
 
-Function F_Not(Arg:Array of PValue):PValue;
+Function F_Not(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; B:Boolean; V:PValue;
    begin
-   If (Length(Arg)=0) then Exit(NewVal(VT_BOO,True));
+   If (Length(Arg)=0) then begin
+      If (DoReturn) then Exit(NewVal(VT_BOO, True)) else Exit(NIL) end;
    If (Length(Arg)>1) then 
        For C:=High(Arg) downto 1 do
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
@@ -528,61 +539,63 @@ Function F_Not(Arg:Array of PValue):PValue;
       V:=ValToBoo(Arg[0]); B:=PBool(V^.Ptr)^; FreeVal(V)
       end;
    If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
-   Exit(NewVal(VT_BOO,Not B))
+   If (DoReturn) then Exit(NewVal(VT_BOO,Not B)) else Exit(NIL)
    end;
 
-Function F_And(Arg:Array of PValue):PValue;
+Function F_And(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; B:Boolean; V:PValue;
    begin B:=True;
-   If (Length(Arg)=0) then Exit(NewVal(VT_BOO,False));
-   If (Length(Arg)>1) then 
-      For C:=High(Arg) downto 1 do begin
+   If (Length(Arg)=0) then begin
+      If (DoReturn) then Exit(NewVal(VT_BOO, False)) else Exit(NIL) end;
+   If (Length(Arg)>=1) then 
+      For C:=High(Arg) downto Low(Arg) do begin
           If (Arg[C]^.Typ = VT_BOO) then B:=B and (PBool(Arg[C]^.Ptr)^)
              else begin
              V:=ValToBoo(Arg[C]); B:=B and (PBool(Arg[C]^.Ptr)^); FreeVal(V)
              end;
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
           end;
-   Exit(NewVal(VT_BOO,B))
+   If (DoReturn) then Exit(NewVal(VT_BOO,B)) else Exit(NilVal)
    end;
 
-Function F_Xor(Arg:Array of PValue):PValue;
+Function F_Xor(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; B:Boolean; V:PValue;
    begin B:=False;
-   If (Length(Arg)=0) then Exit(NewVal(VT_BOO,False));
-   If (Length(Arg)>1) then 
-      For C:=High(Arg) downto 1 do begin
+   If (Length(Arg)=0) then begin
+      If (DoReturn) then Exit(NewVal(VT_BOO, False)) else Exit(NIL) end;
+   If (Length(Arg)>=1) then 
+      For C:=High(Arg) downto Low(Arg) do begin
           If (Arg[C]^.Typ = VT_BOO) then B:=B xor (PBool(Arg[C]^.Ptr)^)
              else begin
              V:=ValToBoo(Arg[C]); B:=B xor (PBool(Arg[C]^.Ptr)^); FreeVal(V)
              end;
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
           end;
-   Exit(NewVal(VT_BOO,B))
+   If (DoReturn) then Exit(NewVal(VT_BOO,B)) else Exit(NilVal)
    end;
 
-Function F_Or(Arg:Array of PValue):PValue;
+Function F_Or(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; B:Boolean; V:PValue;
    begin B:=False;
-   If (Length(Arg)=0) then Exit(NewVal(VT_BOO,False));
-   If (Length(Arg)>1) then 
-      For C:=High(Arg) downto 1 do begin
+   If (Length(Arg)=0) then begin
+      If (DoReturn) then Exit(NewVal(VT_BOO, False)) else Exit(NIL) end;
+   If (Length(Arg)>=1) then 
+      For C:=High(Arg) downto Low(Arg) do begin
           If (Arg[C]^.Typ = VT_BOO) then B:=B or (PBool(Arg[C]^.Ptr)^)
              else begin
              V:=ValToBoo(Arg[C]); B:=B or (PBool(Arg[C]^.Ptr)^); FreeVal(V)
              end;
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
           end;
-   Exit(NewVal(VT_BOO,B))
+   If (DoReturn) then Exit(NewVal(VT_BOO,B)) else Exit(NilVal)
    end;
 
-Function F_Eq(Arg:Array of PValue):PValue;
+Function F_Eq(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; R:Boolean;
    begin R:=True;
-   If (Length(Arg)=0) then Exit(NewVal(VT_BOO,False));
-   If (Length(Arg)=1) then begin
-      If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
-      Exit(NewVal(VT_BOO,False))
+   If (Length(Arg) < 2) then begin
+      If ((Length(Arg) = 1) and (Arg[0]^.Lev >= CurLev)) then FreeVal(Arg[0]);
+      If (DoReturn) then Exit(NewVal(VT_BOO, False)) else Exit(NIL)
       end;
    For C:=(High(Arg)-1) downto Low(Arg) do begin
        V:=ValEq(Arg[C],Arg[C+1]);
@@ -591,16 +604,15 @@ Function F_Eq(Arg:Array of PValue):PValue;
        FreeVal(V)
        end;
    If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
-   Exit(NewVal(VT_BOO,R))
+   If (DoReturn) then Exit(NewVal(VT_BOO, R)) else Exit(NilVal)
    end;
 
-Function F_NEq(Arg:Array of PValue):PValue;
+Function F_NEq(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; R:Boolean;
    begin R:=True;
-   If (Length(Arg)=0) then Exit(NewVal(VT_BOO,False));
-   If (Length(Arg)=1) then begin
-      If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
-      Exit(NewVal(VT_BOO,False))
+   If (Length(Arg) < 2) then begin
+      If ((Length(Arg) = 1) and (Arg[0]^.Lev >= CurLev)) then FreeVal(Arg[0]);
+      If (DoReturn) then Exit(NewVal(VT_BOO, False)) else Exit(NIL)
       end;
    For C:=(High(Arg)-1) downto Low(Arg) do begin
        V:=ValNEq(Arg[C],Arg[C+1]);
@@ -609,16 +621,15 @@ Function F_NEq(Arg:Array of PValue):PValue;
        FreeVal(V)
        end;
    If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
-   Exit(NewVal(VT_BOO,R))
+   If (DoReturn) then Exit(NewVal(VT_BOO, R)) else Exit(NilVal)
    end;
 
-Function F_SEq(Arg:Array of PValue):PValue;
+Function F_SEq(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; R:Boolean;
    begin R:=True;
-   If (Length(Arg)=0) then Exit(NewVal(VT_BOO,False));
-   If (Length(Arg)=1) then begin
-      If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
-      Exit(NewVal(VT_BOO,False))
+   If (Length(Arg) < 2) then begin
+      If ((Length(Arg) = 1) and (Arg[0]^.Lev >= CurLev)) then FreeVal(Arg[0]);
+      If (DoReturn) then Exit(NewVal(VT_BOO, False)) else Exit(NIL)
       end;
    For C:=(High(Arg)-1) downto Low(Arg) do begin
        V:=ValSEq(Arg[C],Arg[C+1]);
@@ -627,16 +638,15 @@ Function F_SEq(Arg:Array of PValue):PValue;
        FreeVal(V)
        end;
    If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
-   Exit(NewVal(VT_BOO,R))
+   If (DoReturn) then Exit(NewVal(VT_BOO, R)) else Exit(NilVal)
    end;
 
-Function F_SNEq(Arg:Array of PValue):PValue;
+Function F_SNEq(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; R:Boolean;
    begin R:=True;
-   If (Length(Arg)=0) then Exit(NewVal(VT_BOO,False));
-   If (Length(Arg)=1) then begin
-      If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
-      Exit(NewVal(VT_BOO,False))
+   If (Length(Arg) < 2) then begin
+      If ((Length(Arg) = 1) and (Arg[0]^.Lev >= CurLev)) then FreeVal(Arg[0]);
+      If (DoReturn) then Exit(NewVal(VT_BOO, False)) else Exit(NIL)
       end;
    For C:=(High(Arg)-1) downto Low(Arg) do begin
        V:=ValSNEq(Arg[C],Arg[C+1]);
@@ -645,16 +655,15 @@ Function F_SNEq(Arg:Array of PValue):PValue;
        FreeVal(V)
        end;
    If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
-   Exit(NewVal(VT_BOO,R))
+   If (DoReturn) then Exit(NewVal(VT_BOO, R)) else Exit(NilVal)
    end;
 
-Function F_Gt(Arg:Array of PValue):PValue;
+Function F_Gt(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; R:Boolean;
    begin R:=True;
-   If (Length(Arg)=0) then Exit(NewVal(VT_BOO,False));
-   If (Length(Arg)=1) then begin
-      If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
-      Exit(NewVal(VT_BOO,False))
+   If (Length(Arg) < 2) then begin
+      If ((Length(Arg) = 1) and (Arg[0]^.Lev >= CurLev)) then FreeVal(Arg[0]);
+      If (DoReturn) then Exit(NewVal(VT_BOO, False)) else Exit(NIL)
       end;
    For C:=(High(Arg)-1) downto Low(Arg) do begin
        V:=ValGt(Arg[C],Arg[C+1]);
@@ -663,16 +672,15 @@ Function F_Gt(Arg:Array of PValue):PValue;
        FreeVal(V)
        end;
    If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
-   Exit(NewVal(VT_BOO,R))
+   If (DoReturn) then Exit(NewVal(VT_BOO, R)) else Exit(NilVal)
    end;
 
-Function F_Ge(Arg:Array of PValue):PValue;
+Function F_Ge(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; R:Boolean;
    begin R:=True;
-   If (Length(Arg)=0) then Exit(NewVal(VT_BOO,False));
-   If (Length(Arg)=1) then begin
-      If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
-      Exit(NewVal(VT_BOO,False))
+   If (Length(Arg) < 2) then begin
+      If ((Length(Arg) = 1) and (Arg[0]^.Lev >= CurLev)) then FreeVal(Arg[0]);
+      If (DoReturn) then Exit(NewVal(VT_BOO, False)) else Exit(NIL)
       end;
    For C:=(High(Arg)-1) downto Low(Arg) do begin
        V:=ValGe(Arg[C],Arg[C+1]);
@@ -681,16 +689,15 @@ Function F_Ge(Arg:Array of PValue):PValue;
        FreeVal(V)
        end;
    If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
-   Exit(NewVal(VT_BOO,R))
+   If (DoReturn) then Exit(NewVal(VT_BOO, R)) else Exit(NilVal)
    end;
 
-Function F_Lt(Arg:Array of PValue):PValue;
+Function F_Lt(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; R:Boolean;
    begin R:=True;
-   If (Length(Arg)=0) then Exit(NewVal(VT_BOO,False));
-   If (Length(Arg)=1) then begin
-      If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
-      Exit(NewVal(VT_BOO,False))
+   If (Length(Arg) < 2) then begin
+      If ((Length(Arg) = 1) and (Arg[0]^.Lev >= CurLev)) then FreeVal(Arg[0]);
+      If (DoReturn) then Exit(NewVal(VT_BOO, False)) else Exit(NIL)
       end;
    For C:=(High(Arg)-1) downto Low(Arg) do begin
        V:=ValLt(Arg[C],Arg[C+1]);
@@ -699,16 +706,15 @@ Function F_Lt(Arg:Array of PValue):PValue;
        FreeVal(V)
        end;
    If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
-   Exit(NewVal(VT_BOO,R))
+   If (DoReturn) then Exit(NewVal(VT_BOO, R)) else Exit(NilVal)
    end;
 
-Function F_Le(Arg:Array of PValue):PValue;
+Function F_Le(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; R:Boolean;
    begin R:=True;
-   If (Length(Arg)=0) then Exit(NewVal(VT_BOO,False));
-   If (Length(Arg)=1) then begin
-      If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
-      Exit(NewVal(VT_BOO,False))
+   If (Length(Arg) < 2) then begin
+      If ((Length(Arg) = 1) and (Arg[0]^.Lev >= CurLev)) then FreeVal(Arg[0]);
+      If (DoReturn) then Exit(NewVal(VT_BOO, False)) else Exit(NIL)
       end;
    For C:=(High(Arg)-1) downto Low(Arg) do begin
        V:=ValLe(Arg[C],Arg[C+1]);
@@ -717,7 +723,7 @@ Function F_Le(Arg:Array of PValue):PValue;
        FreeVal(V)
        end;
    If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
-   Exit(NewVal(VT_BOO,R))
+   If (DoReturn) then Exit(NewVal(VT_BOO, R)) else Exit(NilVal)
    end;
 
 Function DecodeURL(Str:AnsiString):AnsiString;
@@ -741,10 +747,10 @@ Function DecodeURL(Str:AnsiString):AnsiString;
    end;
 
 Function EncodeURL(Str:AnsiString):AnsiString;
-   Var Res:AnsiString; P,R:LongWord;
+   Var Res:AnsiString; P{,R}:LongWord;
    begin
    Res:=''; SetLength(Res,Length(Str));
-   R:=1; P:=1;
+   {R:=1;} P:=1;
    While (P<=Length(Str)) do
       If (((Str[P]>=#48) and (Str[P]<= #57)) or //0-9
           ((Str[P]>=#65) and (Str[P]<= #90)) or //A-Z
@@ -771,10 +777,11 @@ Function EncodeHTML(Str:AnsiString):AnsiString;
    Exit(Res)
    end;
 
-Function F_DecodeURL(Arg:Array of PValue):PValue;
+Function F_DecodeURL(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; S:AnsiString;
    begin
-   If (Length(Arg)=0) then Exit(NewVal(VT_STR,''));
+   If (Not DoReturn) then Exit(F_(False, Arg));
+   If (Length(Arg) = 0) then Exit(NewVal(VT_STR, ''));
    For C:=High(Arg) downto 1 do
        If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    If (Arg[0]^.Typ = VT_STR)
@@ -788,9 +795,10 @@ Function F_DecodeURL(Arg:Array of PValue):PValue;
    Exit(NewVal(VT_STR,DecodeURL(S)))
    end;
 
-Function F_EncodeURL(Arg:Array of PValue):PValue;
+Function F_EncodeURL(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; S:AnsiString;
    begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg)=0) then Exit(NewVal(VT_STR,''));
    For C:=High(Arg) downto 1 do
        If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
@@ -805,9 +813,10 @@ Function F_EncodeURL(Arg:Array of PValue):PValue;
    Exit(NewVal(VT_STR,EncodeURL(S)))
    end;
 
-Function F_EncodeHTML(Arg:Array of PValue):PValue;
+Function F_EncodeHTML(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; S:AnsiString;
    begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg)=0) then Exit(NewVal(VT_STR,''));
    For C:=High(Arg) downto 1 do
        If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
@@ -907,19 +916,20 @@ Function GetKey(Num:LongWord):AnsiString;
 Function GetNum():LongWord;
    begin Exit(Length(GetArr)) end;
 
-Function F_GetProcess(Arg:Array of PValue):PValue;
+Function F_GetProcess(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    ProcessGet();
-   Exit(NilVal())
+   If (DoReturn) then Exit(NilVal()) else Exit(Nil)
    end;
 
-Function F_GetIs_(Arg:Array of PValue):PValue;
+Function F_GetIs_(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var B:Boolean; C:LongWord; V:PValue;
    begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg)=0) then Exit(NewVal(VT_BOO,True));
    B:=True; For C:=High(Arg) downto Low(Arg) do begin
       If (Arg[C]^.Typ<>VT_STR)
@@ -934,9 +944,10 @@ Function F_GetIs_(Arg:Array of PValue):PValue;
    Exit(NewVal(VT_BOO,B))
    end;
 
-Function F_GetVal(Arg:Array of PValue):PValue;
+Function F_GetVal(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; S:AnsiString;
    begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg)=0) then Exit(NewVal(VT_STR,''));
    For C:=High(Arg) downto 1 do
       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
@@ -953,9 +964,10 @@ Function F_GetVal(Arg:Array of PValue):PValue;
    Exit(NewVal(VT_STR,S))
    end;
 
-Function F_GetKey(Arg:Array of PValue):PValue;
+Function F_GetKey(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; S:AnsiString;
    begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg)=0) then Exit(NewVal(VT_STR,''));
    For C:=High(Arg) downto 1 do
       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
@@ -970,21 +982,22 @@ Function F_GetKey(Arg:Array of PValue):PValue;
    Exit(NewVal(VT_STR,S))
    end;
 
-Function F_GetNum(Arg:Array of PValue):PValue;
+Function F_GetNum(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   Exit(NewVal(VT_INT,GetNum()))
+   If (DoReturn) then Exit(NewVal(VT_INT,GetNum())) else Exit(NIL)
    end;
 
-Function F_GetDict(Arg:Array of PValue):PValue;
+Function F_GetDict(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; Dic:PValTrie;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
+   If (Not DoReturn) then Exit(NIL);
    V:=EmptyVal(VT_DIC); Dic:=PValTrie(V^.Ptr);
    If (Length(GetArr) > 0) then 
       For C:=Low(GetArr) to High(GetArr) do
@@ -992,7 +1005,7 @@ Function F_GetDict(Arg:Array of PValue):PValue;
    Exit(V)
    end;
 
-Function F_SetPrecision(Arg:Array of PValue):PValue;
+Function F_SetPrecision(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue;
    begin
    If (Length(Arg)=0) then Exit(NewVal(VT_INT,Values.RealPrec));
@@ -1007,12 +1020,13 @@ Function F_SetPrecision(Arg:Array of PValue):PValue;
       FreeVal(V)
       end;
    If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
-   Exit(NewVal(VT_INT,Values.RealPrec))
+   If (Not DoReturn) then Exit(NewVal(VT_INT,Values.RealPrec)) else Exit(NIL)
    end;
 
-Function F_Perc(Arg:Array of PValue):PValue;
+Function F_Perc(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; A,V:PValue; I:PQInt; S:AnsiString; D:PFloat;
    begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg)=0) then Exit(NewVal(VT_STR,'0%'));
    If (Length(Arg)>2) then
       For C:=High(Arg) downto 2 do
@@ -1055,27 +1069,29 @@ Function GetSysInfo():Boolean;
    Exit(True)
    end;
 
-Function F_SysInfo_Get(Arg:Array of PValue):PValue;
+Function F_SysInfo_Get(DoReturn:Boolean; Arg:Array of PValue):PValue;
+   Var C:LongWord; GSI:Boolean;
+   begin
+   If (Length(Arg)>0) then
+      For C:=Low(Arg) to High(Arg) do
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
+   GSI := GetSysInfo();
+   If (DoReturn) then Exit(NewVal(VT_BOO, GSI)) else Exit(NIL)
+   end;
+
+Function F_SysInfo_Uptime(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   Exit(NewVal(VT_BOO,GetSysInfo()))
+   If (DoReturn) then Exit(NewVal(VT_INT,SI^.Uptime)) else Exit(NIL)
    end;
 
-Function F_SysInfo_Uptime(Arg:Array of PValue):PValue;
-   Var C:LongWord;
-   begin
-   If (Length(Arg)>0) then
-      For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   Exit(NewVal(VT_INT,SI^.Uptime))
-   end;
-
-Function F_SysInfo_Load(Arg:Array of PValue):PValue;
+Function F_SysInfo_Load(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; L:Int64;
    begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg)=0) then Exit(NewVal(VT_FLO,SI^.Loads[0]/65535));
    For C:=High(Arg) downto 1 do
        If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
@@ -1091,108 +1107,111 @@ Function F_SysInfo_Load(Arg:Array of PValue):PValue;
    Exit(NewVal(VT_FLO,SI^.Loads[L]/65535))
    end;
 
-Function F_SysInfo_RAMtotal(Arg:Array of PValue):PValue;
+Function F_SysInfo_RAMtotal(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   Exit(NewVal(VT_INT,SI^.TotalRam))
+   If (DoReturn) then Exit(NewVal(VT_INT,SI^.TotalRam)) else Exit(NIL)
    end;
 
-Function F_SysInfo_RAMfree(Arg:Array of PValue):PValue;
+Function F_SysInfo_RAMfree(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   Exit(NewVal(VT_INT,SI^.FreeRam))
+   If (DoReturn) then Exit(NewVal(VT_INT,SI^.FreeRam)) else Exit(NIL)
    end;
 
-Function F_SysInfo_RAMused(Arg:Array of PValue):PValue;
+Function F_SysInfo_RAMused(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   Exit(NewVal(VT_INT,(SI^.TotalRam - SI^.FreeRam - SI^.BufferRam)))
+   If (DoReturn) then Exit(NewVal(VT_INT,(SI^.TotalRam - SI^.FreeRam - SI^.BufferRam)))
+                 else Exit(NIL)
    end;
 
-Function F_SysInfo_RAMbuffer(Arg:Array of PValue):PValue;
+Function F_SysInfo_RAMbuffer(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   Exit(NewVal(VT_INT,SI^.BufferRam))
+   If (DoReturn) then Exit(NewVal(VT_INT,SI^.BufferRam)) else Exit(NIL)
    end;
 
-Function F_SysInfo_SwapTotal(Arg:Array of PValue):PValue;
+Function F_SysInfo_SwapTotal(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   Exit(NewVal(VT_INT,SI^.TotalSwap))
+   If (DoReturn) then Exit(NewVal(VT_INT,SI^.TotalSwap)) else Exit(NIL)
    end;
 
-Function F_SysInfo_SwapFree(Arg:Array of PValue):PValue;
+Function F_SysInfo_SwapFree(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   Exit(NewVal(VT_INT,SI^.FreeSwap))
+   If (DoReturn) then Exit(NewVal(VT_INT,SI^.FreeSwap)) else Exit(NIL)
    end;
 
-Function F_SysInfo_SwapUsed(Arg:Array of PValue):PValue;
+Function F_SysInfo_SwapUsed(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   Exit(NewVal(VT_INT,(SI^.TotalSwap - SI^.FreeSwap)))
+   If (DoReturn) then Exit(NewVal(VT_INT,(SI^.TotalSwap - SI^.FreeSwap))) else Exit(NIL)
    end;
 
-Function F_SysInfo_Procnum(Arg:Array of PValue):PValue;
+Function F_SysInfo_Procnum(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   Exit(NewVal(VT_INT,SI^.Procs))
+   If (DoReturn) then Exit(NewVal(VT_INT,SI^.Procs)) else Exit(NIL)
    end;
 
-Function F_SysInfo_DiskTotal(Arg:Array of PValue):PValue;
+Function F_SysInfo_DiskTotal(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   Exit(NewVal(VT_INT,DiskSize(ROOTDISK)))
+   If (DoReturn) then Exit(NewVal(VT_INT,DiskSize(ROOTDISK))) else Exit(NIL)
    end;
 
-Function F_SysInfo_DiskFree(Arg:Array of PValue):PValue;
+Function F_SysInfo_DiskFree(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   Exit(NewVal(VT_INT,DiskFree(ROOTDISK)))
+   If (DoReturn) then Exit(NewVal(VT_INT,DiskFree(ROOTDISK))) else Exit(NIL)
    end;
 
-Function F_SysInfo_DiskUsed(Arg:Array of PValue):PValue;
+Function F_SysInfo_DiskUsed(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   Exit(NewVal(VT_INT,(DiskSize(ROOTDISK) - DiskFree(ROOTDISK))))
+   If (DoReturn) then Exit(NewVal(VT_INT,(DiskSize(ROOTDISK) - DiskFree(ROOTDISK))))
+                 else Exit(NIL)
    end;
 
-Function F_SysInfo_Thermal(Arg:Array of PValue):PValue;
+Function F_SysInfo_Thermal(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; Z,T:Int64; F:Text;
    begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg)=0) then Z:=0 else begin
       For C:=High(Arg) downto 1 do
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
@@ -1214,28 +1233,29 @@ Function F_SysInfo_Thermal(Arg:Array of PValue):PValue;
    Exit(NewVal(VT_FLO,T/1000))
    end;
 
-Function F_SysInfo_Hostname(Arg:Array of PValue):PValue;
+Function F_SysInfo_Hostname(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   Exit(NewVal(VT_STR,GetHostName()))
+   If (DoReturn) then Exit(NewVal(VT_STR,GetHostName())) else Exit(NIL)
    end;
 
-Function F_SysInfo_DomainName(Arg:Array of PValue):PValue;
+Function F_SysInfo_DomainName(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   Exit(NewVal(VT_INT,GetDomainName()))
+   If (DoReturn) then Exit(NewVal(VT_INT,GetDomainName())) else Exit(NIL)
    end;
 {$ENDIF} //end of Linux-only functions
 
-Function F_Trim(Arg:Array of PValue):PValue;
+Function F_Trim(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; S:AnsiString;
    begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg)=0) then Exit(NewVal(VT_STR,''));
    For C:=High(Arg) downto 1 do
       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
@@ -1250,9 +1270,10 @@ Function F_Trim(Arg:Array of PValue):PValue;
    Exit(NewVal(VT_STR,S))
    end;
 
-Function F_TrimLeft(Arg:Array of PValue):PValue;
+Function F_TrimLeft(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; S:AnsiString;
    begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg)=0) then Exit(NewVal(VT_STR,''));
    For C:=High(Arg) downto 1 do
       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
@@ -1267,9 +1288,10 @@ Function F_TrimLeft(Arg:Array of PValue):PValue;
    Exit(NewVal(VT_STR,S))
    end;
 
-Function F_TrimRight(Arg:Array of PValue):PValue;
+Function F_TrimRight(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; S:AnsiString;
    begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg)=0) then Exit(NewVal(VT_STR,''));
    For C:=High(Arg) downto 1 do
       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
@@ -1284,9 +1306,10 @@ Function F_TrimRight(Arg:Array of PValue):PValue;
    Exit(NewVal(VT_STR,S))
    end;
 
-Function F_UpperCase(Arg:Array of PValue):PValue;
+Function F_UpperCase(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; S:AnsiString;
    begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg)=0) then Exit(NewVal(VT_STR,''));
    For C:=High(Arg) downto 1 do
       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
@@ -1301,9 +1324,10 @@ Function F_UpperCase(Arg:Array of PValue):PValue;
    Exit(NewVal(VT_STR,S))
    end;
 
-Function F_LowerCase(Arg:Array of PValue):PValue;
+Function F_LowerCase(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; S:AnsiString;
    begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg)=0) then Exit(NewVal(VT_STR,''));
    For C:=High(Arg) downto 1 do
       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
@@ -1318,9 +1342,10 @@ Function F_LowerCase(Arg:Array of PValue):PValue;
    Exit(NewVal(VT_STR,S))
    end;
 
-Function F_Ord(Arg:Array of PValue):PValue;
+Function F_Ord(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; S:AnsiString;
    begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg)=0) then Exit(NilVal());
    For C:=High(Arg) downto 1 do
       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
@@ -1333,9 +1358,10 @@ Function F_Ord(Arg:Array of PValue):PValue;
    Exit(V)
    end;
 
-Function F_Chr(Arg:Array of PValue):PValue;
+Function F_Chr(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; I:QInt; F:TFloat;
    begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg)=0) then Exit(NilVal());
    For C:=High(Arg) downto 1 do
       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
@@ -1351,10 +1377,11 @@ Function F_Chr(Arg:Array of PValue):PValue;
    Exit(V)
    end;
 
-Function F_Doctype(Arg:Array of PValue):PValue;
+Function F_Doctype(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Const DEFAULT = '<!DOCTYPE html>';
    Var C:LongWord; V:PValue; S,R:AnsiString; I:Int64;
    begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg)=0) then Exit(NewVal(VT_STR,DEFAULT));
    For C:=High(Arg) downto 1 do
       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
@@ -1391,56 +1418,57 @@ Function F_Doctype(Arg:Array of PValue):PValue;
    Exit(NewVal(VT_STR,R))
    end;
 
-Function F_DateTime_Start(Arg:Array of PValue):PValue;
+Function F_DateTime_Start(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   Exit(NewVal(VT_FLO,GLOB_dt))
+   If (DoReturn) then Exit(NewVal(VT_FLO,GLOB_dt)) else Exit(NIL)
    end;
 
-Function F_DateTime_FileStart(Arg:Array of PValue):PValue;
+Function F_DateTime_FileStart(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   Exit(NewVal(VT_FLO,GLOB_sdt))
+   If (DoReturn) then Exit(NewVal(VT_FLO,GLOB_sdt)) else Exit(NIL)
    end;
 
-Function F_DateTime_Now(Arg:Array of PValue):PValue;
+Function F_DateTime_Now(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   Exit(NewVal(VT_FLO,SysUtils.Now()))
+   If (DoReturn) then Exit(NewVal(VT_FLO,SysUtils.Now())) else Exit(NIL)
    end;
 
-Function F_DateTime_Date(Arg:Array of PValue):PValue;
+Function F_DateTime_Date(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   Exit(NewVal(VT_FLO,SysUtils.Date()))
+   If (DoReturn) then Exit(NewVal(VT_FLO,SysUtils.Date())) else Exit(NIL)
    end;
 
-Function F_DateTime_Time(Arg:Array of PValue):PValue;
+Function F_DateTime_Time(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   Exit(NewVal(VT_FLO,SysUtils.Time()))
+   If (DoReturn) then Exit(NewVal(VT_FLO,SysUtils.Time())) else Exit(NIL)
    end;
 
-Function F_DateTime_Encode(Arg:Array of PValue):PValue;
+Function F_DateTime_Encode(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Const ARRLEN = 7; ARRHI = 6;
    Var C,H:LongWord; V:PValue;
        DT:Array[0..ARRHI] of LongInt; R:TDateTime;
    begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg)>ARRLEN) then begin H:=ARRHI;
       For C:=High(Arg) downto ARRLEN do
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
@@ -1462,11 +1490,12 @@ Function F_DateTime_Encode(Arg:Array of PValue):PValue;
    Exit(NewVal(VT_FLO,R))
    end;
 
-Function F_DateTime_Make(Arg:Array of PValue):PValue;
+Function F_DateTime_Make(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Const ARRLEN = 5; ARRHI = 4;
    Var C,H:LongWord; V:PValue;
        dt:Array[0..ARRHI] of LongInt; R:TDateTime;
    begin R:=0;
+   If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg)>ARRLEN) then begin H:=ARRHI;
       For C:=High(Arg) downto ARRLEN do
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
@@ -1490,10 +1519,11 @@ Function F_DateTime_Make(Arg:Array of PValue):PValue;
    Exit(NewVal(VT_FLO,R))
    end;
 
-Function F_DateTime_Decode(Arg:Array of PValue):PValue;
+Function F_DateTime_Decode(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C,H:LongWord; V,T:PValue; dt:TDateTime; dec:Array[1..8] of Word;
    begin
-   If (Length(Arg)<2) then Exit(NewVal(VT_BOO,False));
+   If (Length(Arg)<2) then begin
+      If (DoReturn) then Exit(NewVal(VT_BOO,False)) else Exit(NIL) end;
    If (Length(Arg)>9) then begin H:=8;
       For C:=High(Arg) downto 9 do
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
@@ -1516,13 +1546,14 @@ Function F_DateTime_Decode(Arg:Array of PValue):PValue;
        FreeVal(T); FreeVal(V)
        end;
    If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
-   Exit(NewVal(VT_BOO,True))
+   If (DoReturn) then Exit(NewVal(VT_BOO,True)) else Exit(NIL)
    end;
 
 
-Function F_DateTime_Day(Arg:Array of PValue):PValue;
+Function F_DateTime_Day(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; dt:TDateTime; D,M,Y:Word;
    begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
    For C:=High(Arg) downto 1 do
       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
@@ -1538,9 +1569,10 @@ Function F_DateTime_Day(Arg:Array of PValue):PValue;
    Exit(NewVal(VT_INT,D))
    end;
 
-Function F_DateTime_Month(Arg:Array of PValue):PValue;
+Function F_DateTime_Month(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; dt:TDateTime; D,M,Y:Word;
    begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
    For C:=High(Arg) downto 1 do
       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
@@ -1556,9 +1588,10 @@ Function F_DateTime_Month(Arg:Array of PValue):PValue;
    Exit(NewVal(VT_INT,M))
    end;
 
-Function F_DateTime_Year(Arg:Array of PValue):PValue;
+Function F_DateTime_Year(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; dt:TDateTime; D,M,Y:Word;
    begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
    For C:=High(Arg) downto 1 do
       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
@@ -1574,9 +1607,10 @@ Function F_DateTime_Year(Arg:Array of PValue):PValue;
    Exit(NewVal(VT_INT,Y))
    end;
 
-Function F_DateTime_DOW(Arg:Array of PValue):PValue;
+Function F_DateTime_DOW(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; dt:TDateTime; D,M,Y,DOW:Word;
    begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
    For C:=High(Arg) downto 1 do
       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
@@ -1592,9 +1626,10 @@ Function F_DateTime_DOW(Arg:Array of PValue):PValue;
    Exit(NewVal(VT_INT,DOW))
    end;
 
-Function F_DateTime_Hour(Arg:Array of PValue):PValue;
+Function F_DateTime_Hour(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; dt:TDateTime; H,M,S,MS:Word;
    begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
    For C:=High(Arg) downto 1 do
       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
@@ -1610,9 +1645,10 @@ Function F_DateTime_Hour(Arg:Array of PValue):PValue;
    Exit(NewVal(VT_INT,H))
    end;
 
-Function F_DateTime_Min(Arg:Array of PValue):PValue;
+Function F_DateTime_Min(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; dt:TDateTime; H,M,S,MS:Word;
    begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
    For C:=High(Arg) downto 1 do
       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
@@ -1628,9 +1664,10 @@ Function F_DateTime_Min(Arg:Array of PValue):PValue;
    Exit(NewVal(VT_INT,M))
    end;
 
-Function F_DateTime_Sec(Arg:Array of PValue):PValue;
+Function F_DateTime_Sec(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; dt:TDateTime; H,M,S,MS:Word;
    begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
    For C:=High(Arg) downto 1 do
       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
@@ -1646,9 +1683,10 @@ Function F_DateTime_Sec(Arg:Array of PValue):PValue;
    Exit(NewVal(VT_INT,S))
    end;
 
-Function F_DateTime_ms(Arg:Array of PValue):PValue;
+Function F_DateTime_ms(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; dt:TDateTime; H,M,S,MS:Word;
    begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
    For C:=High(Arg) downto 1 do
       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
@@ -1743,9 +1781,10 @@ Function dtf(S:AnsiString):AnsiString;
    If (Q) then Exit(R+'"') else Exit(R)
    end;
 
-Function F_DateTime_String(Arg:Array of PValue):PValue;
+Function F_DateTime_String(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; dt:TDateTime; S,F:AnsiString;
    begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg) > 2) then
       For C:=High(Arg) downto 2 do
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
@@ -1765,10 +1804,11 @@ Function F_DateTime_String(Arg:Array of PValue):PValue;
    Exit(NewVal(VT_STR,S))
    end;
 
-Function F_mkint(Arg:Array of PValue):PValue;
+Function F_mkint(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue;
    begin
-   If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
+   If (Length(Arg)=0) then begin
+      If (DoReturn) then Exit(EmptyVal(VT_INT)) else Exit(NIL) end;
    For C:=High(Arg) downto (Low(Arg)+1) do
        If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]) else
        If (Arg[C]^.Typ <> VT_INT) then begin
@@ -1779,20 +1819,21 @@ Function F_mkint(Arg:Array of PValue):PValue;
       If (Arg[0]^.Typ <> VT_INT) then begin
          V:=ValToInt(Arg[0]); FreeVal(Arg[0])
          end else V:=Arg[0];
-      Exit(V)
+      If (DoReturn) then Exit(V) else Exit(NIL)
       end else begin
       If (Arg[0]^.Typ<>VT_INT) then begin
          V:=ValToInt(Arg[0]); 
          SwapPtrs(Arg[0],V); FreeVal(V)
          end;
-      Exit(CopyVal(Arg[0]))
+      If (DoReturn) then Exit(CopyVal(Arg[0])) else Exit(NIL)
       end
    end;
 
-Function F_mkhex(Arg:Array of PValue):PValue;
+Function F_mkhex(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue;
    begin
-   If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
+   If (Length(Arg)=0) then begin
+      If (DoReturn) then Exit(EmptyVal(VT_HEX)) else Exit(NIL) end;
    For C:=High(Arg) downto (Low(Arg)+1) do
        If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]) else
        If (Arg[C]^.Typ <> VT_Hex) then begin
@@ -1803,20 +1844,21 @@ Function F_mkhex(Arg:Array of PValue):PValue;
       If (Arg[0]^.Typ <> VT_Hex) then begin
          V:=ValToHex(Arg[0]); FreeVal(Arg[0])
          end else V:=Arg[0];
-      Exit(V)
+      If (DoReturn) then Exit(V) else Exit(NIL)
       end else begin
       If (Arg[0]^.Typ<>VT_Hex) then begin
          V:=ValToHex(Arg[0]); 
          SwapPtrs(Arg[0],V); FreeVal(V)
          end;
-      Exit(CopyVal(Arg[0]))
+      If (DoReturn) then Exit(CopyVal(Arg[0])) else Exit(NIL)
       end
    end;
 
-Function F_mkoct(Arg:Array of PValue):PValue;
+Function F_mkoct(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue;
    begin
-   If (Length(Arg)=0) then Exit(NewVal(VT_OCT,0));
+   If (Length(Arg)=0) then begin
+      If (DoReturn) then Exit(EmptyVal(VT_OCT)) else Exit(NIL) end;
    For C:=High(Arg) downto (Low(Arg)+1) do
        If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]) else
        If (Arg[C]^.Typ <> VT_OCT) then begin
@@ -1827,20 +1869,21 @@ Function F_mkoct(Arg:Array of PValue):PValue;
       If (Arg[0]^.Typ <> VT_OCT) then begin
          V:=ValToOct(Arg[0]); FreeVal(Arg[0])
          end else V:=Arg[0];
-      Exit(V)
+      If (DoReturn) then Exit(V) else Exit(NIL)
       end else begin
       If (Arg[0]^.Typ<>VT_OCT) then begin
          V:=ValToOct(Arg[0]);
          SwapPtrs(Arg[0],V); FreeVal(V)
          end;
-      Exit(CopyVal(Arg[0]))
+      If (DoReturn) then Exit(CopyVal(Arg[0])) else Exit(NIL)
       end
    end;
 
-Function F_mkbin(Arg:Array of PValue):PValue;
+Function F_mkbin(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue;
    begin
-   If (Length(Arg)=0) then Exit(NewVal(VT_BIN,0));
+   If (Length(Arg)=0) then begin
+      If (DoReturn) then Exit(EmptyVal(VT_BIN)) else Exit(NIL) end;
    For C:=High(Arg) downto (Low(Arg)+1) do
        If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]) else
        If (Arg[C]^.Typ <> VT_BIN) then begin
@@ -1851,20 +1894,21 @@ Function F_mkbin(Arg:Array of PValue):PValue;
       If (Arg[0]^.Typ <> VT_BIN) then begin
          V:=ValToBin(Arg[0]); FreeVal(Arg[0])
          end else V:=Arg[0];
-      Exit(V)
+      If (DoReturn) then Exit(V) else Exit(NIL)
       end else begin
       If (Arg[0]^.Typ<>VT_BIN) then begin
          V:=ValToBin(Arg[0]); 
          SwapPtrs(Arg[0],V); FreeVal(V)
          end;
-      Exit(CopyVal(Arg[0]))
+      If (DoReturn) then Exit(CopyVal(Arg[0])) else Exit(NIL)
       end
    end;
 
-Function F_mkflo(Arg:Array of PValue):PValue;
+Function F_mkflo(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue;
    begin
-   If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
+   If (Length(Arg)=0) then begin
+      If (DoReturn) then Exit(EmptyVal(VT_FLO)) else Exit(NIL) end;
    For C:=High(Arg) downto (Low(Arg)+1) do
        If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]) else
        If (Arg[C]^.Typ <> VT_INT) then begin
@@ -1875,20 +1919,21 @@ Function F_mkflo(Arg:Array of PValue):PValue;
       If (Arg[0]^.Typ <> VT_FLO) then begin
          V:=ValToFlo(Arg[0]); FreeVal(Arg[0])
          end else V:=Arg[0];
-      Exit(V)
+      If (DoReturn) then Exit(V) else Exit(NIL)
       end else begin
-      If (Arg[0]^.Typ<>VT_INT) then begin
+      If (Arg[0]^.Typ<>VT_FLO) then begin
          V:=ValToFlo(Arg[0]); 
          SwapPtrs(Arg[0],V); FreeVal(V)
          end;
-      Exit(CopyVal(Arg[0]))
+      If (DoReturn) then Exit(CopyVal(Arg[0])) else Exit(NIL)
       end
    end;
 
-Function F_mkstr(Arg:Array of PValue):PValue;
+Function F_mkstr(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue;
    begin
-   If (Length(Arg)=0) then Exit(NewVal(VT_STR,0));
+   If (Length(Arg)=0) then begin
+      If (DoReturn) then Exit(EmptyVal(VT_STR)) else Exit(NIL) end;
    For C:=High(Arg) downto (Low(Arg)+1) do
        If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]) else
        If (Arg[C]^.Typ <> VT_STR) then begin
@@ -1899,20 +1944,21 @@ Function F_mkstr(Arg:Array of PValue):PValue;
       If (Arg[0]^.Typ <> VT_STR) then begin
          V:=ValToStr(Arg[0]); FreeVal(Arg[0])
          end else V:=Arg[0];
-      Exit(V)
+      If (DoReturn) then Exit(V) else Exit(NIL)
       end else begin
       If (Arg[0]^.Typ<>VT_STR) then begin
          V:=ValToStr(Arg[0]);
          SwapPtrs(Arg[0],V); FreeVal(V)
          end;
-      Exit(CopyVal(Arg[0]))
+      If (DoReturn) then Exit(CopyVal(Arg[0])) else Exit(NIL)
       end
    end;
 
-Function F_mklog(Arg:Array of PValue):PValue;
+Function F_mklog(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue;
    begin
-   If (Length(Arg)=0) then Exit(NewVal(VT_BOO,0));
+   If (Length(Arg)=0) then begin
+      If (DoReturn) then Exit(EmptyVal(VT_BOO)) else Exit(NIL) end;
    For C:=High(Arg) downto (Low(Arg)+1) do
        If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]) else
        If (Arg[C]^.Typ <> VT_BOO) then begin
@@ -1923,19 +1969,20 @@ Function F_mklog(Arg:Array of PValue):PValue;
       If (Arg[0]^.Typ <> VT_BOO) then begin
          V:=ValToBoo(Arg[0]); FreeVal(Arg[0])
          end else V:=Arg[0];
-      Exit(V)
+      If (DoReturn) then Exit(V) else Exit(NIL)
       end else begin
       If (Arg[0]^.Typ<>VT_BOO) then begin
          V:=ValToBoo(Arg[0]);
          SwapPtrs(Arg[0],V); FreeVal(V)
          end;
-      Exit(CopyVal(Arg[0]))
+      If (DoReturn) then Exit(CopyVal(Arg[0])) else Exit(NIL)
       end
    end;
 
-Function F_fork(Arg:Array of PValue):PValue;
+Function F_fork(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; R:Boolean;
    begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg)=0) then Exit(NewVal(VT_BOO,False));
    If (Length(Arg)>3) then For C:=High(Arg) downto 3 do
       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
@@ -1960,9 +2007,10 @@ Function F_fork(Arg:Array of PValue):PValue;
       end
    end;
 
-Function F_random(Arg:Array of PValue):PValue;
+Function F_random(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; DH,DL:TFloat; IH,IL:QInt; Ch:Char;
    begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg)>2) then
       For C:=High(Arg) downto 2 do
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
@@ -2013,9 +2061,10 @@ Function F_random(Arg:Array of PValue):PValue;
       Exit(NewVal(VT_FLO,System.Random()))
    end;
 
-Function F_StrLen(Arg:Array of PValue):PValue;
+Function F_StrLen(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; L:QInt;
    begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
    If (Length(Arg)>1) then
       For C:=High(Arg) downto 1 do
@@ -2028,9 +2077,10 @@ Function F_StrLen(Arg:Array of PValue):PValue;
    Exit(NewVal(VT_INT,L))
    end;
 
-Function F_StrPos(Arg:Array of PValue):PValue;
+Function F_StrPos(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; P:QInt;
    begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg)<2) then Exit(NewVal(VT_INT,0));
    If (Length(Arg)>2) then
       For C:=High(Arg) downto 1 do
@@ -2044,9 +2094,10 @@ Function F_StrPos(Arg:Array of PValue):PValue;
    Exit(NewVal(VT_INT,P))
    end;
 
-Function F_SubStr(Arg:Array of PValue):PValue;
+Function F_SubStr(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; I:Array[1..2] of QInt; R:TStr;
    begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg)=0) then Exit(NewVal(VT_STR,''));
    If (Length(Arg)>3) then
       For C:=High(Arg) downto 3 do
@@ -2070,9 +2121,10 @@ Function F_SubStr(Arg:Array of PValue):PValue;
    Exit(NewVal(VT_STR,R))
    end;
 
-Function F_DelStr(Arg:Array of PValue):PValue;
+Function F_DelStr(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; I:Array[1..2] of QInt; 
    begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg)=0) then Exit(NewVal(VT_STR,''));
    If (Length(Arg)>3) then
       For C:=High(Arg) downto 3 do
@@ -2095,9 +2147,10 @@ Function F_DelStr(Arg:Array of PValue):PValue;
    Exit(V)
    end;
 
-Function F_sqrt(Arg:Array of PValue):PValue;
+Function F_sqrt(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; F:TFLoat;
    begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg)=0) then Exit(NewVal(VT_FLO,0.0));
    If (Length(Arg)>1) then
       For C:=High(Arg) downto 1 do
@@ -2116,9 +2169,10 @@ Function F_sqrt(Arg:Array of PValue):PValue;
    Exit(NewVal(VT_FLO,F))
    end;
 
-Function F_sizeof(Arg:Array of PValue):PValue;
+Function F_sizeof(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; 
    begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
    If (Length(Arg)>1) then
       For C:=High(Arg) downto 1 do
@@ -2146,9 +2200,10 @@ Function F_sizeof(Arg:Array of PValue):PValue;
    Exit(NewVal(VT_INT,C*8))
    end;
 
-Function F_typeof(Arg:Array of PValue):PValue;
+Function F_typeof(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue;
    begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg)=0) then Exit(NewVal(VT_STR,''));
    If (Length(Arg)>1) then
       For C:=High(Arg) downto 1 do
@@ -2171,9 +2226,10 @@ Function F_typeof(Arg:Array of PValue):PValue;
    Exit(V)
    end;
 
-Function F_array(Arg:Array of PValue):PValue;
+Function F_array(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; T:PValTree; A,V:PValue;
    begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
    A:=EmptyVal(VT_ARR); T:=PValTree(A^.Ptr);
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do begin
@@ -2186,9 +2242,10 @@ Function F_array(Arg:Array of PValue):PValue;
    Exit(A)
    end;
 
-Function F_dict(Arg:Array of PValue):PValue;
+Function F_dict(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; T:PValTrie; Key:AnsiString; A,V,oV:PValue;
    begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
    A:=EmptyVal(VT_DIC); T:=PValTrie(A^.Ptr);
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
@@ -2211,9 +2268,10 @@ Function F_dict(Arg:Array of PValue):PValue;
    Exit(A)
    end;
 
-Function F_array_count(Arg:Array of PValue):PValue;
+Function F_array_count(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C,R:LongWord;
    begin R:=0;
+   If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg)>0) then
       For C:=High(Arg) downto Low(Arg) do begin
           If (Arg[C]^.Typ = VT_ARR) then R += PValTree(Arg[C]^.Ptr)^.Count else
@@ -2223,9 +2281,10 @@ Function F_array_count(Arg:Array of PValue):PValue;
    Exit(NewVal(VT_INT,R))
    end;
 
-Function F_array_empty(Arg:Array of PValue):PValue;
+Function F_array_empty(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C : LongWord; B:Boolean;
    begin B:=False;
+   If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg)>0) then
       For C:=High(Arg) downto Low(Arg) do begin
           If (Arg[C]^.Typ = VT_ARR) then B:=(B or (Not PValTree(Arg[C]^.Ptr)^.Empty)) else
@@ -2235,9 +2294,10 @@ Function F_array_empty(Arg:Array of PValue):PValue;
    Exit(NewVal(VT_BOO,B))
    end;
 
-Function F_dict_nextkey(Arg:Array of PValue):PValue;
+Function F_dict_nextkey(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; T:PValTrie; K:AnsiString; V:PValue;
    begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg)>=3) then
       For C:=High(Arg) downto 2 do
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
@@ -2259,9 +2319,10 @@ Function F_dict_nextkey(Arg:Array of PValue):PValue;
    Exit(NilVal())
    end;
 
-Function F_dict_keys(Arg:Array of PValue):PValue;
+Function F_dict_keys(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C,D,I:LongWord; R :PValue; Arr:PValTree; Dic:PValTrie; DEA:TValTrie.TEntryArr;
    begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
    R:=EmptyVal(VT_ARR); Arr:=PValTree(R^.Ptr); I:=0;
    If (Length(Arg)>0) then For C:=Low(Arg) to High(Arg) do begin
       If (Arg[C]^.Typ = VT_DIC) then begin
@@ -2277,9 +2338,10 @@ Function F_dict_keys(Arg:Array of PValue):PValue;
    Exit(R)
    end;
 
-Function F_dict_values(Arg:Array of PValue):PValue;
+Function F_dict_values(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C,D,I:LongWord; R :PValue; Arr:PValTree; Dic:PValTrie; DEA:TValTrie.TEntryArr;
    begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
    R:=EmptyVal(VT_ARR); Arr:=PValTree(R^.Ptr); I:=0;
    If (Length(Arg)>0) then For C:=Low(Arg) to High(Arg) do begin
       If (Arg[C]^.Typ = VT_DIC) then begin
@@ -2295,7 +2357,7 @@ Function F_dict_values(Arg:Array of PValue):PValue;
    Exit(R)
    end;
 
-Function F_array_flush(Arg:Array of PValue):PValue;
+Function F_array_flush(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C,I,R:LongWord;
        Arr:PValTree; AEA:TValTree.TEntryArr;
        Dic:PValTrie; DEA:TValTrie.TEntryArr;
@@ -2318,10 +2380,10 @@ Function F_array_flush(Arg:Array of PValue):PValue;
              end end;
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
           end;
-   Exit(NewVal(VT_INT,R))
+   If (DoReturn) then Exit(NewVal(VT_INT,R)) else Exit(NIL)
    end;
 
-Function F_array_print(Arg:Array of PValue):PValue;
+Function F_array_print(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C,I:LongWord; R:Boolean; V:PValue; S:AnsiString;
        Arr:PValTree; AEA:TValTree.TEntryArr;
        Dic:PValTrie; DEA:TValTrie.TEntryArr;
@@ -2366,7 +2428,7 @@ Function F_array_print(Arg:Array of PValue):PValue;
        If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0])
        end;
    V := NewVal(VT_STR,S);
-   If (Not R) then Exit(F_Writeln(V)) else Exit(V)
+   If (Not R) then Exit(F_Writeln(DoReturn, V)) else Exit(V)
    end;
 
 end.

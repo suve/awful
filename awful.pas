@@ -7,8 +7,8 @@ uses SysUtils, Math, Trie, Values, Stack,
 
 const VMAJOR = '0';
       VMINOR = '1';
-      VBUGFX = '1';
-      VREVISION = 16;
+      VBUGFX = '2';
+      VREVISION = 17;
       VERSION = VMAJOR + '.' + VMINOR + '.' + VBUGFX;
 
 Type TTokenType = (
@@ -72,7 +72,7 @@ Var YukFile : Text; YukNum:LongWord;
     mulico:LongWord;
     ParMod:TParamMode;
 
-Function Eval(E:PExpr):PValue;
+Function Eval(Ret:Boolean; E:PExpr):PValue;
    
    Function GetVar(Name:AnsiString;Typ:TValueType):PValue;
       Var R:PValue;
@@ -96,7 +96,7 @@ Function Eval(E:PExpr):PValue;
       begin
       If (A^.Typ = VT_ARR) then begin
          Case (Index^.Typ) of
-            TK_EXPR: V:=Eval(PExpr(Index^.Ptr));
+            TK_EXPR: V:=Eval(RETURN_VALUE_YES, PExpr(Index^.Ptr));
             TK_CONS: V:=PValue(Index^.Ptr);
             TK_VARI, TK_REFE:
                V:=GetVar(PStr(Index^.Ptr)^, VT_INT);
@@ -119,7 +119,7 @@ Function Eval(E:PExpr):PValue;
          end end else
       If (A^.Typ = VT_DIC) then begin
          Case (Index^.Typ) of
-            TK_EXPR: V:=Eval(PExpr(Index^.Ptr));
+            TK_EXPR: V:=Eval(RETURN_VALUE_YES, PExpr(Index^.Ptr));
             TK_CONS: V:=PValue(Index^.Ptr);
             TK_VARI, TK_REFE:
                V:=GetVar(PStr(Index^.Ptr)^, VT_STR);
@@ -145,7 +145,7 @@ Function Eval(E:PExpr):PValue;
    
    Var Arg:Array of PValue; T:LongWord; V:PValue; I:LongWord; atk:PArrTk; Tp:TValueType;
    begin
-   If (Length(E^.Tok)=0) then Exit(E^.Fun([]));
+   If (Length(E^.Tok)=0) then Exit(E^.Fun(Ret, []));
    SetLength(Arg,Length(E^.Tok));
    For T:=High(E^.Tok) downto Low(E^.Tok) do
        Case (E^.Tok[T]^.Typ) of 
@@ -178,10 +178,10 @@ Function Eval(E:PExpr):PValue;
              Arg[T]:=V
              end;
           TK_EXPR: begin
-             Arg[T]:=Eval(PExpr(E^.Tok[T]^.Ptr))
+             Arg[T]:=Eval(RETURN_VALUE_YES, PExpr(E^.Tok[T]^.Ptr))
              end
           end;
-   Exit(E^.Fun(Arg))
+   Exit(E^.Fun(Ret, Arg))
    end;
 
 Function RunFunc(P:LongWord):PValue;
@@ -190,16 +190,16 @@ Function RunFunc(P:LongWord):PValue;
    If (Pr[P].Nu = 0) then Exit(NilVal);
    Proc:=P; ExLn:=0; CurLev += 1;
    While (Not DoExit) do begin
-      R:=Eval(Pr[P].Ex[ExLn]); ExLn+=1;
-      If (ExLn < Pr[P].Nu)
-         then FreeVal(R)
-         else begin CurLev -= 1; Exit(R) end
+      R:=Eval(RETURN_VALUE_NO, Pr[P].Ex[ExLn]); ExLn+=1;
+      If (ExLn >= Pr[P].Nu)
+         then begin CurLev -= 1; Exit(R) end
+         else If (R<>NIL) then FreeVal(R)
       end;
    CurLev -= 1;
-   Exit(NilVal())
+   Exit(NIL)
    end;
 
-Function F_If(Arg:Array of PValue):PValue;
+Function F_If(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; IfNum:QInt; R:Boolean; V:PValue;
    begin
    If (Length(Arg)>1) then begin
@@ -217,10 +217,10 @@ Function F_If(Arg:Array of PValue):PValue;
       end else R:=False;
    IfNum:=PQInt(Arg[0]^.Ptr)^; FreeVal(Arg[0]);
    If (Not R) then ExLn:=IfArr[IfNum][1];
-   Exit(NilVal)
+   Exit(NIL)
    end;
 
-Function F_Else(Arg:Array of PValue):PValue;
+Function F_Else(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; IfNum:QInt;
    begin
    If (Length(Arg)>1) then
@@ -228,10 +228,10 @@ Function F_Else(Arg:Array of PValue):PValue;
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    IfNum:=PQInt(Arg[0]^.Ptr)^; FreeVal(Arg[0]);
    ExLn:=IfArr[IfNum][2];
-   Exit(NilVal)
+   Exit(NIL)
    end;
 
-Function F_While(Arg:Array of PValue):PValue;
+Function F_While(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; WhiNum:QInt; R:Boolean; V:PValue;
    begin
    If (Length(Arg)>1) then begin
@@ -249,10 +249,10 @@ Function F_While(Arg:Array of PValue):PValue;
       end else R:=False;
    WhiNum:=PQInt(Arg[0]^.Ptr)^; FreeVal(Arg[0]);
    If (Not R) then ExLn:=WhiArr[WhiNum][2];
-   Exit(NilVal)
+   Exit(NIL)
    end;
 
-Function F_Done(Arg:Array of PValue):PValue;
+Function F_Done(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; WhiNum:QInt;
    begin
    If (Length(Arg)>1) then
@@ -260,10 +260,10 @@ Function F_Done(Arg:Array of PValue):PValue;
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    WhiNum:=PQInt(Arg[0]^.Ptr)^; FreeVal(Arg[0]);
    ExLn:=WhiArr[WhiNum][1];
-   Exit(NilVal)
+   Exit(NIL)
    end;
 
-Function F_Until(Arg:Array of PValue):PValue;
+Function F_Until(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; RepNum:QInt; R:Boolean; V:PValue;
    begin
    If (Length(Arg)>1) then begin
@@ -281,10 +281,10 @@ Function F_Until(Arg:Array of PValue):PValue;
       end else R:=False;
    RepNum:=PQInt(Arg[0]^.Ptr)^; FreeVal(Arg[0]);
    If (Not R) then ExLn:=RepArr[RepNum][1];
-   Exit(NilVal)
+   Exit(NIL)
    end;
 
-Function F_Return(Arg:Array of PValue):PValue;
+Function F_Return(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; R:PValue;
    begin
    If (Length(Arg)>1) then
@@ -298,17 +298,17 @@ Function F_Return(Arg:Array of PValue):PValue;
    Exit(R)
    end;
 
-Function F_Exit(Arg:Array of PValue):PValue;
+Function F_Exit(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    ExLn:=Pr[Proc].Nu; DoExit:=True;
-   Exit(NilVal())
+   Exit(NIL)
    end;
 
-Function F_AutoCall(Arg:Array of PValue):PValue;
+Function F_AutoCall(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var P,E,V:LongWord; A,H,PA,CA:LongInt; R,TV,ArrV:PValue; Arr:PValTree;
    begin
    P:=Proc; E:=ExLn; Proc:=PQInt(Arg[0]^.Ptr)^; CurLev += 1;
@@ -352,10 +352,11 @@ Function F_AutoCall(Arg:Array of PValue):PValue;
    For A:=Low(Arg) to High(Arg) do
        If (Arg[A]^.Lev >= CurLev) then FreeVal(Arg[A]);
    Proc:=P; ExLn:=E; CurLev -= 1;
-   Exit(R)
+   If (DoReturn) then Exit(R)
+                 else begin If (R<>NIL) then FreeVal(R); Exit(NIL) end
    end;
 
-Function F_Call(Arg:Array of PValue):PValue;
+Function F_Call(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; UFN:LongWord; FPtr:PFunc; S:TStr;
    begin
    If (Length(Arg)=0) then Exit(NilVal());
@@ -368,16 +369,16 @@ Function F_Call(Arg:Array of PValue):PValue;
    Try
       UFN:=UsrFun^.GetVal(S);
       Arg[0]:=NewVal(VT_INT,UFN);
-      Exit(F_AutoCall(Arg))
+      Exit(F_AutoCall(DoReturn, Arg))
    Except
       Try
          FPtr:=Func^.GetVal(S);
-         Exit(FPtr(Arg[1..High(Arg)]));
+         Exit(FPtr(DoReturn, Arg[1..High(Arg)]));
       Except
          If (Length(Arg)>1) then
             For C:=High(Arg) downto 1 do
                 If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-         Exit(NilVal())
+         If (DoReturn) then Exit(NilVal()) else Exit(NIL)
    end end end;
 
 Function GetFunc(Name:AnsiString):PFunc;
@@ -870,7 +871,7 @@ Procedure Run();
    GLOB_sdt:=Now();
    GLOB_sms:=TimeStampToMSecs(DateTimeToTimeStamp(GLOB_sdt));
    
-   R:=RunFunc(0); FreeVal(R)
+   R:=RunFunc(0); If (R<>NIL) then FreeVal(R)
    end;
 
 Procedure Cleanup();

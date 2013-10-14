@@ -9,7 +9,8 @@ Var RealPrec : LongWord = 3;
     CurLev : LongWord = 0;
 
 Type TValueType = (
-     VT_NIL, VT_NEW, VT_PTR,
+     VT_NIL, VT_NEW,
+     VT_PTR,
      VT_BOO,
      VT_INT, VT_HEX, VT_OCT, VT_BIN, VT_FLO,
      VT_STR, VT_UTF,
@@ -42,9 +43,11 @@ Type PValue = ^TValue;
      PValTrie = ^TValTrie;
      TValTrie = specialize GenericTrie<PValue>;
      
-     PFunc = Function(Arg:Array of PValue):PValue;
+     PFunc = Function(DoReturn:Boolean; Arg:Array of PValue):PValue;
      
-     PFunTrie = ^TFunTrie;
+Const RETURN_VALUE_YES = True; RETURN_VALUE_NO = False;
+     
+Type PFunTrie = ^TFunTrie;
      TFunTrie = specialize GenericTrie<PFunc>;
 
 Function NumToStr(Int:QInt;Base:LongWord;Digs:LongWord=0):TStr; 
@@ -98,6 +101,8 @@ Function NewVal(T:TValueType;V:Int64):PValue;
 Function NewVal(T:TValueType;V:Bool):PValue;
 Function NewVal(T:TValueType;V:TStr):PValue;
 Function NewVal(T:TValueType):PValue;
+
+Function Exv(DoReturn:Boolean):PValue; Inline;
 
 implementation
    uses Math, SysUtils;
@@ -1331,5 +1336,9 @@ Function NewVal(T:TValueType):PValue;
       end;
    Exit(R)
    end;
+
+
+Function Exv(DoReturn:Boolean):PValue; Inline;
+   begin If (DoReturn) then Exit(NilVal()) else Exit(NIL) end;
 
 end.
