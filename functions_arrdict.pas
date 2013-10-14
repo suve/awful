@@ -220,7 +220,7 @@ Function F_array_print(DoReturn:Boolean; Arg:Array of PValue):PValue;
                  If (I < High(AEA)) then S += ', '
                  end;
           S += ')'
-          end end;
+          end end else
        If (Arg[0]^.Typ = VT_DIC) then begin
           S := 'dict(';
           Dic:=PValTrie(Arg[0]^.Ptr); 
@@ -234,7 +234,7 @@ Function F_array_print(DoReturn:Boolean; Arg:Array of PValue):PValue;
                  If (I < High(DEA)) then S += ', '
                  end;
           S += ')'
-          end end else S := '';
+          end end else WriteStr(S, '{', Arg[0]^.Typ, '}');
        If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0])
        end;
    If (R) then begin 

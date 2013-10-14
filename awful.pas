@@ -14,8 +14,8 @@ uses SysUtils, Math,
 
 const VMAJOR = '0';
       VMINOR = '1';
-      VBUGFX = '3';
-      VREVISION = 18;
+      VBUGFX = '4';
+      VREVISION = 19;
       VERSION = VMAJOR + '.' + VMINOR + '.' + VBUGFX;
 
 Type PText = ^System.Text;
@@ -78,7 +78,7 @@ Function Eval(Ret:Boolean; E:PExpr):PValue;
             TK_VARI, TK_REFE:
                V:=GetVar(PStr(Index^.Ptr)^, VT_INT);
             TK_AREF, TK_AVAL: begin
-               Writeln(StdErr, 'GetArr(Arr, ', Index^.Typ, ')');
+               //Writeln(StdErr, 'GetArr(Arr, ', Index^.Typ, ')');
                atk := PArrTk(Index^.Ptr);
                V:=GetVar(atk^.Nam, VT_INT);
                For C:=Low(atk^.Ind) to High(atk^.Ind) do
@@ -378,9 +378,11 @@ Function MakeExpr(Var Tk:Array of AnsiString;Ln,T:LongInt):PExpr;
    Function ConstPrefix(C:Char):Boolean;
       begin Exit(Pos(C,'sflihob=')<>0) end;
    
-   Function MakeToken(Index:LongInt):PToken;
-      Var Tok:PToken; V:PValue; PS:PStr; CName:TStr;
+   Function MakeToken(Var Index:LongInt):PToken;
+      Var Tok,otk:PToken; atk:PArrTk; TkIn, Nest:LongInt;
+          sex:PExpr; V:PValue; PS:PStr; CName:TStr; 
       begin
+      // Check string prefix and generate token
       If (Tk[Index][1]='&') then begin
          New(Tok); New(PS); Tok^.Typ:=TK_VARI; Tok^.Ptr:=PS; 
          PS^:=Copy(Tk[Index],2,Length(Tk[Index]))
@@ -424,12 +426,42 @@ Function MakeExpr(Var Tk:Array of AnsiString;Ln,T:LongInt):PExpr;
          New(Tok); Tok^.Typ:=TK_CONS; Tok^.Ptr:=V; V^.Lev := 0
          end else
          Tok:=NIL;
+      // Check if next token is an array index
+      If (Index < High(Tk)) and (Tk[Index+1][1] = '[') then begin
+         If (Tok = NIL) then
+            Fatal(Ln,'Array expression ("[") found, but previous token is not a variable name.');
+         otk:=Tok; Index += 1; TkIn := Index + 1; // E^.Tok[High(E^.Tok)];
+         If (otk^.Typ = TK_VARI) or (otk^.Typ = TK_REFE) then begin
+            Tok:=MakeToken(TkIn);
+            If (Tok=NIL) then begin
+               sex:=MakeExpr(Tk, Ln, Index + 1);
+               New(Tok); Tok^.Typ:=TK_EXPR; Tok^.Ptr:=sex
+               end;
+            CName:=PStr(otk^.Ptr)^; Dispose(PStr(otk^.Ptr));
+            If (otk^.Typ = TK_REFE) then otk^.Typ := TK_AREF
+                                    else otk^.Typ := TK_AVAL;
+            New(atk); atk^.Nam:=CName;
+            SetLength(atk^.Ind, 1); atk^.Ind[0] := Tok;
+            otk^.Ptr := atk
+            end else 
+            Fatal(Ln,'Array expression ("[") found, but previous token is not a variable name.');
+         Nest:=0;
+         While (Index <= High(Tk)) do 
+            //If (Length(Tk[Index])=0) then Index +=1 else
+            If (Tk[Index][1]='[') then begin Nest+=1; Index+=1 end else
+            If (Tk[Index][1]=']') then begin
+               Nest-=1; If (Nest=0) then Break else Index+=1
+               end else Index+=1;
+         If (Nest>0) then Writeln(StdErr,ExtractFileName(YukPath),'(',Ln,'): ',
+                                  'Error: Un-closed array expression. ("[" without a matching "]".)');
+         Tok := otk // Return value
+         end;
       Exit(Tok)
       end;
    
    Var E:PExpr; FPtr:PFunc; sex:PExpr; A:LongWord;
        Tok,otk:PToken; V:PValue; {PS:PStr;} atk : PArrTk;
-       Nest:LongWord; CName:TStr;
+       Nest:LongWord; CName:TStr; Tmp:LongInt;
    begin New(E); 
    If (Tk[T][1]=':') then begin
       FPtr:=GetFunc(Copy(Tk[T],2,Length(Tk[T])));
@@ -459,7 +491,7 @@ Function MakeExpr(Var Tk:Array of AnsiString;Ln,T:LongInt):PExpr;
          FPtr:=@(F_Else)
          end else
       If (Tk[T]='!fi') then begin
-         If (IfSta^.Empty()) then Fatal(Ln,'Fatal: !fi without corresponding !if.');
+         If (IfSta^.Empty()) then Fatal(Ln,'!fi without corresponding !if.');
          A:=IfSta^.Pop();
          If (IfArr[A][1]<0) then IfArr[A][1]:=ExLn;
          IfArr[A][2]:=ExLn;
@@ -609,26 +641,13 @@ Function MakeExpr(Var Tk:Array of AnsiString;Ln,T:LongInt):PExpr;
          end else
       If (Tk[T][1]=')') then begin
          Exit(E)
-         end else
+         end else 
       If (Tk[T][1]='[') then begin
          If (Length(E^.Tok)=0) then
             Fatal(Ln,'Array expression ("[") found, but previous token is not a variable name.');
-         otk:=E^.Tok[High(E^.Tok)];
-         If (otk^.Typ = TK_VARI) or (otk^.Typ = TK_REFE) then begin
-            Tok:=MakeToken(T+1);
-            If (Tok=NIL) then begin
-               sex:=MakeExpr(Tk,Ln,T+1);
-               New(Tok); Tok^.Typ:=TK_EXPR; Tok^.Ptr:=sex
-               end;
-            CName:=PStr(otk^.Ptr)^; Dispose(PStr(otk^.Ptr));
-            If (otk^.Typ = TK_REFE) then otk^.Typ := TK_AREF
-                                    else otk^.Typ := TK_AVAL;
-            New(atk); atk^.Nam:=CName;
-            SetLength(atk^.Ind, 1); atk^.Ind[0] := Tok;
-            otk^.Ptr := atk
-            end else
+         otk:=E^.Tok[High(E^.Tok)]; Tmp:=T+1;
          If (otk^.Typ = TK_AREF) or (otk^.Typ = TK_AVAL) then begin
-            Tok:=MakeToken(T+1);
+            Tok:=MakeToken(Tmp);
             If (Tok=NIL) then begin
                sex:=MakeExpr(Tk,Ln,T+1);
                New(Tok); Tok^.Typ:=TK_EXPR; Tok^.Ptr:=sex
@@ -647,7 +666,7 @@ Function MakeExpr(Var Tk:Array of AnsiString;Ln,T:LongInt):PExpr;
                end else T+=1;
          If (Nest>0) then Writeln(StdErr,ExtractFileName(YukPath),'(',Ln,'): ',
                                   'Error: Un-closed array expression. ("[" without a matching "]".)')
-         end else
+         end else 
       If (Tk[T][1]=']') then begin
          Exit(E)
          end else
