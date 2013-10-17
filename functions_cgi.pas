@@ -326,23 +326,25 @@ Function F_GetDict(DoReturn:Boolean; Arg:Array of PValue):PValue;
    end;
 
 Function F_Doctype(DoReturn:Boolean; Arg:Array of PValue):PValue;
-   Const DEFAULT = '<!DOCTYPE html>';
+   Const HTML5 = '<!DOCTYPE html>';
+         HTML4_LOOSE = '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">';
+         XHTML1_1 = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">';
+         DEFAULT = HTML5;
    Var C:LongWord; V:PValue; S,R:AnsiString; I:Int64;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
-   If (Length(Arg)=0) then Exit(NewVal(VT_STR,DEFAULT));
+   If (Length(Arg)=0) then Exit(NewVal(VT_STR, DEFAULT));
    For C:=High(Arg) downto 1 do
       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    If (Arg[0]^.Typ = VT_STR)
       then begin
       S:=PStr(Arg[0]^.Ptr)^;
-      If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
       If (S='html5') then
-         R:=('<!DOCTYPE html>') else
+         R:=(HTML5) else
       If (S='html4-strict') then
          R:=('<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">') else
       If (S='html4-transitional') or (S='html4-loose') then
-         R:=('<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">') else
+         R:=(HTML4_LOOSE) else
       If (S='html4-frameset') then
          R:=('<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Frameset//EN" "http://www.w3.org/TR/html4/frameset.dtd">') else
       If (S='xhtml1-strict') then
@@ -351,18 +353,20 @@ Function F_Doctype(DoReturn:Boolean; Arg:Array of PValue):PValue;
          R:=('<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">') else
       If (S='xhtml1-frameset') then
          R:=('<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Frameset//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-frameset.dtd">') else
-      If (S='xhtml1-1') then
-         R:=('<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">') else
+      If (S='xhtml1.1') then
+         R:=(XHTML1_1) else
          {else} R:=DEFAULT
       end else begin
       V:=ValToInt(Arg[0]); I:=(PQInt(V^.Ptr)^); FreeVal(V);
-      If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
       If (I = 5) then 
-         R:=('<!DOCTYPE html>') else
+         R := (HTML5) else
       If (I = 4) then 
-         R:=('<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">') else
+         R := (HTML4_LOOSE) else
+      If (I = 1) then
+         R := (XHTML1_1) else
          {else} R:=DEFAULT
       end;
+   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    Exit(NewVal(VT_STR,R))
    end;
 

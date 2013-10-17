@@ -3,6 +3,8 @@ unit functions_datetime; {$MODE OBJFPC}
 interface
    uses Values;
 
+Const dtf_def = 'yyyy"-"mm"-"dd" "hh":"nn';
+
 Procedure Register(FT:PFunTrie);
 
 Function F_DateTime_Start(DoReturn:Boolean; Arg:Array of PValue):PValue;
@@ -46,9 +48,6 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('datetime-ms',@F_DateTime_MS);
    FT^.SetVal('datetime-string',@F_DateTime_String);
    end;
-
-
-Const dtf_def = 'yyyy"-"mm"-"dd" "hh":"nn';
 
 Function F_DateTime_Start(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord;
