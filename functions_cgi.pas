@@ -19,6 +19,16 @@ Function F_GetKey(DoReturn:Boolean; Arg:Array of PValue):PValue;
 Function F_GetNum(DoReturn:Boolean; Arg:Array of PValue):PValue;
 Function F_GetDict(DoReturn:Boolean; Arg:Array of PValue):PValue;
 
+Function F_PostProcess(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_PostIs_(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_PostVal(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_PostKey(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_PostNum(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_PostDict(DoReturn:Boolean; Arg:Array of PValue):PValue;
+
+Function EncodeURL(Str:AnsiString):AnsiString;
+Function EncodeHTML(Str:AnsiString):AnsiString;
+
 implementation
    uses SysUtils, Math, EmptyFunc;
 
@@ -37,14 +47,22 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('get-key',@F_GetKey);
    FT^.SetVal('get-num',@F_GetNum);
    FT^.SetVal('get-dict',@F_GetDict);
+   // POST related functions
+   FT^.SetVal('post-prepare',@F_PostProcess);
+   FT^.SetVal('post-is',@F_PostIs_);
+   FT^.SetVal('post-val',@F_PostVal);
+   FT^.SetVal('post-key',@F_PostKey);
+   FT^.SetVal('post-num',@F_PostNum);
+   FT^.SetVal('post-dict',@F_PostDict);
    end;
 
 
-Type TGetVal = record
+Type TKeyVal = record
      Key, Val : AnsiString
      end;
+     TKeyValArr = Array of TKeyVal;
 
-Var GetArr:Array of TGetVal;
+Var GetArr, PostArr : TKeyValArr;
 
 Function DecodeURL(Str:AnsiString):AnsiString;
    Var Res:AnsiString; P,R:LongWord;
@@ -183,58 +201,92 @@ Procedure ProcessGet();
       end;
    end;
 
-Function GetSet(Key:AnsiString;L,R:LongInt):Boolean;
+Procedure ProcessPost();
+   Var Q,K,V:AnsiString; P:LongWord; I,R:LongInt; L:QWord; Ch:Char;
+   begin
+   SetLength(PostArr,0);
+   Q:=GetEnvironmentVariable('CONTENT_LENGTH');
+   L:=Values.StrToInt(Q); Q:=''; SetLength(Q,L);
+   While (L>0) do begin Read(Ch); If Eoln then Readln(); Q:=Q+Ch; L-=1 end;
+   While (Length(Q)>0) do begin
+      SetLength(PostArr,Length(PostArr)+1);
+      P:=Pos('&',Q);
+      If (P>0) then begin
+         V:=Copy(Q,1,P-1);
+         Delete(Q,1,P)
+         end else begin
+         V:=Q; Q:=''
+         end;
+      P:=Pos('=',V);
+      If (P>0) then begin
+         K:=Copy(V,1,P-1);
+         Delete(V,1,P)
+         end else begin
+         K:=V; V:=''
+         end;
+      K:=DecodeURL(K); V:=DecodeURL(V);
+      I:=High(PostArr);
+      While (I>0) and (K<PostArr[I-1].Key) do I-=1;
+      If (I<High(PostArr)) then 
+         For R:=High(PostArr) to (I+1)
+             do PostArr[R]:=PostArr[R-1];
+      PostArr[I].Key:=K;
+      PostArr[I].Val:=V
+      end;
+   end;
+
+Function ArrSet(Var Arr:TKeyValArr; Key:AnsiString;L,R:LongInt):Boolean;
    Var Mid:LongWord;
    begin
    If (L>R) then Exit(False);
    Mid:=(L+R) div 2;
-   Case Sign(CompareStr(Key,GetArr[Mid].Key)) of
-      -1: Exit(GetSet(Key,L,Mid-1));
+   Case Sign(CompareStr(Key,Arr[Mid].Key)) of
+      -1: Exit(ArrSet(Arr, Key,L,Mid-1));
        0: Exit(True);
-      +1: Exit(GetSet(Key,Mid+1,R));
+      +1: Exit(ArrSet(Arr, Key,Mid+1,R));
    end end;
 
-Function GetSet(Key:AnsiString):Boolean;
+Function ArrSet(Var Arr:TKeyValArr; Key:AnsiString):Boolean;
    begin
-   If (Length(GetArr)>0)
-      then Exit(GetSet(Key,Low(GetArr),High(GetArr)))
+   If (Length(Arr)>0)
+      then Exit(ArrSet(Arr, Key,Low(Arr),High(Arr)))
       else Exit(False)
    end;
 
-Function GetStr(Key:AnsiString;L,R:LongInt):AnsiString;
+Function ArrStr(Var Arr:TKeyValArr; Key:AnsiString;L,R:LongInt):AnsiString;
    Var Mid:LongWord;
    begin
    If (L>R) then Exit('');
    Mid:=(L+R) div 2;
-   Case Sign(CompareStr(Key,GetArr[Mid].Key)) of
-      -1: Exit(GetStr(Key,L,Mid-1));
-       0: Exit(GetArr[Mid].Val);
-      +1: Exit(GetStr(Key,Mid+1,R));
+   Case Sign(CompareStr(Key,Arr[Mid].Key)) of
+      -1: Exit(ArrStr(Arr, Key,L,Mid-1));
+       0: Exit(Arr[Mid].Val);
+      +1: Exit(ArrStr(Arr, Key,Mid+1,R));
    end end;
 
-Function GetStr(Key:AnsiString):AnsiString;
+Function ArrStr(Var Arr:TKeyValArr; Key:AnsiString):AnsiString;
    begin
-   If (Length(GetArr)>0)
-      then Exit(GetStr(Key,Low(GetArr),High(GetArr)))
+   If (Length(Arr)>0)
+      then Exit(ArrStr(Arr, Key,Low(Arr),High(Arr)))
       else Exit('')
    end;
 
-Function GetStr(Num:LongWord):AnsiString;
+Function ArrStr(Var Arr:TKeyValArr; Num:LongWord):AnsiString;
    begin
-   If (Num<Length(GetArr))
-      then Exit(GetArr[Num].Val)
+   If (Num<Length(Arr))
+      then Exit(Arr[Num].Val)
       else Exit('')
    end;
 
-Function GetKey(Num:LongWord):AnsiString;
+Function ArrKey(Var Arr:TKeyValArr; Num:LongWord):AnsiString;
    begin
-   If (Num<Length(GetArr))
-      then Exit(GetArr[Num].Key)
+   If (Num<Length(Arr))
+      then Exit(Arr[Num].Key)
       else Exit('')
    end;
 
-Function GetNum():LongWord;
-   begin Exit(Length(GetArr)) end;
+Function ArrNum(Var Arr:TKeyValArr):LongWord;
+   begin Exit(Length(Arr)) end;
 
 Function F_GetProcess(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord;
@@ -246,7 +298,17 @@ Function F_GetProcess(DoReturn:Boolean; Arg:Array of PValue):PValue;
    If (DoReturn) then Exit(NilVal()) else Exit(Nil)
    end;
 
-Function F_GetIs_(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_PostProcess(DoReturn:Boolean; Arg:Array of PValue):PValue;
+   Var C:LongWord;
+   begin
+   If (Length(Arg)>0) then
+      For C:=Low(Arg) to High(Arg) do
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
+   ProcessPost();
+   If (DoReturn) then Exit(NilVal()) else Exit(Nil)
+   end;
+
+Function F_ArrIs_(Var Arr:TKeyValArr; DoReturn:Boolean; Var Arg:Array of PValue):PValue;
    Var B:Boolean; C:LongWord; V:PValue;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -255,16 +317,16 @@ Function F_GetIs_(DoReturn:Boolean; Arg:Array of PValue):PValue;
       If (Arg[C]^.Typ<>VT_STR)
          then begin
             V:=ValToStr(Arg[C]);
-            If (Not GetSet(PStr(V^.Ptr)^)) then B:=False;
+            If (Not ArrSet(Arr, PStr(V^.Ptr)^)) then B:=False;
             FreeVal(V);
          end else
-         If (Not GetSet(PStr(Arg[C]^.Ptr)^)) then B:=False;
+         If (Not ArrSet(Arr, PStr(Arg[C]^.Ptr)^)) then B:=False;
       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
       end;
    Exit(NewVal(VT_BOO,B))
    end;
 
-Function F_GetVal(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_ArrVal(Var Arr:TKeyValArr; DoReturn:Boolean; Var Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; S:AnsiString;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -272,19 +334,19 @@ Function F_GetVal(DoReturn:Boolean; Arg:Array of PValue):PValue;
    For C:=High(Arg) downto 1 do
       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    If (Arg[0]^.Typ >= VT_INT) and (Arg[0]^.Typ <= VT_BIN)
-      then S:=GetStr(PQInt(Arg[0]^.Ptr)^) else
+      then S:=ArrStr(Arr, PQInt(Arg[0]^.Ptr)^) else
    If (Arg[0]^.Typ = VT_STR)
-      then S:=GetStr(PStr(Arg[0]^.Ptr)^)
+      then S:=ArrStr(Arr, PStr(Arg[0]^.Ptr)^)
       else begin
       V:=ValToStr(Arg[0]);
-      S:=GetStr(PStr(V^.Ptr)^);
+      S:=ArrStr(Arr, PStr(V^.Ptr)^);
       FreeVal(V)
       end;
    If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    Exit(NewVal(VT_STR,S))
    end;
 
-Function F_GetKey(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_ArrKey(Var Arr:TKeyValArr; DoReturn:Boolean; Var Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; S:AnsiString;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -292,26 +354,26 @@ Function F_GetKey(DoReturn:Boolean; Arg:Array of PValue):PValue;
    For C:=High(Arg) downto 1 do
       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    If (Arg[0]^.Typ >= VT_INT) and (Arg[0]^.Typ <= VT_BIN)
-      then S:=GetKey(PQInt(Arg[0]^.Ptr)^)
+      then S:=ArrKey(Arr, PQInt(Arg[0]^.Ptr)^)
       else begin
       V:=ValToInt(Arg[0]);
-      S:=GetKey(PQInt(V^.Ptr)^);
+      S:=ArrKey(Arr, PQInt(V^.Ptr)^);
       FreeVal(V)
       end;
    If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    Exit(NewVal(VT_STR,S))
    end;
 
-Function F_GetNum(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_ArrNum(Var Arr:TKeyValArr; DoReturn:Boolean; Var Arg:Array of PValue):PValue;
    Var C:LongWord;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   If (DoReturn) then Exit(NewVal(VT_INT,GetNum())) else Exit(NIL)
+   If (DoReturn) then Exit(NewVal(VT_INT,ArrNum(Arr))) else Exit(NIL)
    end;
 
-Function F_GetDict(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_ArrDict(Var Arr:TKeyValArr; DoReturn:Boolean; Var Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; Dic:PValTrie;
    begin
    If (Length(Arg)>0) then
@@ -319,11 +381,41 @@ Function F_GetDict(DoReturn:Boolean; Arg:Array of PValue):PValue;
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    If (Not DoReturn) then Exit(NIL);
    V:=EmptyVal(VT_DIC); Dic:=PValTrie(V^.Ptr);
-   If (Length(GetArr) > 0) then 
-      For C:=Low(GetArr) to High(GetArr) do
-          Dic^.SetVal(GetArr[C].Key, NewVal(VT_STR, GetArr[C].Val));
+   If (Length(Arr) > 0) then 
+      For C:=Low(Arr) to High(Arr) do
+          Dic^.SetVal(Arr[C].Key, NewVal(VT_STR, Arr[C].Val));
    Exit(V)
    end;
+
+Function F_GetIs_(DoReturn:Boolean; Arg:Array of PValue):PValue;
+   begin Exit(F_ArrIs_(GetArr, DoReturn, Arg)) end;
+   
+Function F_GetVal(DoReturn:Boolean; Arg:Array of PValue):PValue;
+   begin Exit(F_ArrVal(GetArr, DoReturn, Arg)) end;
+   
+Function F_GetKey(DoReturn:Boolean; Arg:Array of PValue):PValue;
+   begin Exit(F_ArrKey(GetArr, DoReturn, Arg)) end;
+   
+Function F_GetNum(DoReturn:Boolean; Arg:Array of PValue):PValue;
+   begin Exit(F_ArrNum(GetArr, DoReturn, Arg)) end;
+   
+Function F_GetDict(DoReturn:Boolean; Arg:Array of PValue):PValue;
+   begin Exit(F_ArrDict(GetArr, DoReturn, Arg)) end;
+
+Function F_PostIs_(DoReturn:Boolean; Arg:Array of PValue):PValue;
+   begin Exit(F_ArrIs_(PostArr, DoReturn, Arg)) end;
+   
+Function F_PostVal(DoReturn:Boolean; Arg:Array of PValue):PValue;
+   begin Exit(F_ArrVal(PostArr, DoReturn, Arg)) end;
+   
+Function F_PostKey(DoReturn:Boolean; Arg:Array of PValue):PValue;
+   begin Exit(F_ArrKey(PostArr, DoReturn, Arg)) end;
+   
+Function F_PostNum(DoReturn:Boolean; Arg:Array of PValue):PValue;
+   begin Exit(F_ArrNum(PostArr, DoReturn, Arg)) end;
+   
+Function F_PostDict(DoReturn:Boolean; Arg:Array of PValue):PValue;
+   begin Exit(F_ArrDict(PostArr, DoReturn, Arg)) end;
 
 Function F_Doctype(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Const HTML5 = '<!DOCTYPE html>';
