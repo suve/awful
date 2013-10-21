@@ -14,9 +14,6 @@ Function F_Sleep(DoReturn:Boolean; Arg:Array of PValue):PValue;
 Function F_Ticks(DoReturn:Boolean; Arg:Array of PValue):PValue;
 Function F_FileTicks(DoReturn:Boolean; Arg:Array of PValue):PValue;
 
-Function F_Write(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_Writeln(DoReturn:Boolean; Arg:Array of PValue):PValue;
-
 Function F_Set(DoReturn:Boolean; Arg:Array of PValue):PValue;
 Function F_Add(DoReturn:Boolean; Arg:Array of PValue):PValue;
 Function F_Sub(DoReturn:Boolean; Arg:Array of PValue):PValue;
@@ -72,7 +69,7 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('ge',@F_ge);     FT^.SetVal('>=',@F_Ge);
    FT^.SetVal('lt',@F_lt);     FT^.SetVal('<',@F_Lt);
    FT^.SetVal('le',@F_le);     FT^.SetVal('<=',@F_Le);
-   FT^.SetVal('not',@F_not);   FT^.SetVal('!',@F_Not);    FT^.SetVal('~',@F_Not);
+   FT^.SetVal('not',@F_not);   FT^.SetVal('!',@F_Not);    //FT^.SetVal('~',@F_Not);
    FT^.SetVal('and',@F_and);   FT^.SetVal('&&',@F_and);
    FT^.SetVal('xor',@F_xor);   FT^.SetVal('^^',@F_xor);
    FT^.SetVal('or' ,@F_or);    FT^.SetVal('||',@F_or);
@@ -82,8 +79,6 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('fileticks',@F_FileTicks);
    FT^.SetVal('filename',@F_FileName);
    FT^.SetVal('filepath',@F_FilePath);
-   FT^.SetVal('write',@F_Write);
-   FT^.SetVal('writeln',@F_Writeln);
    FT^.SetVal('floatprec',@F_SetPrecision);
    FT^.SetVal('perc',@F_Perc);
    FT^.SetVal('sqrt',@F_sqrt);
@@ -158,40 +153,6 @@ Function F_Sleep(DoReturn:Boolean; Arg:Array of PValue):PValue;
    If (Not DoReturn) then Exit(NIL);
    ms_en:=TimeStampToMSecs(DateTimeToTimeStamp(Now()));
    Exit(NewVal(VT_INT,Trunc(ms_en - ms_st)))
-   end;
-
-Function F_Write(DoReturn:Boolean; Arg:Array of PValue):PValue;
-   Var C:LongWord;
-   begin
-   If (Length(Arg) > 0) then
-      For C:=Low(Arg) to High(Arg) do begin
-          Case Arg[C]^.Typ of
-             VT_NIL: Write('{NIL}');
-             VT_NEW: Write('{NEW}');
-             VT_PTR: Write('{PTR}');
-             VT_INT: Write(PQInt(Arg[C]^.Ptr)^);
-             VT_HEX: Write(HexToStr(PQInt(Arg[C]^.Ptr)^));
-             VT_OCT: Write(OctToStr(PQInt(Arg[C]^.Ptr)^));
-             VT_BIN: Write(BinToStr(PQInt(Arg[C]^.Ptr)^));
-             VT_FLO: Write(PFloat(Arg[C]^.Ptr)^:0:RealPrec);
-             VT_BOO: Write(PBoolean(Arg[C]^.Ptr)^);
-             VT_STR: Write(PAnsiString(Arg[C]^.Ptr)^);
-             VT_UTF: Write('{UTF8}');
-             VT_ARR: Write('array(',PValTree(Arg[C]^.Ptr)^.Count,')');
-             VT_DIC: Write('dict(',PValTrie(Arg[C]^.Ptr)^.Count,')');
-             else Write('(',Arg[C]^.Typ,')');
-             end;
-          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
-          end;
-   If (DoReturn) then Exit(NewVal(VT_STR,'')) else Exit(NIL)
-   end;
-
-Function F_Writeln(DoReturn:Boolean; Arg:Array of PValue):PValue;
-   Var R:PValue;
-   begin
-   R:=F_Write(DoReturn, Arg);
-   Writeln();
-   Exit(R)
    end;
 
 Function F_Set(DoReturn:Boolean; Arg:Array of PValue):PValue;

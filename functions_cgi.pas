@@ -1,8 +1,20 @@
 unit functions_cgi;
 
+{$INCLUDE defines.inc}
+
 interface
    uses Values;
 
+
+Type TKeyVal = record
+     Key, Val : AnsiString
+     end;
+     
+     TKeyValArr = Array of TKeyVal;
+
+{$IFDEF CGI}
+Var Headers:TKeyValArr;
+{$ENDIF}
 
 Procedure Register(FT:PFunTrie);
 
@@ -12,14 +24,19 @@ Function F_EncodeURL(DoReturn:Boolean; Arg:Array of PValue):PValue;
 Function F_EncodeHTML(DoReturn:Boolean; Arg:Array of PValue):PValue;
 Function F_Doctype(DoReturn:Boolean; Arg:Array of PValue):PValue;
 
+{$IFDEF CGI}
+Function F_HTTPheader(DoReturn:Boolean; Arg:Array of PValue):PValue;
+{$ELSE}
 Function F_GetProcess(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_PostProcess(DoReturn:Boolean; Arg:Array of PValue):PValue;
+{$ENDIF}
+
 Function F_GetIs_(DoReturn:Boolean; Arg:Array of PValue):PValue;
 Function F_GetVal(DoReturn:Boolean; Arg:Array of PValue):PValue;
 Function F_GetKey(DoReturn:Boolean; Arg:Array of PValue):PValue;
 Function F_GetNum(DoReturn:Boolean; Arg:Array of PValue):PValue;
 Function F_GetDict(DoReturn:Boolean; Arg:Array of PValue):PValue;
 
-Function F_PostProcess(DoReturn:Boolean; Arg:Array of PValue):PValue;
 Function F_PostIs_(DoReturn:Boolean; Arg:Array of PValue):PValue;
 Function F_PostVal(DoReturn:Boolean; Arg:Array of PValue):PValue;
 Function F_PostKey(DoReturn:Boolean; Arg:Array of PValue):PValue;
@@ -28,6 +45,9 @@ Function F_PostDict(DoReturn:Boolean; Arg:Array of PValue):PValue;
 
 Function EncodeURL(Str:AnsiString):AnsiString;
 Function EncodeHTML(Str:AnsiString):AnsiString;
+
+Procedure ProcessGet();
+Procedure ProcessPost();
 
 implementation
    uses SysUtils, Math, EmptyFunc;
@@ -41,28 +61,26 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('encodeHTML',@F_EncodeHTML);
    FT^.SetVal('doctype',@F_Doctype);
    // GET related functions
-   FT^.SetVal('get-prepare',@F_GetProcess);
    FT^.SetVal('get-is',@F_GetIs_);
    FT^.SetVal('get-val',@F_GetVal);
    FT^.SetVal('get-key',@F_GetKey);
    FT^.SetVal('get-num',@F_GetNum);
    FT^.SetVal('get-dict',@F_GetDict);
    // POST related functions
-   FT^.SetVal('post-prepare',@F_PostProcess);
    FT^.SetVal('post-is',@F_PostIs_);
    FT^.SetVal('post-val',@F_PostVal);
    FT^.SetVal('post-key',@F_PostKey);
    FT^.SetVal('post-num',@F_PostNum);
    FT^.SetVal('post-dict',@F_PostDict);
+   // Symbol-dependent functions
+   {$IFDEF CGI} FT^.SetVal('http-header',@F_HTTPheader); {$ENDIF}
+   FT^.SetVal('get-prepare', {$IFNDEF CGI} @F_GetProcess {$ELSE} @F_ {$ENDIF} );
+   FT^.SetVal('post-prepare', {$IFNDEF CGI} @F_PostProcess {$ELSE} @F_ {$ENDIF} );
    end;
 
 
-Type TKeyVal = record
-     Key, Val : AnsiString
-     end;
-     TKeyValArr = Array of TKeyVal;
-
 Var GetArr, PostArr : TKeyValArr;
+
 
 Function DecodeURL(Str:AnsiString):AnsiString;
    Var Res:AnsiString; P,R:LongWord;
@@ -87,7 +105,7 @@ Function DecodeURL(Str:AnsiString):AnsiString;
 Function EncodeURL(Str:AnsiString):AnsiString;
    Var Res:AnsiString; P{,R}:LongWord;
    begin
-   Res:=''; SetLength(Res,Length(Str));
+   Res:=''; //SetLength(Res,Length(Str));
    {R:=1;} P:=1;
    While (P<=Length(Str)) do
       If (((Str[P]>=#48) and (Str[P]<= #57)) or //0-9
@@ -100,18 +118,19 @@ Function EncodeURL(Str:AnsiString):AnsiString;
    end;
 
 Function EncodeHTML(Str:AnsiString):AnsiString;
-   Var Res:AnsiString; P,R:LongWord;
+   Var Res:AnsiString; P{,R}:LongWord;
    begin
-   Res:=''; SetLength(Res,Length(Str));
-   R:=1; P:=1;
+   Res:=''; //SetLength(Res,Length(Str));
+   {R:=1;} P:=1;
    While (P<=Length(Str)) do
       Case Str[P] of
-         '"': begin Res+='&quot;'; R+=6; P+=1 end;
-         '&': begin Res+='&amp;';  R+=5; P+=1 end;
-         '<': begin Res+='&lt;';   R+=4; P+=1 end;
-         '>': begin Res+='&gt;';   R+=4; P+=1 end;
-         else begin Res+=Str[P];   R+=1; P+=1 end
+         '"': begin Res+='&quot;'; {R+=6;} P+=1 end;
+         '&': begin Res+='&amp;';  {R+=5;} P+=1 end;
+         '<': begin Res+='&lt;';   {R+=4;} P+=1 end;
+         '>': begin Res+='&gt;';   {R+=4;} P+=1 end;
+         else begin Res+=Str[P];   {R+=1;} P+=1 end
       end;
+   //SetLength(Res, R);
    Exit(Res)
    end;
 
@@ -168,6 +187,39 @@ Function F_EncodeHTML(DoReturn:Boolean; Arg:Array of PValue):PValue;
    If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    Exit(NewVal(VT_STR,EncodeHTML(S)))
    end;
+
+{$IFDEF CGI}
+Function F_HTTPheader(DoReturn:Boolean; Arg:Array of PValue):PValue;
+   Var C:LongWord; K,V:AnsiString; T:PValue; Match:Boolean;
+   begin
+   If (Length(Arg)=0) then If (DoReturn) then Exit(NilVal()) else Exit(NIL);
+   If (Arg[0]^.Typ <> VT_STR) then begin
+      T:=ValToStr(Arg[0]); K:=PStr(T^.Ptr)^; FreeVal(T)
+      end else K:=PStr(Arg[0]^.Ptr)^;
+   If (Length(Arg)>=2) then begin
+      If (Arg[1]^.Typ <> VT_STR) then begin
+         T:=ValToStr(Arg[1]); V:=PStr(T^.Ptr)^; FreeVal(T)
+         end else V:=PStr(Arg[1]^.Ptr)^;
+      Match:=False;
+      For C:=Low(Headers) to High(Headers) do
+          If (Headers[C].Key = K) then begin
+             Headers[C].Val := V; Match := True;
+             Break end;
+      If (Not Match) then begin
+         SetLength(Headers, Length(Headers)+1);
+         Headers[High(Headers)].Key:=K;
+         Headers[High(Headers)].Val:=V
+         end
+      end else
+   If (Length(Arg)=1) then
+      For C:=Low(Headers) to High(Headers) do
+          If (Headers[C].Key = K) then begin
+             Headers[C] := Headers[High(Headers)];
+             SetLength(Headers, Length(Headers)-1);
+             Break end;
+   Exit(F_(DoReturn, Arg));
+   end;
+{$ENDIF}
 
 Procedure ProcessGet();
    Var Q,K,V:AnsiString; P:LongWord; I,R:LongInt;
@@ -288,6 +340,7 @@ Function ArrKey(Var Arr:TKeyValArr; Num:LongWord):AnsiString;
 Function ArrNum(Var Arr:TKeyValArr):LongWord;
    begin Exit(Length(Arr)) end;
 
+{$IFNDEF CGI}
 Function F_GetProcess(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord;
    begin
@@ -307,6 +360,7 @@ Function F_PostProcess(DoReturn:Boolean; Arg:Array of PValue):PValue;
    ProcessPost();
    If (DoReturn) then Exit(NilVal()) else Exit(Nil)
    end;
+{$ENDIF}
 
 Function F_ArrIs_(Var Arr:TKeyValArr; DoReturn:Boolean; Var Arg:Array of PValue):PValue;
    Var B:Boolean; C:LongWord; V:PValue;

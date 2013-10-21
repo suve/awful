@@ -1,8 +1,7 @@
-program awful;
+program awful; {$INCLUDE defines.inc}
 
-{$MODE OBJFPC} {$COPERATORS ON} {$LONGSTRINGS ON}
+{$LONGSTRINGS ON}
 
-//{$DEFINE CGI}
 
 uses SysUtils, Math,
      Trie, Stack,
@@ -11,13 +10,13 @@ uses SysUtils, Math,
      Functions_ArrDict,
      Functions_CGI,
      Functions_DateTime,
-     Functions_Strings, Functions_SysInfo,
+     Functions_stdIO, Functions_Strings, Functions_SysInfo,
      Functions_TypeCast;
 
 const VMAJOR = '0';
       VMINOR = '2';
-      VBUGFX = '1';
-      VREVISION = 21;
+      VBUGFX = '2';
+      VREVISION = 22;
       VERSION = VMAJOR + '.' + VMINOR + '.' + VBUGFX;
 
 Type PText = ^System.Text;
@@ -374,13 +373,13 @@ Procedure Fatal(Ln:LongWord;Msg:AnsiString);
    begin
    Writeln(StdErr,ExtractFileName(YukPath),'(',Ln,'): Fatal: ',Msg);
    {$IFDEF CGI}
-   Writeln('Content-type: text/html');
+   Writeln('Content-type: text/html;charset=UTF-8');
    Writeln();
    Writeln('<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">');
    Writeln('<html lang="en">');
    Writeln('<head>');
-   Writeln('  <meta http-equiv="content-type" content="text/html;charset=UTF-8">');
-   Writeln('  <title>Error</title>');
+   Writeln('<meta http-equiv="content-type" content="text/html;charset=UTF-8">');
+   Writeln('<title>Error</title>');
    Writeln('</head>');
    Writeln('<body>');
    Writeln('<h3>awful-cgi: fatal error</h3><hr>');
@@ -736,8 +735,8 @@ Function ProcessLine(L:AnsiString;N:LongWord):Array_PExpr;
       If (mulico > 0) then begin
          If (P>Length(L)) then L:='' else
          If (L[P]='#') then
-            If (Length(L)>P) and (L[P+1]='>') then mulico+=1 else
-            If (P>1) and (L[P-1]='<') then begin
+            If (Length(L)>P) and (L[P+1]='~') then mulico+=1 else
+            If (P>1) and (L[P-1]='~') then begin
                If (mulico > 1) then mulico-=1 else begin
                   Delete(L,1,P); P:=0; mulico:=0
                end end
@@ -745,7 +744,7 @@ Function ProcessLine(L:AnsiString;N:LongWord):Array_PExpr;
       {$IFDEF CGI}
       If (codemode = 0) then begin
          If (P>Length(L)) then begin
-            If (Length(Tk) > 0) then begin
+            If (Length(Tk) > 0) and (Tk[High(Tk)][1] <> '~') then begin
                SetLength(Tk, Length(Tk)+3); Tk[High(Tk)-2] := '~'
                end else SetLength(Tk, Length(Tk)+2);
             Tk[High(Tk)-1] := ':writeln';
@@ -755,15 +754,20 @@ Function ProcessLine(L:AnsiString;N:LongWord):Array_PExpr;
          If (L[P] = '?') then begin
             If ((P>1) and (L[P-1] = '<')) and ((P <= Length(L)-3) and (L[P+1..P+3] = 'yuk')) then begin
                If (P > 2) then begin
-                  If (Length(Tk) > 0) then begin
+                  If (Length(Tk) > 0) and (Tk[High(Tk)][1]<>'~') then begin
                      SetLength(Tk, Length(Tk)+4); Tk[High(Tk)-2] := '~'
                      end else SetLength(Tk, Length(Tk)+3);
                   Tk[High(Tk)-2] := ':write';
                   Tk[High(Tk)-1] := 's"' + L[1..P-2] +'"';
                   Tk[High(Tk)] := '~'
-                  end;
+                  end else
+                  If (Length(Tk)>0) and (Tk[High(Tk)][1] <> '~') then begin
+                     SetLength(Tk, Length(Tk)+1); Tk[High(Tk)] := '~'
+                     end;
                codemode := 1; Delete(L, 1, P+4); P:=0
-               end
+               end else
+            If (P<Length(L)) and (L[P+1] = '>') and (codemode = 0) then begin
+               Fatal(N, 'Unexpected codemode close tag ("?>").') end;
             end else
          If (N = 1) and (P = 1) and (L[1]='#') then begin
             If (Length(L)>1) and (L[2]='!') then L:=''
@@ -782,18 +786,17 @@ Function ProcessLine(L:AnsiString;N:LongWord):Array_PExpr;
                Delete(L,1,P) 
                end else 
             If (L[P]='#') then begin //Comment character! 
-               If (P>1) then begin
+               If (P>1) then begin 
                   SetLength(Tk,Length(Tk)+1);
                   Tk[High(Tk)]:=Copy(L,1,P-1)
                   end;
-               If (Length(L)>P) and (L[P+1]='>') //begin of multi-line comment
+               If (Length(L)>P) and (L[P+1]='~') //begin of multi-line comment
                   then begin Delete(L,1,P+1); mulico += 1 end 
-                  else L:='' {normal comment} end
+                  else L:='' {normal comment}
+               end
             {$IFDEF CGI}
                else
             If (P = 3) and (L[1..2] = '?>') then begin
-               If (codemode = 0) then Fatal(N,'Unpaired codemode closing tag. ("?>")');
-               If (Length(Tk)>0) then begin SetLength(Tk, Length(Tk)+1); Tk[High(Tk)]:='~' end;
                codemode -= 1; Delete(L, 1, 2)
                end
             {$ENDIF}
@@ -817,8 +820,6 @@ Function ProcessLine(L:AnsiString;N:LongWord):Array_PExpr;
             end else
          {$IFDEF CGI}
          If (L[P]='?') and (P<Length(L)) and (L[P+1]='>') then begin
-            If (codemode = 0) then Fatal(N,'Unpaired codemode closing tag. ("?>")');
-            If (Length(Tk)>0) then begin SetLength(Tk, Length(Tk)+1); Tk[High(Tk)]:='~' end;
             codemode -= 1; Delete(L, 1, P+1); P:=0;
             end else
          {$ENDIF}
@@ -965,8 +966,11 @@ Procedure Run();
    GLOB_sdt:=Now();
    GLOB_sms:=TimeStampToMSecs(DateTimeToTimeStamp(GLOB_sdt));
    
-   {$IFDEF CGI} Functions_CGI.F_GetProcess(False, []); {$ENDIF}
-   {$IFDEF CGI} Functions_CGI.F_PostProcess(False, []); {$ENDIF}
+   {$IFDEF CGI} Functions_CGI.ProcessGet(); {$ENDIF}
+   {$IFDEF CGI} Functions_CGI.ProcessPost(); {$ENDIF}
+   
+   {$IFDEF CGI} SetLength(Headers, 1);
+   Headers[0].Key:='Content-type'; Headers[0].Val:='text/html'; {$ENDIF}
    
    R:=RunFunc(0); If (R<>NIL) then FreeVal(R)
    end;
@@ -974,6 +978,7 @@ Procedure Run();
 Procedure Cleanup();
    Var C,I:LongWord; VEA:TValTrie.TEntryArr;
    begin
+   {$IFDEF CGI} SetLength(Headers, 0); {$ENDIF}
    // Free all the user-functions, their expressions and tokens
    UsrFun^.Flush(); Dispose(UsrFun, Destroy());
    If (Length(Pr)>0) then
@@ -1009,6 +1014,7 @@ Functions.Register(Func);
 Functions_ArrDict.Register(Func);
 Functions_CGI.Register(Func);
 Functions_DateTime.Register(Func);
+Functions_stdIO.Register(Func);
 Functions_Strings.Register(Func);
 Functions_SysInfo.Register(Func);
 Functions_TypeCast.Register(Func);

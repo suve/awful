@@ -14,7 +14,8 @@ Type TValueType = (
      VT_BOO,
      VT_INT, VT_HEX, VT_OCT, VT_BIN, VT_FLO,
      VT_STR, VT_UTF,
-     VT_ARR, VT_DIC);
+     VT_ARR, VT_DIC,
+     VT_FIL);
 
 Const VT_LOG = VT_BOO;
 
@@ -23,6 +24,14 @@ Type PValue = ^TValue;
      Typ : TValueType;
      Lev : LongWord;
      Ptr : Pointer
+     end;
+     
+     PFileVal = ^TFileVal;
+     TFileVal = record
+     Fil : System.Text;
+     arw : Char;
+     Pth : AnsiString;
+     Buf : AnsiString
      end;
      
      PQInt = ^QInt;
@@ -1213,7 +1222,7 @@ Procedure FreeVal(Var Val:PValue);
    end;
 
 Function  EmptyVal(T:TValueType):PValue;
-   Var R:PValue; I:PQInt; S:PStr; D:PFloat; B:PBoolean; Arr:PValTree; Dic:PValTrie;
+   Var R:PValue; I:PQInt; S:PStr; D:PFloat; B:PBoolean; Arr:PValTree; Dic:PValTrie; Fil:PFileVal;
    begin
    New(R); R^.Lev:=CurLev; R^.Typ:=T;
    Case T of 
@@ -1227,6 +1236,8 @@ Function  EmptyVal(T:TValueType):PValue;
       VT_BOO: begin New(B); (B^):=False;      R^.Ptr:=B end;
       VT_ARR: begin New(Arr,Create(Alfa));    R^.Ptr:=Arr end;
       VT_DIC: begin New(Dic,Create('!','~')); R^.Ptr:=Dic end;
+      VT_FIL: begin New(Fil); Fil^.arw:='u';
+                  Fil^.Pth:=''; Fil^.Buf:=''; R^.Ptr:=Fil end;
       else R^.Ptr:=NIL
       end;
    Exit(R)
