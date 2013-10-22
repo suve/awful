@@ -15,8 +15,8 @@ uses SysUtils, Math,
 
 const VMAJOR = '0';
       VMINOR = '2';
-      VBUGFX = '2';
-      VREVISION = 22;
+      VBUGFX = '3';
+      VREVISION = 23;
       VERSION = VMAJOR + '.' + VMINOR + '.' + VBUGFX;
 
 Type PText = ^System.Text;
@@ -373,7 +373,7 @@ Procedure Fatal(Ln:LongWord;Msg:AnsiString);
    begin
    Writeln(StdErr,ExtractFileName(YukPath),'(',Ln,'): Fatal: ',Msg);
    {$IFDEF CGI}
-   Writeln('Content-type: text/html;charset=UTF-8');
+   Writeln('Content-Type: text/html; charset=UTF-8');
    Writeln();
    Writeln('<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">');
    Writeln('<html lang="en">');
@@ -966,11 +966,14 @@ Procedure Run();
    GLOB_sdt:=Now();
    GLOB_sms:=TimeStampToMSecs(DateTimeToTimeStamp(GLOB_sdt));
    
-   {$IFDEF CGI} Functions_CGI.ProcessGet(); {$ENDIF}
-   {$IFDEF CGI} Functions_CGI.ProcessPost(); {$ENDIF}
+   {$IFDEF CGI}
+   Functions_CGI.ProcessGet();
+   Functions_CGI.ProcessPost();
+   Functions_CGI.ProcessCake();
    
-   {$IFDEF CGI} SetLength(Headers, 1);
-   Headers[0].Key:='Content-type'; Headers[0].Val:='text/html'; {$ENDIF}
+   SetLength(Headers, 1);
+   Headers[0].Key:='content-type'; Headers[0].Val:='text/html';
+   {$ENDIF}
    
    R:=RunFunc(0); If (R<>NIL) then FreeVal(R)
    end;
@@ -978,7 +981,6 @@ Procedure Run();
 Procedure Cleanup();
    Var C,I:LongWord; VEA:TValTrie.TEntryArr;
    begin
-   {$IFDEF CGI} SetLength(Headers, 0); {$ENDIF}
    // Free all the user-functions, their expressions and tokens
    UsrFun^.Flush(); Dispose(UsrFun, Destroy());
    If (Length(Pr)>0) then
@@ -993,6 +995,9 @@ Procedure Cleanup();
              end;
           Dispose(Vars[C],Destroy());
           end;
+   // Set dynarr length to 0
+   {$IFDEF CGI} Functions_CGI.FreeArrays(); {$ENDIF}
+   SetLength(Pr, 0); SetLength(Vars, 0);
    // Free the constants trie
    If (Not Cons^.Empty) then begin
       VEA := Cons^.ToArray(); Cons^.Flush();

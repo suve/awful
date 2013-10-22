@@ -12,6 +12,10 @@ Function F_Read(DoReturn:Boolean; Arg:Array of PValue):PValue;
 Function F_Readln(DoReturn:Boolean; Arg:Array of PValue):PValue;
 Function F_GetChar(DoReturn:Boolean; Arg:Array of PValue):PValue;
 
+Function F_stdin_BufferFlush(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_stdin_BufferClear(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_stdin_BufferPush(DoReturn:Boolean; Arg:Array of PValue):PValue;
+
 implementation
    uses EmptyFunc, Functions_CGI, SysUtils;
 
@@ -26,19 +30,40 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('read', @F_Read);
    FT^.SetVal('readln', @F_Readln);
    FT^.SetVal('getchar', @F_GetChar);
+   FT^.SetVal('stdin-flush', @F_stdin_BufferFlush);
+   FT^.SetVal('stdin-clear', @F_stdin_BufferClear);
+   FT^.SetVal('stdin-push', @F_stdin_BufferPush)
    end;
 
 
 {$IFDEF CGI} Var WasOutput : Boolean = False; {$ENDIF}
 
 Function F_Write(DoReturn:Boolean; Arg:Array of PValue):PValue;
+   
+   Function CapitalizeHeader(Hdr:TStr):TStr;
+      Var C:LongWord;
+      begin
+      If (Length(Hdr) = 0) then Exit('');
+      Hdr[1]:=UpCase(Hdr[1]); C:=2;
+      While (C < Length(Hdr)) do 
+         If (Hdr[C]<>'-') then C += 1
+            else begin
+            Hdr[C+1]:=UpCase(Hdr[C+1]); C += 2
+            end;
+      Exit(Hdr)
+      end;
+   
    Var C:LongWord;
    begin
    {$IFDEF CGI}
    If (Not WasOutput) then begin
-      If (Length(Headers)>0) then begin
-         For C:=Low(Headers) to High(Headers) do
-             Writeln(Headers[C].Key,': ',Headers[C].Val);
+      If (Length(Headers)>0) or (Length(Cookies)>0) then begin
+         If (Length(Headers)>0) then
+            For C:=Low(Headers) to High(Headers) do
+                Writeln(CapitalizeHeader(Headers[C].Key),': ',Headers[C].Val);
+         If (Length(Cookies)>0) then
+            For C:=Low(Cookies) to High(Cookies) do
+                Writeln('Set-Cookie: ',EncodeURL(Cookies[C].Name),'=',EncodeURL(Cookies[C].Value));
          Writeln()
          end;
       WasOutput := True
@@ -130,6 +155,42 @@ Function F_getchar(DoReturn:Boolean; Arg:Array of PValue):PValue;
    FillBuffer(Input, @stdinBuffer, TRIM_NO);
    Chr:=stdinBuffer[1]; Delete(stdinBuffer, 1, 1);
    If (DoReturn) then Exit(NewVal(VT_STR, Chr)) else Exit(NIL)
+   end;
+
+Function F_stdin_BufferFlush(DoReturn:Boolean; Arg:Array of PValue):PValue;
+   Var V:PValue;
+   begin
+   If (Length(Arg)>0) then F_(False, Arg);
+   If (DoReturn) then V:=NewVal(VT_STR, stdinBuffer) else V:=NIL;
+   stdinBuffer := ''; Exit(V)
+   end;
+
+Function F_stdin_BufferClear(DoReturn:Boolean; Arg:Array of PValue):PValue;
+   Var V:PValue;
+   begin
+   If (Length(Arg)>0) then F_(False, Arg);
+   If (DoReturn) then V:=NewVal(VT_INT, Length(stdinBuffer)) else V:=NIL;
+   stdinBuffer := ''; Exit(V)
+   end;
+
+Function F_stdin_BufferPush(DoReturn:Boolean; Arg:Array of PValue):PValue;
+   Var C:LongWord;
+   begin
+   If (Length(Arg)>0) then
+      For C:=Low(Arg) to High(Arg) do begin
+          If (Length(stdinBuffer) > 0) and (stdinBuffer[Length(stdinBuffer)]<>#32) then stdinBuffer += #32;
+          Case Arg[C]^.Typ of
+             VT_BOO: stdinBuffer += SysUtils.BoolToStr(PBool(Arg[C]^.Ptr)^);
+             VT_BIN: stdinBuffer += Values.BinToStr(PQInt(Arg[C]^.Ptr)^);
+             VT_OCT: stdinBuffer += Values.OctToStr(PQInt(Arg[C]^.Ptr)^);
+             VT_INT: stdinBuffer += Values.IntToStr(PQInt(Arg[C]^.Ptr)^);
+             VT_HEX: stdinBuffer += Values.HexToStr(PQInt(Arg[C]^.Ptr)^);
+             VT_FLO: stdinBuffer += Values.RealToStr(PFloat(Arg[C]^.Ptr)^, 5);
+             VT_STR: stdinBuffer += PStr(Arg[C]^.Ptr)^;
+             end;
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
+          end;
+   If (DoReturn) then Exit(NilVal()) else Exit(NIL)
    end;
 
 (*

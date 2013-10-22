@@ -11,9 +11,14 @@ Type TKeyVal = record
      end;
      
      TKeyValArr = Array of TKeyVal;
+     
+     TCookie = record
+     Name, Value : AnsiString
+     end;
 
 {$IFDEF CGI}
 Var Headers:TKeyValArr;
+    Cookies:Array of TCookie;
 {$ENDIF}
 
 Procedure Register(FT:PFunTrie);
@@ -26,9 +31,11 @@ Function F_Doctype(DoReturn:Boolean; Arg:Array of PValue):PValue;
 
 {$IFDEF CGI}
 Function F_HTTPheader(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_HTTPcookie(DoReturn:Boolean; Arg:Array of PValue):PValue;
 {$ELSE}
 Function F_GetProcess(DoReturn:Boolean; Arg:Array of PValue):PValue;
 Function F_PostProcess(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_CakeProcess(DoReturn:Boolean; Arg:Array of PValue):PValue;
 {$ENDIF}
 
 Function F_GetIs_(DoReturn:Boolean; Arg:Array of PValue):PValue;
@@ -43,11 +50,19 @@ Function F_PostKey(DoReturn:Boolean; Arg:Array of PValue):PValue;
 Function F_PostNum(DoReturn:Boolean; Arg:Array of PValue):PValue;
 Function F_PostDict(DoReturn:Boolean; Arg:Array of PValue):PValue;
 
+Function F_CakeIs_(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_CakeVal(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_CakeKey(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_CakeNum(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_CakeDict(DoReturn:Boolean; Arg:Array of PValue):PValue;
+
 Function EncodeURL(Str:AnsiString):AnsiString;
 Function EncodeHTML(Str:AnsiString):AnsiString;
 
 Procedure ProcessGet();
 Procedure ProcessPost();
+Procedure ProcessCake();
+Procedure FreeArrays();
 
 implementation
    uses SysUtils, Math, EmptyFunc;
@@ -72,14 +87,44 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('post-key',@F_PostKey);
    FT^.SetVal('post-num',@F_PostNum);
    FT^.SetVal('post-dict',@F_PostDict);
-   // Symbol-dependent functions
-   {$IFDEF CGI} FT^.SetVal('http-header',@F_HTTPheader); {$ENDIF}
+   // HTTP-Cookie related functions
+   FT^.SetVal('cookie-is',@F_CakeIs_);
+   FT^.SetVal('cookie-val',@F_CakeVal);
+   FT^.SetVal('cookie-key',@F_CakeKey);
+   FT^.SetVal('cookie-num',@F_CakeNum);
+   FT^.SetVal('cookie-dict',@F_CakeDict);
+   // Functions available in CGI mode only
+   FT^.SetVal('http-header', {$IFDEF CGI} @F_HTTPheader {$ELSE} @F_ {$ENDIF} );
+   FT^.SetVal('http-cookie', {$IFDEF CGI} @F_HTTPcookie {$ELSE} @F_ {$ENDIF} );
+   // Function available only outside CGI mode
    FT^.SetVal('get-prepare', {$IFNDEF CGI} @F_GetProcess {$ELSE} @F_ {$ENDIF} );
    FT^.SetVal('post-prepare', {$IFNDEF CGI} @F_PostProcess {$ELSE} @F_ {$ENDIF} );
+   FT^.SetVal('cookie-prepare', {$IFNDEF CGI} @F_CakeProcess {$ELSE} @F_ {$ENDIF} );
    end;
 
 
-Var GetArr, PostArr : TKeyValArr;
+Var GetArr, PostArr, CakeArr : TKeyValArr;
+
+
+Procedure SortArr(Var Arr:TKeyValArr; Min, Max : LongWord);
+   Var Pos, Piv:LongWord; PivVal:TKeyVal;
+   begin
+   Pos:=Min; Piv:=Max; PivVal:=Arr[Piv];
+   While (Pos<>Piv) do
+      If (Arr[Pos].Key > PivVal.Key) then begin
+         Arr[Piv]:=Arr[Pos]; Arr[Pos]:=Arr[Piv-1];
+         Arr[Piv-1] := PivVal; Piv -= 1
+         end else Pos += 1;
+   If ((Pos - Min) > 1) then SortArr(Arr, Min, Pos-1);
+   If ((Max - Pos) > 1) then SortArr(Arr, Pos+1, Max)
+   end;
+
+
+Procedure FreeArrays();
+   begin
+   SetLength(GetArr, 0); SetLength(PostArr, 0); SetLength(CakeArr, 0)
+   {$IFDEF CGI} ; SetLength(Headers, 0); SetLength(Cookies, 0) {$ENDIF}
+   end;
 
 
 Function DecodeURL(Str:AnsiString):AnsiString;
@@ -190,21 +235,23 @@ Function F_EncodeHTML(DoReturn:Boolean; Arg:Array of PValue):PValue;
 
 {$IFDEF CGI}
 Function F_HTTPheader(DoReturn:Boolean; Arg:Array of PValue):PValue;
-   Var C:LongWord; K,V:AnsiString; T:PValue; Match:Boolean;
+   Var T:PValue; K,V:AnsiString; C:LongWord; Match:Boolean;
    begin
    If (Length(Arg)=0) then If (DoReturn) then Exit(NilVal()) else Exit(NIL);
    If (Arg[0]^.Typ <> VT_STR) then begin
       T:=ValToStr(Arg[0]); K:=PStr(T^.Ptr)^; FreeVal(T)
       end else K:=PStr(Arg[0]^.Ptr)^;
+   K:=LowerCase(Trim(K));
    If (Length(Arg)>=2) then begin
       If (Arg[1]^.Typ <> VT_STR) then begin
          T:=ValToStr(Arg[1]); V:=PStr(T^.Ptr)^; FreeVal(T)
          end else V:=PStr(Arg[1]^.Ptr)^;
-      Match:=False;
-      For C:=Low(Headers) to High(Headers) do
-          If (Headers[C].Key = K) then begin
-             Headers[C].Val := V; Match := True;
-             Break end;
+      Match := False;
+      If (Length(Headers)>0) then
+         For C:=Low(Headers) to High(Headers) do
+             If (K = Headers[C].Key) then begin
+                Headers[C].Val := V; Match:=True;
+                Break end;
       If (Not Match) then begin
          SetLength(Headers, Length(Headers)+1);
          Headers[High(Headers)].Key:=K;
@@ -212,12 +259,29 @@ Function F_HTTPheader(DoReturn:Boolean; Arg:Array of PValue):PValue;
          end
       end else
    If (Length(Arg)=1) then
-      For C:=Low(Headers) to High(Headers) do
-          If (Headers[C].Key = K) then begin
-             Headers[C] := Headers[High(Headers)];
-             SetLength(Headers, Length(Headers)-1);
-             Break end;
-   Exit(F_(DoReturn, Arg));
+      If (Length(Headers)>0) then
+         For C:=Low(Headers) to High(Headers) do
+             If (K = Headers[C].Key) then begin
+                Headers[C] := Headers[High(Headers)];
+                SetLength(Headers, Length(Headers)-1);
+                Break end;
+   Exit(F_(DoReturn, Arg))
+   end;
+
+Function F_HTTPcookie(DoReturn:Boolean; Arg:Array of PValue):PValue;
+   Var T:PValue; K,V:AnsiString;
+   begin
+   If (Length(Arg) < 2) then If (DoReturn) then Exit(NilVal()) else Exit(NIL);
+   If (Arg[0]^.Typ <> VT_STR) then begin
+      T:=ValToStr(Arg[0]); K:=PStr(T^.Ptr)^; FreeVal(T)
+      end else K:=PStr(Arg[0]^.Ptr)^;
+   If (Arg[1]^.Typ <> VT_STR) then begin
+      T:=ValToStr(Arg[1]); V:=PStr(T^.Ptr)^; FreeVal(T)
+      end else V:=PStr(Arg[1]^.Ptr)^;
+   SetLength(Cookies, Length(Cookies)+1);
+   Cookies[High(Cookies)].Name := Trim(K);
+   Cookies[High(Cookies)].Value := V;
+   Exit(F_(DoReturn, Arg))
    end;
 {$ENDIF}
 
@@ -251,6 +315,7 @@ Procedure ProcessGet();
       GetArr[I].Key:=K;
       GetArr[I].Val:=V
       end;
+   If (Length(GetArr)>0) then SortArr(GetArr, Low(GetArr), High(GetArr))
    end;
 
 Procedure ProcessPost();
@@ -285,6 +350,40 @@ Procedure ProcessPost();
       PostArr[I].Key:=K;
       PostArr[I].Val:=V
       end;
+   If (Length(PostArr)>0) then SortArr(PostArr, Low(PostArr), High(PostArr))
+   end;
+
+Procedure ProcessCake();
+   Var Q,K,V:AnsiString; P:LongWord; I,R:LongInt;
+   begin
+   SetLength(CakeArr,0);
+   Q:=GetEnvironmentVariable('HTTP_COOKIE');
+   While (Length(Q)>0) do begin
+      SetLength(CakeArr,Length(CakeArr)+1);
+      P:=Pos(';',Q);
+      If (P>0) then begin
+         V:=Copy(Q,1,P-1);
+         Delete(Q,1,P)
+         end else begin
+         V:=Q; Q:=''
+         end;
+      P:=Pos('=',V);
+      If (P>0) then begin
+         K:=Copy(V,1,P-1);
+         Delete(V,1,P)
+         end else begin
+         K:=V; V:=''
+         end;
+      K:=DecodeURL(K); V:=DecodeURL(V);
+      I:=High(CakeArr);
+      While (I>0) and (K<CakeArr[I-1].Key) do I-=1;
+      If (I<High(CakeArr)) then 
+         For R:=High(CakeArr) to (I+1)
+             do CakeArr[R]:=CakeArr[R-1];
+      CakeArr[I].Key:=K;
+      CakeArr[I].Val:=V
+      end;
+   If (Length(CakeArr)>0) then SortArr(CakeArr, Low(CakeArr), High(CakeArr))
    end;
 
 Function ArrSet(Var Arr:TKeyValArr; Key:AnsiString;L,R:LongInt):Boolean;
@@ -358,6 +457,16 @@ Function F_PostProcess(DoReturn:Boolean; Arg:Array of PValue):PValue;
       For C:=Low(Arg) to High(Arg) do
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    ProcessPost();
+   If (DoReturn) then Exit(NilVal()) else Exit(Nil)
+   end;
+
+Function F_CakeProcess(DoReturn:Boolean; Arg:Array of PValue):PValue;
+   Var C:LongWord;
+   begin
+   If (Length(Arg)>0) then
+      For C:=Low(Arg) to High(Arg) do
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
+   ProcessCake();
    If (DoReturn) then Exit(NilVal()) else Exit(Nil)
    end;
 {$ENDIF}
@@ -470,6 +579,21 @@ Function F_PostNum(DoReturn:Boolean; Arg:Array of PValue):PValue;
    
 Function F_PostDict(DoReturn:Boolean; Arg:Array of PValue):PValue;
    begin Exit(F_ArrDict(PostArr, DoReturn, Arg)) end;
+   
+Function F_CakeIs_(DoReturn:Boolean; Arg:Array of PValue):PValue;
+   begin Exit(F_ArrIs_(CakeArr, DoReturn, Arg)) end;
+   
+Function F_CakeVal(DoReturn:Boolean; Arg:Array of PValue):PValue;
+   begin Exit(F_ArrVal(CakeArr, DoReturn, Arg)) end;
+   
+Function F_CakeKey(DoReturn:Boolean; Arg:Array of PValue):PValue;
+   begin Exit(F_ArrKey(CakeArr, DoReturn, Arg)) end;
+   
+Function F_CakeNum(DoReturn:Boolean; Arg:Array of PValue):PValue;
+   begin Exit(F_ArrNum(CakeArr, DoReturn, Arg)) end;
+   
+Function F_CakeDict(DoReturn:Boolean; Arg:Array of PValue):PValue;
+   begin Exit(F_ArrDict(CakeArr, DoReturn, Arg)) end;
 
 Function F_Doctype(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Const HTML5 = '<!DOCTYPE html>';
