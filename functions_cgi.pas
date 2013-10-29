@@ -71,9 +71,9 @@ implementation
 Procedure Register(FT:PFunTrie);
    begin
    // String thingies
-   FT^.SetVal('decodeURL',@F_DecodeURL);
-   FT^.SetVal('encodeURL',@F_DecodeURL);
-   FT^.SetVal('encodeHTML',@F_EncodeHTML);
+   FT^.SetVal('decodeURL',@F_DecodeURL);   FT^.SetVal('url-decode',@F_DecodeURL);
+   FT^.SetVal('encodeURL',@F_EncodeURL);   FT^.SetVal('url-encode',@F_EncodeURL);
+   FT^.SetVal('encodeHTML',@F_EncodeHTML); FT^.SetVal('html-encode',@F_EncodeHTML);
    FT^.SetVal('doctype',@F_Doctype);
    // GET related functions
    FT^.SetVal('get-is',@F_GetIs_);
@@ -285,28 +285,36 @@ Function F_HTTPcookie(DoReturn:Boolean; Arg:Array of PValue):PValue;
    end;
 {$ENDIF}
 
-Procedure ProcessGet();
-   Var Q,K,V:AnsiString; P:LongWord; I,R:LongInt;
+Function FindChar(Const Str:TStr; Chr:Char; Offset:LongWord):LongWord;
    begin
-   SetLength(GetArr,0);
+   While (Offset <= Length(Str)) do begin
+      If (Str[Offset] = Chr) then Exit(Offset);
+      Offset += 1
+      end;
+   Exit(0)
+   end;
+
+Procedure ProcessGet();
+   Var Q,K,V:AnsiString; P,S,L:LongWord; I,R:LongInt;
+   begin
+   SetLength(GetArr,0); 
    Q:=GetEnvironmentVariable('QUERY_STRING');
-   While (Length(Q)>0) do begin
+   S:=1; L:=Length(Q);
+   While (S <= L) do begin
       SetLength(GetArr,Length(GetArr)+1);
-      P:=Pos('&',Q);
+      P:=FindChar(Q, '&', S);
       If (P>0) then begin
-         V:=Copy(Q,1,P-1);
-         Delete(Q,1,P)
+         V:=Copy(Q, S, P-1); S:=P+1
          end else begin
-         V:=Q; Q:=''
+         V:=Q; S := L+1
          end;
-      P:=Pos('=',V);
+      P:=FindChar(V, '=', 1);
       If (P>0) then begin
-         K:=Copy(V,1,P-1);
-         Delete(V,1,P)
+         K:=DecodeURL(Copy(V,1,P-1));
+         V:=DecodeURL(Copy(V,P+1,L))
          end else begin
-         K:=V; V:=''
+         K:=DecodeURL(V); V:=''
          end;
-      K:=DecodeURL(K); V:=DecodeURL(V);
       I:=High(GetArr);
       While (I>0) and (K<GetArr[I-1].Key) do I-=1;
       If (I<High(GetArr)) then 
@@ -319,29 +327,28 @@ Procedure ProcessGet();
    end;
 
 Procedure ProcessPost();
-   Var Q,K,V:AnsiString; P:LongWord; I,R:LongInt; L:QWord; Ch:Char;
+   Var Q,K,V:AnsiString; P:LongWord; I,R:LongInt; S,L:QWord; Ch:Char;
    begin
    SetLength(PostArr,0);
    Q:=GetEnvironmentVariable('CONTENT_LENGTH');
-   L:=Values.StrToInt(Q); Q:=''; SetLength(Q,L);
-   While (L>0) do begin Read(Ch); If Eoln then Readln(); Q:=Q+Ch; L-=1 end;
-   While (Length(Q)>0) do begin
+   L:=Values.StrToInt(Q); S:=L; Q:=''; SetLength(Q,L);
+   While (S<L) do begin Read(Ch); If Eoln then Readln(); Q[S]:=Ch; S+=1 end;
+   S := 1; L += 1;
+   While (S <= L) do begin
       SetLength(PostArr,Length(PostArr)+1);
-      P:=Pos('&',Q);
+      P:=FindChar(Q, '&', S);
       If (P>0) then begin
-         V:=Copy(Q,1,P-1);
-         Delete(Q,1,P)
+         V:=Copy(Q,S,P-1); S := P+1
          end else begin
-         V:=Q; Q:=''
+         V:=Q; S := L+1
          end;
-      P:=Pos('=',V);
+      P:=FindChar(V, '=', 1);
       If (P>0) then begin
-         K:=Copy(V,1,P-1);
-         Delete(V,1,P)
+         K:=DecodeURL(Copy(V,1,P-1));
+         V:=DecodeURL(Copy(V,P+1,L)) //Delete(V,1,P)
          end else begin
-         K:=V; V:=''
+         K:=DecodeURL(V); V:=''
          end;
-      K:=DecodeURL(K); V:=DecodeURL(V);
       I:=High(PostArr);
       While (I>0) and (K<PostArr[I-1].Key) do I-=1;
       If (I<High(PostArr)) then 
@@ -354,27 +361,26 @@ Procedure ProcessPost();
    end;
 
 Procedure ProcessCake();
-   Var Q,K,V:AnsiString; P:LongWord; I,R:LongInt;
+   Var Q,K,V:AnsiString; P,S,L:LongWord; I,R:LongInt;
    begin
    SetLength(CakeArr,0);
    Q:=GetEnvironmentVariable('HTTP_COOKIE');
-   While (Length(Q)>0) do begin
+   S:=1; L:=Length(Q);
+   While (S <= L) do begin
       SetLength(CakeArr,Length(CakeArr)+1);
-      P:=Pos(';',Q);
+      P:=FindChar(Q, '&', S);
       If (P>0) then begin
-         V:=Copy(Q,1,P-1);
-         Delete(Q,1,P)
+         V:=Copy(Q,S,P-1); S := P+1
          end else begin
-         V:=Q; Q:=''
+         V:=Q; S:=L+1
          end;
-      P:=Pos('=',V);
+      FindChar(V, '=', 1);
       If (P>0) then begin
-         K:=Copy(V,1,P-1);
-         Delete(V,1,P)
+         K:=DecodeURL(Copy(V,1,P-1));
+         V:=DecodeURL(Copy(V,P+1,L)) //Delete(V,1,P)
          end else begin
-         K:=V; V:=''
+         K:=DecodeURL(V); V:=''
          end;
-      K:=DecodeURL(K); V:=DecodeURL(V);
       I:=High(CakeArr);
       While (I>0) and (K<CakeArr[I-1].Key) do I-=1;
       If (I<High(CakeArr)) then 

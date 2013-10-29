@@ -38,21 +38,20 @@ Procedure Register(FT:PFunTrie);
 
 {$IFDEF CGI} Var WasOutput : Boolean = False; {$ENDIF}
 
+Function CapitalizeHeader(Hdr:TStr):TStr;
+   Var C:LongWord;
+   begin
+   If (Length(Hdr) = 0) then Exit('');
+   Hdr[1]:=UpCase(Hdr[1]); C:=2;
+   While (C < Length(Hdr)) do 
+      If (Hdr[C]<>'-') then C += 1
+         else begin
+         Hdr[C+1]:=UpCase(Hdr[C+1]); C += 2
+         end;
+   Exit(Hdr)
+   end;
+
 Function F_Write(DoReturn:Boolean; Arg:Array of PValue):PValue;
-   
-   Function CapitalizeHeader(Hdr:TStr):TStr;
-      Var C:LongWord;
-      begin
-      If (Length(Hdr) = 0) then Exit('');
-      Hdr[1]:=UpCase(Hdr[1]); C:=2;
-      While (C < Length(Hdr)) do 
-         If (Hdr[C]<>'-') then C += 1
-            else begin
-            Hdr[C+1]:=UpCase(Hdr[C+1]); C += 2
-            end;
-      Exit(Hdr)
-      end;
-   
    Var C:LongWord;
    begin
    {$IFDEF CGI}

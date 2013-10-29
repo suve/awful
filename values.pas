@@ -172,7 +172,9 @@ Function StrToInt(Str:TStr):QInt;
    Plus:=(Str[1]<>'-'); Res:=0;
    For P:=1 to Length(Str) do
        If (Str[P]>=#48) and (Str[P]<=#57) then
-          Res:=(Res*10)+Ord(Str[P])-48;
+          Res:=(Res*10)+Ord(Str[P])-48 else
+       If (Str[P]='.') or (Str[P]=',') then
+          Break;
    If Plus then Exit(Res) else Exit(-Res)
    end;
 
@@ -187,7 +189,9 @@ Function StrToHex(Str:TStr):QInt;
        If (Str[P]>=#65) and (Str[P]<=#70) then
           Res:=(Res shl 4)+Ord(Str[P])-55 else
        If (Str[P]>=#97) and (Str[P]<=#102) then
-          Res:=(Res shl 4)+Ord(Str[P])-87;
+          Res:=(Res shl 4)+Ord(Str[P])-87 else
+       If (Str[P]='.') or (Str[P]=',') then
+          Break;
    If Plus then Exit(Res) else Exit(-Res)
    end;
 
@@ -198,7 +202,9 @@ Function StrToOct(Str:TStr):QInt;
    Plus:=(Str[1]<>'-'); Res:=0;
    For P:=1 to Length(Str) do
        If (Str[P]>=#48) and (Str[P]<=#55) then
-          Res:=(Res shl 3)+Ord(Str[P])-48;
+          Res:=(Res shl 3)+Ord(Str[P])-48 else
+       If (Str[P]='.') or (Str[P]=',') then
+          Break;
    If Plus then Exit(Res) else Exit(-Res)
    end;
 
@@ -209,7 +215,9 @@ Function StrToBin(Str:TStr):QInt;
    Plus:=(Str[1]<>'-'); Res:=0;
    For P:=1 to Length(Str) do
        If (Str[P]>=#48) and (Str[P]<=#49) then
-          Res:=(Res shl 1)+Ord(Str[P])-48;
+          Res:=(Res shl 1)+Ord(Str[P])-48 else
+       If (Str[P]='.') or (Str[P]=',') then
+          Break;
    If Plus then Exit(Res) else Exit(-Res)
    end;
 

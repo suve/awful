@@ -15,8 +15,8 @@ uses SysUtils, Math,
 
 const VMAJOR = '0';
       VMINOR = '2';
-      VBUGFX = '3';
-      VREVISION = 23;
+      VBUGFX = '4';
+      VREVISION = 24;
       VERSION = VMAJOR + '.' + VMINOR + '.' + VBUGFX;
 
 Type PText = ^System.Text;
@@ -716,8 +716,9 @@ Function MakeExpr(Var Tk:Array of AnsiString;Ln,T:LongInt):PExpr;
    end;
 
 Function ProcessLine(L:AnsiString;N:LongWord):Array_PExpr;
-   Var Tk:Array of AnsiString; P:LongWord;
+   Var Tk:Array of AnsiString; P,S,Len:LongWord;
        Str:LongInt; Del:Char; R:Array_PExpr; Rs,Rn:LongWord;
+       PipeChar:AnsiString;
    
    Function BreakToken(Ch:Char):Boolean;
       begin Exit(Pos(Ch,' (|)[#]~')<>0) end;
@@ -730,123 +731,140 @@ Function ProcessLine(L:AnsiString;N:LongWord):Array_PExpr;
       Exit(R)
       end;
    {$ENDIF}
-   SetLength(Tk,0); P:=1; Str:=0; Del:=#255;
-   While (Length(L)>0) do begin
+   SetLength(Tk,0); S := 1; Len:=Length(L); P:=1; Str:=0; Del:=#255; PipeChar:='';
+   While (S <= Len) do begin
+      //Writeln(N:8,#32,Len:8,#32,S:8,#32,P:8,' "',L[P],'"');
       If (mulico > 0) then begin
-         If (P>Length(L)) then L:='' else
+         If (P>Len) then S := Len+1 else
          If (L[P]='#') then
-            If (Length(L)>P) and (L[P+1]='~') then mulico+=1 else
+            If (Len>P) and (L[P+1]='~') then mulico+=1 else
             If (P>1) and (L[P-1]='~') then begin
                If (mulico > 1) then mulico-=1 else begin
-                  Delete(L,1,P); P:=0; mulico:=0
+                  S:=P+1; {P-=1;} mulico:=0
                end end
          end else
       {$IFDEF CGI}
       If (codemode = 0) then begin
-         If (P>Length(L)) then begin
+         If (P>Len) then begin
             If (Length(Tk) > 0) and (Tk[High(Tk)][1] <> '~') then begin
                SetLength(Tk, Length(Tk)+3); Tk[High(Tk)-2] := '~'
                end else SetLength(Tk, Length(Tk)+2);
             Tk[High(Tk)-1] := ':writeln';
-            Tk[High(Tk)] := 's"' + L +'"';
-            L:=''; P:=0
+            Tk[High(Tk)] := 's"' + L[S..Len] +'"';
+            S := Len + 1; P-=1
             end else
          If (L[P] = '?') then begin
-            If ((P>1) and (L[P-1] = '<')) and ((P <= Length(L)-3) and (L[P+1..P+3] = 'yuk')) then begin
-               If (P > 2) then begin
+            If ((P>1) and (L[P-1] = '<')) and ((P <= Len-3) and (L[P+1..P+3] = 'yuk')) then begin
+               If (P > S+1) then begin
                   If (Length(Tk) > 0) and (Tk[High(Tk)][1]<>'~') then begin
                      SetLength(Tk, Length(Tk)+4); Tk[High(Tk)-2] := '~'
                      end else SetLength(Tk, Length(Tk)+3);
                   Tk[High(Tk)-2] := ':write';
-                  Tk[High(Tk)-1] := 's"' + L[1..P-2] +'"';
+                  Tk[High(Tk)-1] := 's"' + L[S..P-2] +'"';
                   Tk[High(Tk)] := '~'
                   end else
                   If (Length(Tk)>0) and (Tk[High(Tk)][1] <> '~') then begin
                      SetLength(Tk, Length(Tk)+1); Tk[High(Tk)] := '~'
                      end;
-               codemode := 1; Delete(L, 1, P+4); P:=0
+               //Writeln(StdErr,ExtractFileName(YukPath),'(',N,'): Entering codemode');
+               codemode := 1; S:=P+5; P+=3
                end else
-            If (P<Length(L)) and (L[P+1] = '>') and (codemode = 0) then begin
+            If (P<Len) and (L[P+1] = '>') and (codemode = 0) then begin
                Fatal(N, 'Unexpected codemode close tag ("?>").') end;
             end else
          If (N = 1) and (P = 1) and (L[1]='#') then begin
-            If (Length(L)>1) and (L[2]='!') then L:=''
+            If (Len>1) and (L[2]='!') then S:=Len+1 // #!shebang
             end
          end else
       {$ENDIF}
       If (Str<=0) then begin
-         If (P>Length(L)) or (BreakToken(L[P])) then begin
+         If (P>Len) or (BreakToken(L[P])) then begin
             //Writeln(StdErr,'Breaking line: "',L,'" at "',L[P],'".');
             If (L[P]=' ') then begin
-               If (P>1) then begin
+               If (P>S) then begin
                   SetLength(Tk,Length(Tk)+1);
-                  Tk[High(Tk)]:=Copy(L,1,P-1)
+                  Tk[High(Tk)]:=Copy(L,S,P-S)
                   end;
-               While (P<Length(L)) and (L[P+1]=#32) do P+=1;
-               Delete(L,1,P) 
+               While (P<Len) and (L[P+1]=#32) do P+=1;
+               S := P+1; P+=1
                end else 
             If (L[P]='#') then begin //Comment character! 
-               If (P>1) then begin 
+               If (P>S) then begin 
                   SetLength(Tk,Length(Tk)+1);
-                  Tk[High(Tk)]:=Copy(L,1,P-1)
+                  Tk[High(Tk)]:=Copy(L,S,P-S)
                   end;
-               If (Length(L)>P) and (L[P+1]='~') //begin of multi-line comment
-                  then begin Delete(L,1,P+1); mulico += 1 end 
-                  else L:='' {normal comment}
+               If (Len>P) and (L[P+1]='~') //begin of multi-line comment
+                  then begin S := P+2; P+=2; mulico += 1 end 
+                  else S:=Len+1 {normal comment}
                end
             {$IFDEF CGI}
                else
-            If (P = 3) and (L[1..2] = '?>') then begin
-               codemode -= 1; Delete(L, 1, 2)
+            If (P >= 3) and (L[P-2..P-1] = '?>') then begin
+               codemode -= 1; S:=P; P+=1 //Delete(L, 1, 2)
                end
             {$ENDIF}
                else begin // paren
-               SetLength(Tk,Length(Tk)+1);
-               If (P>1) then begin
-                  Tk[High(Tk)]:=Copy(L,1,P-1);
-                  Delete(L,1,P-1)
-                  end else begin
-                  Tk[High(Tk)]:=L[1];
-                  While (P<Length(L)) and (L[P+1]=#32) do P+=1;
-                  Delete(L,1,P)
+               If (P>S) then begin
+                  SetLength(Tk, Length(Tk)+1);
+                  Tk[High(Tk)]:=Copy(L,S,P-S)
                   end;
-               If (Tk[High(Tk)]='|') then begin
-                  Tk[High(Tk)]:=')';
+               If (P<=Len) then begin
                   SetLength(Tk,Length(Tk)+1);
-                  Tk[High(Tk)]:='('
-                  end
+                  Tk[High(Tk)]:=L[P];
+                  While (P<Len) and (L[P+1]=#32) do P+=1
+                  end;
+               S:=P+1; P+=1;
+               If (Tk[High(Tk)]='|') then begin
+                  If (Length(PipeChar)=0) then begin
+                     SetLength(Tk, Length(Tk)-1);
+                     Writeln(StdErr,ExtractFileName(YukPath),'(',N,'): ',
+                            'Note: Pipe ("|") without matching parentheses or brackets.') 
+                     end else begin
+                     SetLength(Tk, Length(Tk)+1);
+                     If (PipeChar[Length(PipeChar)] = '(') then begin
+                        Tk[High(Tk)-1]:=')'; Tk[High(Tk)]:='('
+                        end else begin
+                        Tk[High(Tk)-1]:=']'; Tk[High(Tk)]:='['
+                        end
+                     end
+                  end else
+               If (Tk[High(Tk)]='(') or (Tk[High(Tk)] = '[') then
+                  PipeChar += Tk[High(Tk)] else
+               If ((Tk[High(Tk)]=')') or (Tk[High(Tk)] = ']')) and
+                  (Length(PipeChar)>0) and (PipeChar[Length(PipeChar)]=Tk[High(Tk)]) then
+                  Delete(PipeChar, Length(PipeChar), 1)
                end;
-            P:=0; Str:=0
+            P:=S-1; Str:=0
             end else
          {$IFDEF CGI}
-         If (L[P]='?') and (P<Length(L)) and (L[P+1]='>') then begin
-            codemode -= 1; Delete(L, 1, P+1); P:=0;
+         If (L[P]='?') and (P<Len) and (L[P+1]='>') then begin
+            codemode -= 1; S:=P+2; P+=1 //Delete(L, 1, P+1); P:=0;
             end else
          {$ENDIF}
          If (Str=0) and (L[P]='s')
             then Str:=+1 else Str:=-1
          end else
       If (Str=1) then begin
-         If (P>Length(L)) then begin
+         If (P>Len) then begin
             Writeln(StdErr,ExtractFileName(YukPath),'(',N,'): ',
                     'Note: String prefix found at end of line.');
             SetLength(Tk,Length(Tk)+1);
             Tk[High(Tk)]:='s""';
-            L:=''; P:=0; Str:=0
+            S:=Len+1; Str:=0
             end else begin
             Del:=L[P]; Str:=2
          end end else
-      If (Str=2) and ((P>Length(L)) or (L[P]=Del)) then begin
+      If (Str=2) and ((P>Len) or (L[P]=Del)) then begin
          SetLength(Tk,Length(Tk)+1);
-         Tk[High(Tk)]:=Copy(L,1,P);
-         If (P<=Length(L))
-            then While (P<Length(L)) and (L[P+1]=#32) do P+=1
+         Tk[High(Tk)]:=Copy(L,S,P-S+1);
+         If (P<=Len)
+            then While (P<Len) and (L[P+1]=#32) do P+=1
             else begin
             Writeln(StdErr,ExtractFileName(YukPath),'(',N,'): ',
                     'Note: String token exceeds line.');
             Tk[High(Tk)]+=Del
             end;
-         Delete(L,1,P); P:=0; Str:=0
+         S:=P+1; {P-=1;} Str:=0
          end;
       P+=1
       end;
@@ -936,6 +954,7 @@ Procedure ReadFile(I:PText);
             end
          end;
       {$IFNDEF CGI} end; {$ENDIF}
+   If (mulico > 0) then Writeln(StdErr,ExtractFileName(YukPath),'(',N,'): multi-line comment stretches past end of file.');
    {For P:=Low(Pr) to High(Pr) do begin
        Write(StdErr,'Func #',P,' has ',Pr[P].Nu,'/',Length(Pr[P].Ex),' expressions and ',
              Length(Pr[P].Ar),' arguments');
@@ -949,7 +968,7 @@ Procedure ReadFile(I:PText);
       Fatal(A, '!if stretches past end of code.') end;
    If (Not WhiSta^.Empty()) then begin
       A:=WhiSta^.Peek(); A:=WhiArr[A][0];
-      Fatal(A, 'Fatal: !while stretches past end of code.') end;
+      Fatal(A, '!while stretches past end of code.') end;
    If (Not RepSta^.Empty()) then begin
       A:=RepSta^.Peek(); A:=RepArr[A][0];
       Fatal(A, '!repeat stretches past end of code.') end;

@@ -97,8 +97,8 @@ Function F_array_empty(DoReturn:Boolean; Arg:Array of PValue):PValue;
    If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg)>0) then
       For C:=High(Arg) downto Low(Arg) do begin
-          If (Arg[C]^.Typ = VT_ARR) then B:=(B or (Not PValTree(Arg[C]^.Ptr)^.Empty)) else
-          If (Arg[C]^.Typ = VT_DIC) then B:=(B or (Not PValTrie(Arg[C]^.Ptr)^.Empty));
+          If (Arg[C]^.Typ = VT_ARR) then B:=(B or (PValTree(Arg[C]^.Ptr)^.Empty)) else
+          If (Arg[C]^.Typ = VT_DIC) then B:=(B or (PValTrie(Arg[C]^.Ptr)^.Empty));
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
           end;
    Exit(NewVal(VT_BOO,B))

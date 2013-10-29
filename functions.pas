@@ -711,7 +711,7 @@ Function F_typeof(DoReturn:Boolean; Arg:Array of PValue):PValue;
       VT_STR: V:=NewVal(VT_STR, 'string');
       VT_ARR: V:=NewVal(VT_STR, 'array');
       VT_DIC: V:=NewVal(VT_STR, 'dict');
-      else V:=NewVal(VT_STR, '?')
+      else V:=NewVal(VT_STR, '???')
       end;
    If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    Exit(V)
