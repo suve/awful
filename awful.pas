@@ -1,22 +1,25 @@
-program awful; {$INCLUDE defines.inc}
-
-{$LONGSTRINGS ON}
-
+program awful; {$INCLUDE defines.inc} {$LONGSTRINGS ON}
 
 uses SysUtils, Math,
+
      Trie, Stack,
-     Values, TokExpr, EmptyFunc,
-     Functions,
-     Functions_ArrDict,
-     Functions_CGI,
+     
+     Values, TokExpr,
+     
+     EmptyFunc, Functions,
+     
+     Functions_Arith,    Functions_ArrDict,
+     Functions_Bitwise,  Functions_Boole,
+     Functions_CGI,      Functions_Compare,
      Functions_DateTime,
-     Functions_stdIO, Functions_Strings, Functions_SysInfo,
+     Functions_stdIO,    Functions_Strings, Functions_SysInfo,
      Functions_TypeCast;
+// ----- uses
 
 const VMAJOR = '0';
       VMINOR = '2';
-      VBUGFX = '4';
-      VREVISION = 24;
+      VBUGFX = '5*';
+      VREVISION = 25;
       VERSION = VMAJOR + '.' + VMINOR + '.' + VBUGFX;
 
 Type PText = ^System.Text;
@@ -49,6 +52,8 @@ Var YukFile : Text; YukNum:LongWord;
     Proc, ExLn : LongWord;
     mulico:LongWord; {$IFDEF CGI} codemode:LongWord; {$ENDIF}
     ParMod:TParamMode;
+
+Var Switch_NoRun : Boolean = FALSE;
 
 Function Eval(Ret:Boolean; E:PExpr):PValue;
    
@@ -378,12 +383,12 @@ Procedure Fatal(Ln:LongWord;Msg:AnsiString);
    Writeln('<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">');
    Writeln('<html lang="en">');
    Writeln('<head>');
-   Writeln('<meta http-equiv="content-type" content="text/html;charset=UTF-8">');
+   Writeln('<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">');
    Writeln('<title>Error</title>');
    Writeln('</head>');
    Writeln('<body>');
    Writeln('<h3>awful-cgi: fatal error</h3><hr>');
-   Writeln('<p><strong>File:</strong> ',YukPath,'</p>');
+   Writeln('<p><strong>File:</strong> ',EncodeHTML(YukPath),'</p>');
    Writeln('<p><strong>Line:</strong> ',Ln,'</p>');
    Writeln('<p><i>',EncodeHTML(Msg),'</i></p>');
    DateTimeToString(DTstr, dtf_def, Now());
@@ -975,7 +980,7 @@ Procedure ReadFile(I:PText);
    Dispose(WhiSta,Destroy()); Dispose(RepSta,Destroy());
    Dispose(IfSta,Destroy());
    
-   PQInt(PTV^.Ptr)^ := Ceil(TimeStampToMSecs(DateTimeToTimeStamp(Now()))-GLOB_ms);
+   PQInt(PTV^.Ptr)^ := Ceil(TimeStampToMSecs(DateTimeToTimeStamp(Now()))-GLOB_ms)
    end;
 
 Procedure Run();
@@ -1033,41 +1038,52 @@ New(Func,Create('!','~'));
 Func^.SetVal('call',@F_Call);
 Func^.SetVal('return',@F_Return);
 Func^.SetVal('exit',@F_Exit);
-EmptyFunc.Register(Func);
-Functions.Register(Func);
-Functions_ArrDict.Register(Func);
-Functions_CGI.Register(Func);
-Functions_DateTime.Register(Func);
-Functions_stdIO.Register(Func);
-Functions_Strings.Register(Func);
-Functions_SysInfo.Register(Func);
-Functions_TypeCast.Register(Func);
+EmptyFunc          . Register(Func);
+Functions          . Register(Func);
+Functions_Arith    . Register(Func);
+Functions_ArrDict  . Register(Func);
+Functions_Boole    . Register(Func);
+Functions_Bitwise  . Register(Func);
+Functions_CGI      . Register(Func);
+Functions_Compare  . Register(Func);
+Functions_DateTime . Register(Func);
+Functions_stdIO    . Register(Func);
+Functions_Strings  . Register(Func);
+Functions_SysInfo  . Register(Func);
+Functions_TypeCast . Register(Func);
 //YukSDL.Register(Func);
 
 If (ParamCount()>0) then begin
    ParMod:=PAR_INPUT;
    For YukNum:=1 to ParamCount() do begin
-   If (ParamStr(YukNum)='-o') then begin
-      ParMod:=PAR_OUTPUT; Continue end else
-   If (ParamStr(YukNum)='-e') then begin
-      ParMod:=PAR_ERR; Continue end;
-   Assign(YukFile,ParamStr(YukNum));
-   If (ParMod = PAR_INPUT) then begin
-      {$I-} Reset(YukFile); {$I+}
-      If (IOResult=0) then begin
-         YukPath:=ParamStr(YukNum);
-         ReadFile(@YukFile); Close(YukFile);
-         Run(); Cleanup()
+      If (ParamStr(YukNum)='-o') then begin
+         ParMod:=PAR_OUTPUT; Continue
+         end else
+      If (ParamStr(YukNum)='-e') then begin
+         ParMod:=PAR_ERR; Continue
+         end else
+      If (ParamStr(YukNum)='--norun') then begin
+         Switch_NoRun := True; Continue
+         end;
+      Assign(YukFile,ParamStr(YukNum));
+      If (ParMod = PAR_INPUT) then begin
+         {$I-} Reset(YukFile); {$I+}
+         If (IOResult=0) then begin
+            YukPath:=ParamStr(YukNum);
+            ReadFile(@YukFile); Close(YukFile);
+            If (Not Switch_NoRun) then Run()
+                                  else Writeln('No syntax errors detected in "',YukPath,'" (parsed in ',PQInt(Cons^.GetVal('FILE-PARSETIME')^.Ptr)^,'ms).');
+            Cleanup()
+            end
+         end else begin
+         {$I-} Rewrite(YukFile); {$I+}
+         If (IOResult = 0) then begin
+            If (ParMod = PAR_OUTPUT)
+               then begin StdOut:=YukFile; Output:=YukFile end
+               else StdErr:=YukFile;
+            ParMod:=PAR_INPUT
+            end
          end
-      end else begin
-      {$I-} Rewrite(YukFile); {$I+}
-      If (IOResult = 0) then begin
-         If (ParMod = PAR_OUTPUT)
-            then begin StdOut:=YukFile; Output:=YukFile end
-            else StdErr:=YukFile;
-         ParMod:=PAR_INPUT
-         end
-      end
    end end else begin
    YukPath:='(stdin)';
    ReadFile(@Input);

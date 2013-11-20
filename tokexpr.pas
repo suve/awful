@@ -49,10 +49,11 @@ Procedure FreeToken(T:PToken);
          ; // Pointer to a value in const trie. Value will be freed when flushing consts
       TK_VARI, TK_REFE:
          Dispose(PStr(T^.Ptr));
-      TK_AVAL, TK_AREF:
-         begin atk:=PArrTk(T^.Ptr); 
+      TK_AVAL, TK_AREF: begin
+         atk:=PArrTk(T^.Ptr); 
          For C:=Low(atk^.Ind) to High(atk^.Ind) do FreeToken(atk^.Ind[C]);
-         SetLength(atk^.Ind, 0); Dispose(atk) end;
+         SetLength(atk^.Ind, 0); Dispose(atk)
+         end;
       TK_BADT:
          ; // Bad token. Holds no data. Unused.
       end;

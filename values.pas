@@ -89,6 +89,11 @@ Function ValDiv(A,B:PValue):PValue;
 Function ValMod(A,B:PValue):PValue;
 Function ValPow(A,B:PValue):PValue;
 
+Function ValNot(A:PValue):PValue;
+Function ValAnd(A,B:PValue):PValue;
+Function ValXor(A,B:PValue):PValue;
+Function ValOr(A,B:PValue):PValue;
+
 Function ValSeq(A,B:PValue):PValue;
 Function ValSNeq(A,B:PValue):PValue;
 Function ValEq(A,B:PValue):PValue;
@@ -103,7 +108,10 @@ Procedure FreeVal(Var Val:PValue);
 Function  EmptyVal(T:TValueType):PValue;
 Function  CopyTyp(V:PValue):PValue;
 Function  CopyVal(V:PValue):PValue;
+Function  CopyVal(V:PValue;Lv:LongWord):PValue;
 Procedure SwapPtrs(A,B:PValue);
+Procedure SetValLev(V:PValue;Lv:LongWord);
+Procedure SetValMaxLev(V:PValue;Lv:LongWord);
 
 Function NewVal(T:TValueType;V:TFloat):PValue;
 Function NewVal(T:TValueType;V:Int64):PValue;
@@ -718,7 +726,8 @@ Function ValMul(A,B:PValue):PValue;
    end;
 
 Function ValDiv(A,B:PValue):PValue;
-   Var R:PValue; I:PQInt; S:PStr; L:PBoolean; D:PFloat;
+   Var R:PValue; I:PQInt; S:PStr; L:PBoolean; F:PFloat;
+       tI:QInt; tF:TFloat;
    begin
    New(R); R^.Typ:=A^.Typ; R^.Lev:=CurLev;
    If (A^.Typ = VT_NIL) then begin 
@@ -726,25 +735,39 @@ Function ValDiv(A,B:PValue):PValue;
       end else
    If (A^.Typ >= VT_INT) and (A^.Typ <= VT_BIN) then begin
       New(I); R^.Ptr:=I; (I^):=PQInt(A^.Ptr)^;
-      If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) 
-         then (I^):=(I^) div (PQInt(B^.Ptr)^) else
-      If (B^.Typ = VT_FLO)
-         then (I^):=Trunc((I^)/(PFloat(B^.Ptr)^)) else
-      If (B^.Typ = VT_STR)
-         then (I^):=(I^) div StrToNum(PStr(B^.Ptr)^,A^.Typ) else
+      If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then begin
+            If (PQInt(B^.Ptr)^<>0) then (I^):=(I^) div (PQInt(B^.Ptr)^)
+                                   else (I^):=0
+         end else
+      If (B^.Typ = VT_FLO) then begin
+            If (PFloat(B^.Ptr)^<>0.0) then (I^):=Trunc((I^)/(PFloat(B^.Ptr)^))
+                                      else (I^):=0
+         end else
+      If (B^.Typ = VT_STR) then begin
+            tI:=StrToNum(PStr(B^.Ptr)^,A^.Typ);
+            If (tI<>0) then (I^):=(I^) div tI
+                       else (I^):=0
+         end else
       If (B^.Typ = VT_BOO)
          then If (Not PBoolean(B^.Ptr)^) then (I^):=0
       end else
    If (A^.Typ = VT_FLO) then begin
-      New(D); R^.Ptr:=D; (D^):=PFloat(A^.Ptr)^;
-      If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) 
-         then (D^)/=(PQInt(B^.Ptr)^) else
-      If (B^.Typ = VT_FLO)
-         then (D^)/=PFloat(B^.Ptr)^ else
-      If (B^.Typ = VT_STR)
-         then (D^)/=StrToReal(PStr(B^.Ptr)^) else
+      New(F); R^.Ptr:=F; (F^):=PFloat(A^.Ptr)^;
+      If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then begin
+            If ((PQInt(B^.Ptr)^)<>0) then (F^)/=(PQInt(B^.Ptr)^)
+                                     else (F^):=0.0
+         end else
+      If (B^.Typ = VT_FLO) then begin
+            If ((PFloat(B^.Ptr)^)<>0.0) then (F^)/=PFloat(B^.Ptr)^
+                                        else (F^):=0.0
+         end else
+      If (B^.Typ = VT_STR) then begin
+            tF:=StrToReal(PStr(B^.Ptr)^);
+            If (tF<>0.0) then (F^)/=tF
+                         else (F^):=0.0
+         end else
       If (B^.Typ = VT_BOO)
-         then If (Not PBoolean(B^.Ptr)^) then (D^):=0
+         then If (Not PBoolean(B^.Ptr)^) then (F^):=0
       end else
    If (A^.Typ = VT_STR) then begin
       New(S); R^.Ptr:=S; (S^):=PStr(A^.Ptr)^;
@@ -898,6 +921,152 @@ Function ValPow(A,B:PValue):PValue;
          then (L^):=(L^) and StrToBoolDef(PStr(B^.Ptr)^,FALSE) else
       If (B^.Typ = VT_BOO)
          then (L^):=(L^) and (PBoolean(B^.Ptr)^)}
+      end;
+   Exit(R)
+   end;
+
+Function ValNot(A:PValue):PValue;
+   Var R:PValue; I:PQInt; S:PStr; L:PBoolean; D:PFloat; C:LongWord;
+   begin
+   New(R); R^.Typ:=A^.Typ; R^.Lev:=CurLev;
+   If (A^.Typ = VT_NIL) then begin 
+      R^.Ptr:=NIL
+      end else
+   If (A^.Typ >= VT_INT) and (A^.Typ <= VT_BIN) then begin
+      New(I); R^.Ptr:=I; (I^):=Not PQInt(A^.Ptr)^;
+      end else
+   If (A^.Typ = VT_FLO) then begin
+      New(D); R^.Ptr:=D; (D^):=Not Trunc(PFloat(A^.Ptr)^);
+      end else
+   If (A^.Typ = VT_STR) then begin
+      New(S); R^.Ptr:=S; (S^):=PStr(A^.Ptr)^;
+      For C:=1 to Length(S^) do S^[C] := Chr(Not Ord(S^[C]))
+      end else
+   If (A^.Typ = VT_BOO) then begin
+      New(L); R^.Ptr:=L; (L^):=Not PBoolean(A^.Ptr)^;
+      end;
+   Exit(R)
+   end;
+
+Function ValAnd(A,B:PValue):PValue;
+   Var R:PValue; I:PQInt; S:PStr; L:PBoolean; D:PFloat;
+   begin
+   New(R); R^.Typ:=A^.Typ; R^.Lev:=CurLev;
+   If (A^.Typ = VT_NIL) then begin 
+      R^.Ptr:=NIL; Exit(R)
+      end else
+   If (A^.Typ >= VT_INT) and (A^.Typ <= VT_BIN) then begin
+      New(I); R^.Ptr:=I; (I^):=PQInt(A^.Ptr)^;
+      If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) 
+         then (I^):=I^ and PQInt(B^.Ptr)^ else
+      If (B^.Typ = VT_FLO)
+         then (I^):=I^ and Trunc(PFloat(B^.Ptr)^) else
+      If (B^.Typ = VT_STR)
+         then (I^):=I^ and StrToNum(PStr(B^.Ptr)^,A^.Typ) else
+      If (B^.Typ = VT_BOO)
+         then (I^):=I^ and Ord(PBool(B^.Ptr)^)
+      end else
+   If (A^.Typ = VT_FLO) then begin
+      New(D); R^.Ptr:=D; (D^):=PFloat(A^.Ptr)^;
+      If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) 
+         then (D^):=Trunc(D^) and PQInt(B^.Ptr)^ else
+      If (B^.Typ = VT_FLO)
+         then (D^):=Trunc(D^) and Trunc(PFloat(B^.Ptr)^) else
+      If (B^.Typ = VT_STR)
+         then (D^):=Trunc(D^) and Trunc(StrToReal(PStr(B^.Ptr)^)) else
+      If (B^.Typ = VT_BOO)
+         then (D^):=Trunc(D^) and Ord(PBool(B^.Ptr)^)
+      end else
+   If (A^.Typ = VT_STR) then begin
+      New(S); R^.Ptr:=S; (S^):=PStr(A^.Ptr)^;
+      { LOL DUNNO }
+      end else
+   If (A^.Typ = VT_BOO) then begin
+      New(L); R^.Ptr:=L; (L^):=PBoolean(A^.Ptr)^;
+      If (B^.Typ = VT_BOO)
+         then L^:=L^ and PBool(B^.Ptr)^
+      end;
+   Exit(R)
+   end;
+
+Function ValXor(A,B:PValue):PValue;
+   Var R:PValue; I:PQInt; S:PStr; L:PBoolean; D:PFloat;
+   begin
+   New(R); R^.Typ:=A^.Typ; R^.Lev:=CurLev;
+   If (A^.Typ = VT_NIL) then begin 
+      R^.Ptr:=NIL; Exit(R)
+      end else
+   If (A^.Typ >= VT_INT) and (A^.Typ <= VT_BIN) then begin
+      New(I); R^.Ptr:=I; (I^):=PQInt(A^.Ptr)^;
+      If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) 
+         then (I^):=I^ xor PQInt(B^.Ptr)^ else
+      If (B^.Typ = VT_FLO)
+         then (I^):=I^ xor Trunc(PFloat(B^.Ptr)^) else
+      If (B^.Typ = VT_STR)
+         then (I^):=I^ xor StrToNum(PStr(B^.Ptr)^,A^.Typ) else
+      If (B^.Typ = VT_BOO)
+         then (I^):=I^ xor Ord(PBool(B^.Ptr)^)
+      end else
+   If (A^.Typ = VT_FLO) then begin
+      New(D); R^.Ptr:=D; (D^):=PFloat(A^.Ptr)^;
+      If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) 
+         then (D^):=Trunc(D^) xor PQInt(B^.Ptr)^ else
+      If (B^.Typ = VT_FLO)
+         then (D^):=Trunc(D^) xor Trunc(PFloat(B^.Ptr)^) else
+      If (B^.Typ = VT_STR)
+         then (D^):=Trunc(D^) xor Trunc(StrToReal(PStr(B^.Ptr)^)) else
+      If (B^.Typ = VT_BOO)
+         then (D^):=Trunc(D^) xor Ord(PBool(B^.Ptr)^)
+      end else
+   If (A^.Typ = VT_STR) then begin
+      New(S); R^.Ptr:=S; (S^):=PStr(A^.Ptr)^;
+      { LOL DUNNO }
+      end else
+   If (A^.Typ = VT_BOO) then begin
+      New(L); R^.Ptr:=L; (L^):=PBoolean(A^.Ptr)^;
+      If (B^.Typ = VT_BOO)
+         then L^:=L^ xor PBool(B^.Ptr)^
+      end;
+   Exit(R)
+   end;
+
+Function ValOr(A,B:PValue):PValue;
+   Var R:PValue; I:PQInt; S:PStr; L:PBoolean; D:PFloat;
+   begin
+   New(R); R^.Typ:=A^.Typ; R^.Lev:=CurLev;
+   If (A^.Typ = VT_NIL) then begin 
+      R^.Ptr:=NIL; Exit(R)
+      end else
+   If (A^.Typ >= VT_INT) and (A^.Typ <= VT_BIN) then begin
+      New(I); R^.Ptr:=I; (I^):=PQInt(A^.Ptr)^;
+      If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) 
+         then (I^):=I^ or PQInt(B^.Ptr)^ else
+      If (B^.Typ = VT_FLO)
+         then (I^):=I^ or Trunc(PFloat(B^.Ptr)^) else
+      If (B^.Typ = VT_STR)
+         then (I^):=I^ or StrToNum(PStr(B^.Ptr)^,A^.Typ) else
+      If (B^.Typ = VT_BOO)
+         then (I^):=I^ or Ord(PBool(B^.Ptr)^)
+      end else
+   If (A^.Typ = VT_FLO) then begin
+      New(D); R^.Ptr:=D; (D^):=PFloat(A^.Ptr)^;
+      If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) 
+         then (D^):=Trunc(D^) or PQInt(B^.Ptr)^ else
+      If (B^.Typ = VT_FLO)
+         then (D^):=Trunc(D^) or Trunc(PFloat(B^.Ptr)^) else
+      If (B^.Typ = VT_STR)
+         then (D^):=Trunc(D^) or Trunc(StrToReal(PStr(B^.Ptr)^)) else
+      If (B^.Typ = VT_BOO)
+         then (D^):=Trunc(D^) or Ord(PBool(B^.Ptr)^)
+      end else
+   If (A^.Typ = VT_STR) then begin
+      New(S); R^.Ptr:=S; (S^):=PStr(A^.Ptr)^;
+      { LOL DUNNO }
+      end else
+   If (A^.Typ = VT_BOO) then begin
+      New(L); R^.Ptr:=L; (L^):=PBoolean(A^.Ptr)^;
+      If (B^.Typ = VT_BOO)
+         then L^:=L^ or PBool(B^.Ptr)^
       end;
    Exit(R)
    end;
@@ -1255,12 +1424,15 @@ Function  CopyTyp(V:PValue):PValue;
    begin Exit(EmptyVal(V^.Typ)) end;
 
 Function  CopyVal(V:PValue):PValue;
+   begin Exit(CopyVal(V, CurLev)) end;
+
+Function  CopyVal(V:PValue;Lv:LongWord):PValue;
    Var R:PValue; I:PQInt; S:PStr; D:PFloat; B:PBoolean;
        NArr, OArr : PValTree; NDic, ODic : PValTrie;
        AEA : TValTree.TEntryArr; DEA : TValTrie.TEntryArr;
        C:LongWord;
    begin
-   New(R); R^.Lev:=CurLev; R^.Typ:=V^.Typ;
+   New(R); R^.Lev:=Lv; R^.Typ:=V^.Typ;
    Case V^.Typ of 
       VT_INT: begin New(I); (I^):=PQInt(V^.Ptr)^; R^.Ptr:=I end;
       VT_HEX: begin New(I); (I^):=PQInt(V^.Ptr)^; R^.Ptr:=I end;
@@ -1274,8 +1446,8 @@ Function  CopyVal(V:PValue):PValue;
               If (Not OArr^.Empty()) then begin
                   AEA := OArr^.ToArray();
                   For C:=Low(AEA) to High(AEA) do
-                      If (AEA[C].Val^.Lev >= V^.Lev)
-                         then NArr^.SetVal(AEA[C].Key, CopyVal(AEA[C].Val))
+                      If (AEA[C].Val^.Lev >= Lv)
+                         then NArr^.SetVal(AEA[C].Key, CopyVal(AEA[C].Val, Lv))
                          else NArr^.SetVal(AEA[C].Key, AEA[C].Val)
               end end;
       VT_DIC: begin
@@ -1283,8 +1455,8 @@ Function  CopyVal(V:PValue):PValue;
               If (Not ODic^.Empty()) then begin
                   DEA := ODic^.ToArray();
                   For C:=Low(DEA) to High(DEA) do
-                      If (DEA[C].Val^.Lev >= V^.Lev)
-                         then NDic^.SetVal(DEA[C].Key, CopyVal(DEA[C].Val))
+                      If (DEA[C].Val^.Lev >= Lv)
+                         then NDic^.SetVal(DEA[C].Key, CopyVal(DEA[C].Val, Lv))
                          else NDic^.SetVal(DEA[C].Key, DEA[C].Val)
               end end;
       else R^.Ptr:=NIL
@@ -1292,28 +1464,54 @@ Function  CopyVal(V:PValue):PValue;
    Exit(R)
    end;
 
-Procedure SwapPtrs(A,B:PValue);
-   Var P:Pointer; T:TValueType; C:LongWord;
+Procedure SetValLev(V:PValue;Lv:LongWord);
+   Var C:LongWord;
        Arr:PValTree; AEA:TValTree.TEntryArr;
        Dic:PValTrie; DEA:TValTrie.TEntryArr;
+   begin
+   V^.Lev := Lv;
+   If (V^.Typ = VT_ARR) then begin
+      Arr:=PValTree(V^.Ptr); If (Arr^.Empty()) then Exit();
+      AEA:=Arr^.ToArray();
+      For C:=Low(AEA) to High(AEA) do
+          SetValLev(AEA[C].Val, Lv)
+      end else
+   If (V^.Typ = VT_DIC) then begin
+      Dic:=PValTrie(V^.Ptr); If (Dic^.Empty()) then Exit();
+      DEA:=Dic^.ToArray();
+      For C:=Low(DEA) to High(DEA) do
+          SetValLev(DEA[C].Val, Lv)
+      end
+   end;
+
+Procedure SetValMaxLev(V:PValue;Lv:LongWord);
+   Var C:LongWord;
+       Arr:PValTree; AEA:TValTree.TEntryArr;
+       Dic:PValTrie; DEA:TValTrie.TEntryArr;
+   begin
+   If (V^.Lev > Lv) then V^.Lev := Lv;
+   If (V^.Typ = VT_ARR) then begin
+      Arr:=PValTree(V^.Ptr); If (Arr^.Empty()) then Exit();
+      AEA:=Arr^.ToArray();
+      For C:=Low(AEA) to High(AEA) do
+          If (AEA[C].Val^.Lev >= Lv) then SetValMaxLev(AEA[C].Val, Lv)
+      end else
+   If (V^.Typ = VT_DIC) then begin
+      Dic:=PValTrie(V^.Ptr); If (Dic^.Empty()) then Exit();
+      DEA:=Dic^.ToArray();
+      For C:=Low(DEA) to High(DEA) do
+          If (DEA[C].Val^.Lev > Lv) then SetValMaxLev(DEA[C].Val, Lv)
+      end
+   end;
+
+Procedure SwapPtrs(A,B:PValue);
+   Var P:Pointer; T:TValueType; //C:LongWord;
    begin
    P:=A^.Ptr; T:=A^.Typ;
    A^.Ptr:=B^.Ptr; A^.Typ:=B^.Typ;
    B^.Ptr:=P; B^.Typ:=T;
-   If (A^.Typ = VT_ARR) then begin
-      Arr := A^.Ptr;
-      If (Not Arr^.Empty()) then begin
-         AEA:=Arr^.ToArray();
-         For C:=Low(AEA) to High(AEA) do
-             If (AEA[C].Val^.Lev > A^.Lev) then AEA[C].Val^.Lev := A^.Lev
-      end end else
-   If (A^.Typ = VT_DIC) then begin
-      Dic := A^.Ptr;
-      If (Not Dic^.Empty()) then begin
-         DEA:=Dic^.ToArray();
-         For C:=Low(DEA) to High(DEA) do
-             If (DEA[C].Val^.Lev > A^.Lev) then DEA[C].Val^.Lev := A^.Lev
-      end end else
+   If (A^.Typ = VT_ARR) or (A^.Typ = VT_DIC)
+      then SetValMaxLev(A, A^.Lev)
    end;
 
 Function NewVal(T:TValueType;V:TFloat):PValue;

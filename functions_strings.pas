@@ -16,9 +16,13 @@ Function F_StrPos(DoReturn:Boolean; Arg:Array of PValue):PValue;
 Function F_SubStr(DoReturn:Boolean; Arg:Array of PValue):PValue;
 Function F_DelStr(DoReturn:Boolean; Arg:Array of PValue):PValue;
 
+Function F_Chr_UTF8(DoReturn:Boolean; Arg:Array of PValue):PValue;
 Function F_Chr(DoReturn:Boolean; Arg:Array of PValue):PValue;
 Function F_Ord(DoReturn:Boolean; Arg:Array of PValue):PValue;
 
+Function F_Perc(DoReturn:Boolean; Arg:Array of PValue):PValue;
+
+Function UTF8_Char(Code:LongWord):ShortString;
 
 implementation
    uses SysUtils, EmptyFunc;
@@ -26,17 +30,56 @@ implementation
 
 Procedure Register(FT:PFunTrie);
    begin
+   // Char functions
    FT^.SetVal('chr',@F_chr);
+   FT^.SetVal('chru',@F_chr_UTF8);
    FT^.SetVal('ord',@F_ord);
-   FT^.SetVal('trim',@F_Trim);
-   FT^.SetVal('trimle',@F_TrimLeft);
-   FT^.SetVal('trimri',@F_TrimRight);
-   FT^.SetVal('uppercase',@F_UpperCase);
-   FT^.SetVal('lowercase',@F_LowerCase);
-   FT^.SetVal('strlen',@F_StrLen);
-   FT^.SetVal('strpos',@F_StrPos);
-   FT^.SetVal('substr',@F_SubStr);
-   FT^.SetVal('delstr',@F_DelStr);
+   // String manipulation functions
+   FT^.SetVal('str-trim',@F_Trim);
+   FT^.SetVal('str-letrim',@F_TrimLeft);
+   FT^.SetVal('str-ritrim',@F_TrimRight);
+   FT^.SetVal('str-upper',@F_UpperCase);
+   FT^.SetVal('str-lower',@F_LowerCase);
+   FT^.SetVal('str-len',@F_StrLen);
+   FT^.SetVal('str-pos',@F_StrPos);
+   FT^.SetVal('str-sub',@F_SubStr);
+   FT^.SetVal('str-del',@F_DelStr);
+   // Utils
+   FT^.SetVal('perc',@F_Perc);
+   end;
+
+
+Function UTF8_Char(Code:LongWord):ShortString;
+   Var Bit:Array[0..31] of Byte; C:LongInt; S:ShortString;
+   
+   Function MakeChar(Mask:Byte;Max,Min:LongInt):Char;
+      Var B:Byte;
+      begin B:=0;
+      While (Max > Min) do begin
+         B += Bit[Max]; B *= 2; Max -= 1
+         end;
+      B := Mask + B + Bit[Max];
+      Exit(Chr(B))
+      end;
+   
+   begin 
+   If (Code <= 127) then Exit(Chr(Code)) else S:='';
+   For C:=0 to 31 do Bit[C]:=0; C:=0;
+   While (Code > 0) do begin
+      Bit[C]:=(Code mod 2);
+      Code := Code div 2;
+      C += 1
+      end;
+   If (C <= 11) then begin C:=05; S += MakeChar(%11000000,10,06) end else
+   If (C <= 16) then begin C:=11; S += MakeChar(%11100000,15,12) end else
+   If (C <= 21) then begin C:=17; S += MakeChar(%11110000,20,18) end else
+   If (C <= 26) then begin C:=23; S += MakeChar(%11111000,25,24) end else
+   If (C <= 31) then begin C:=29; S += MakeChar(%11111100,30,30) end;
+   While (C > 0) do begin
+      S += MakeChar(%10000000, C, C-5); C -= 6
+      end;
+   //For C:=1 to Length(S) do Write(BinToStr(Ord(S[C]),8),#32,HexToStr(Ord(S[C]),2),' | '); Writeln;
+   Exit(S)
    end;
 
 
@@ -249,6 +292,61 @@ Function F_Chr(DoReturn:Boolean; Arg:Array of PValue):PValue;
       end else V:=NilVal();
    If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    Exit(V)
+   end;
+
+Function F_Chr_UTF8(DoReturn:Boolean; Arg:Array of PValue):PValue;
+   Var C:LongWord; V:PValue; I:QInt; F:TFloat;
+   begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
+   If (Length(Arg)=0) then Exit(NilVal());
+   For C:=High(Arg) downto 1 do
+      If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
+   If (Arg[0]^.Typ >= VT_INT) and (Arg[0]^.Typ <= VT_BIN) then begin
+      I:=PQInt(Arg[0]^.Ptr)^;
+      V:=NewVal(VT_STR, UTF8_Char(I));
+      end else
+   If (Arg[0]^.Typ = VT_FLO) then begin
+      F:=PFloat(Arg[0]^.Ptr)^;
+      V:=NewVal(VT_STR, UTF8_Char(Trunc(F)));
+      end else V:=NilVal();
+   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
+   Exit(V)
+   end;
+
+Function F_Perc(DoReturn:Boolean; Arg:Array of PValue):PValue;
+   Var C:LongWord; A,V:PValue; I:PQInt; S:AnsiString; D:PFloat;
+   begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
+   If (Length(Arg)=0) then Exit(NewVal(VT_STR,'0%')) else S:='';
+   If (Length(Arg)>2) then
+      For C:=High(Arg) downto 2 do
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
+   If (Length(Arg)>=2) then begin
+      If (Arg[0]^.Typ = VT_FLO) then begin
+         A:=CopyVal(Arg[0]); D:=PFloat(A^.Ptr); (D^)*=100;
+         V:=ValDiv(A,Arg[1]); FreeVal(A);
+         S:=Values.IntToStr(Trunc(PFloat(V^.Ptr)^))+'%';
+         FreeVal(V)
+         end else begin
+         If (Arg[0]^.Typ >= VT_INT) and (Arg[0]^.Typ <= VT_BIN)
+            then A:=CopyVal(Arg[0]) else A:=ValToInt(Arg[0]);
+         I:=PQInt(A^.Ptr); (I^)*=100;
+         V:=ValDiv(A,Arg[1]); FreeVal(A);
+         S:=Values.IntToStr(PQInt(V^.Ptr)^)+'%';
+         FreeVal(V)
+         end
+      end else begin
+      If (Arg[0]^.Typ = VT_FLO)
+         then S:=Values.IntToStr(Trunc(100*PFloat(Arg[0]^.Ptr)^))+'%'
+         else begin
+         A:=ValToFlo(Arg[0]);
+         S:=Values.IntToStr(Trunc(100*PFloat(A^.Ptr)^))+'%';
+         FreeVal(A)
+         end
+      end;
+   If (Length(Arg) >= 2) and (Arg[1]^.Lev >= CurLev) then FreeVal(Arg[1]);
+   If (Length(Arg) >= 1) and (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
+   Exit(NewVal(VT_STR,S))
    end;
 
 end.
