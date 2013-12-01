@@ -18,8 +18,8 @@ uses SysUtils, Math,
 
 const VMAJOR = '0';
       VMINOR = '2';
-      VBUGFX = '5*';
-      VREVISION = 25;
+      VBUGFX = '6';
+      VREVISION = 26;
       VERSION = VMAJOR + '.' + VMINOR + '.' + VBUGFX;
 
 Type PText = ^System.Text;
@@ -386,7 +386,7 @@ Procedure Fatal(Ln:LongWord;Msg:AnsiString);
    Writeln('<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">');
    Writeln('<title>Error</title>');
    Writeln('</head>');
-   Writeln('<body>');
+   Writeln('<body style="background: white; color: black">');
    Writeln('<h3>awful-cgi: fatal error</h3><hr>');
    Writeln('<p><strong>File:</strong> ',EncodeHTML(YukPath),'</p>');
    Writeln('<p><strong>Line:</strong> ',Ln,'</p>');
@@ -932,14 +932,18 @@ Procedure ReadFile(I:PText);
    
    {$IFDEF CGI} V:=NewVal(VT_STR, GetEnvironmentVariable('REQUEST_METHOD')); V^.Lev:=0; Cons^.SetVal('REQUEST-METHOD', V); {$ENDIF}
    
-   V:=NewVal(VT_STR,ExpandFileName(YukPath));  V^.Lev := 0; Cons^.SetVal('FILEPATH',V);
-   V:=NewVal(VT_STR,ExtractFileName(YukPath)); V^.Lev := 0; Cons^.SetVal('FILENAME',V);
+   V:=NewVal(VT_STR,ExpandFileName(YukPath));  V^.Lev := 0; Cons^.SetVal('FILE-PATH',V);
+   V:=NewVal(VT_STR,ExtractFileName(YukPath)); V^.Lev := 0; Cons^.SetVal('FILE-NAME',V);
    PTV:=EmptyVal(VT_INT);                    PTV^.Lev := 0; Cons^.SetVal('FILE-PARSETIME', PTV);
    
    V:=NewVal(VT_STR,ParamStr(0)); V^.Lev := 0; Cons^.SetVal('AWFUL-PATH',V);
    V:=NewVal(VT_STR,BuildNum());  V^.Lev := 0; Cons^.SetVal('AWFUL-BUILD',V);
    V:=NewVal(VT_STR,VERSION);     V^.Lev := 0; Cons^.SetVal('AWFUL-VERSION',V);
    V:=NewVal(VT_INT,VREVISION);   V^.Lev := 0; Cons^.SetVal('AWFUL-REVISION',V);
+   V:=NewVal(VT_BOO,{$IFDEF CGI}True{$ELSE}False{$ENDIF}); V^.Lev := 0; Cons^.SetVal('AWFUL-CGI',V);
+   
+   V:=NewVal(VT_FLO,2.71828182845904523536); V^.Lev := 0; Cons^.SetVal('e', V);
+   V:=NewVal(VT_FLO,3.14159265358979323846); V^.Lev := 0; Cons^.SetVal('pi', V);
    
    SetLength(Vars,1); New(Vars[0],Create('!','~')); 
    

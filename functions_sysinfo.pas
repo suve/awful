@@ -16,25 +16,32 @@ Function F_SysInfo_RAMused(DoReturn:Boolean; Arg:Array of PValue):PValue;
 Function F_SysInfo_SwapTotal(DoReturn:Boolean; Arg:Array of PValue):PValue;
 Function F_SysInfo_SwapFree(DoReturn:Boolean; Arg:Array of PValue):PValue;
 Function F_SysInfo_SwapUsed(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_SysInfo_Procnum(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_SysInfo_Thermal(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_SysInfo_DomainName(DoReturn:Boolean; Arg:Array of PValue):PValue;
+{$ENDIF}
+
+Function F_SysInfo_Hostname(DoReturn:Boolean; Arg:Array of PValue):PValue;
 Function F_SysInfo_DiskFree(DoReturn:Boolean; Arg:Array of PValue):PValue;
 Function F_SysInfo_DiskTotal(DoReturn:Boolean; Arg:Array of PValue):PValue;
 Function F_SysInfo_DiskUsed(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_SysInfo_Procnum(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_SysInfo_Thermal(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_SysInfo_Hostname(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_SysInfo_DomainName(DoReturn:Boolean; Arg:Array of PValue):PValue;
 
+{$IFDEF LINUX}
 Function F_SysInfo_All(DoReturn:Boolean; Arg:Array of PValue):PValue;
 {$ENDIF}
 
 implementation
    uses SysUtils,
         {$IFDEF LINUX}Unix, Linux,{$ENDIF}
+        {$IFDEF WINDOWS}Winsock,{$ENDIF}
         EmptyFunc;
-   
-Const ROOTDISK = 3;
-   
+
+Const DISK_DEFAULT = 0;
+      {$IFDEF LINUX} ROOTDISK = 3; {$ENDIF}
+
+{$IFDEF LINUX}
 Var SI:PSysInfo;
+{$ENDIF}
 
 Procedure Register(FT:PFunTrie);
    begin
@@ -50,14 +57,14 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('sysinfo-swap-free',@F_SysInfo_SwapFree);
    FT^.SetVal('sysinfo-swap-used',@F_SysInfo_SwapUsed);
    FT^.SetVal('sysinfo-procnum',@F_SysInfo_Procnum);
+   FT^.SetVal('sysinfo-thermal',@F_SysInfo_Thermal);
+   FT^.SetVal('sysinfo-domainname',@F_SysInfo_DomainName);
+   FT^.SetVal('sysinfo',@F_SysInfo_All);
+   {$ENDIF}
+   FT^.SetVal('sysinfo-hostname',@F_SysInfo_Hostname);
    FT^.SetVal('sysinfo-disk-total',@F_SysInfo_DiskTotal);
    FT^.SetVal('sysinfo-disk-free',@F_SysInfo_DiskFree);
    FT^.SetVal('sysinfo-disk-used',@F_SysInfo_DiskUsed);
-   FT^.SetVal('sysinfo-thermal',@F_SysInfo_Thermal);
-   FT^.SetVal('sysinfo-domainname',@F_SysInfo_DomainName);
-   FT^.SetVal('sysinfo-hostname',@F_SysInfo_Hostname);
-   FT^.SetVal('sysinfo',@F_SysInfo_All);
-   {$ENDIF}
    end;
 
 {$IFDEF LINUX}
@@ -88,7 +95,7 @@ Function F_SysInfo_Uptime(DoReturn:Boolean; Arg:Array of PValue):PValue;
       For C:=Low(Arg) to High(Arg) do
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    If (SI = NIL) then If (Not GetSysInfo()) then Exit(NilVal());
-   If (DoReturn) then Exit(NewVal(VT_INT,SI^.Uptime)) else Exit(NIL)
+   Exit(NewVal(VT_INT,SI^.Uptime))
    end;
 
 Function F_SysInfo_Load(DoReturn:Boolean; Arg:Array of PValue):PValue;
@@ -199,34 +206,6 @@ Function F_SysInfo_Procnum(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Exit(NewVal(VT_INT,SI^.Procs))
    end;
 
-Function F_SysInfo_DiskTotal(DoReturn:Boolean; Arg:Array of PValue):PValue;
-   Var C:LongWord;
-   begin
-   If (Length(Arg)>0) then
-      For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   If (DoReturn) then Exit(NewVal(VT_INT,DiskSize(ROOTDISK))) else Exit(NIL)
-   end;
-
-Function F_SysInfo_DiskFree(DoReturn:Boolean; Arg:Array of PValue):PValue;
-   Var C:LongWord;
-   begin
-   If (Length(Arg)>0) then
-      For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   If (DoReturn) then Exit(NewVal(VT_INT,DiskFree(ROOTDISK))) else Exit(NIL)
-   end;
-
-Function F_SysInfo_DiskUsed(DoReturn:Boolean; Arg:Array of PValue):PValue;
-   Var C:LongWord;
-   begin
-   If (Length(Arg)>0) then
-      For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   If (DoReturn) then Exit(NewVal(VT_INT,(DiskSize(ROOTDISK) - DiskFree(ROOTDISK))))
-                 else Exit(NIL)
-   end;
-
 Function F_SysInfo_Thermal(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; Z,T:Int64; F:Text;
    begin
@@ -252,15 +231,6 @@ Function F_SysInfo_Thermal(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Exit(NewVal(VT_FLO,T/1000))
    end;
 
-Function F_SysInfo_Hostname(DoReturn:Boolean; Arg:Array of PValue):PValue;
-   Var C:LongWord;
-   begin
-   If (Length(Arg)>0) then
-      For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   If (DoReturn) then Exit(NewVal(VT_STR,GetHostName())) else Exit(NIL)
-   end;
-
 Function F_SysInfo_DomainName(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord;
    begin
@@ -278,7 +248,7 @@ Function F_SysInfo_All(DoReturn:Boolean; Arg:Array of PValue):PValue;
    If (Length(Arg) > 0) then F_(False, Arg);
    If (Not DoReturn) then Exit(NIL);
    
-   Val:=EmptyVal(VT_DIC); Dict:=PValTrie(Val^.Ptr);
+   Val:=EmptyVal(VT_DIC); Dict:=PValTrie(Val^.Ptr); New(SI);
    If (SysInfo(SI) = 0) then begin
       AV:=EmptyVal(VT_ARR); Arr:=PValTree(AV^.Ptr);
       For C:=0 to 2 do Arr^.SetValNaive(C, NewVal(VT_FLO,SI^.Loads[C]/65535));
@@ -320,8 +290,86 @@ Function F_SysInfo_All(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Dict^.SetVal('hostname', NewVal(VT_STR, GetHostName()));
    Dict^.SetVal('domain', NewVal(VT_STR, GetDomainName()));
    
-   Exit(Val)
+   Dispose(SI); Exit(Val)
    end;
 {$ENDIF} //end of Linux-only functions
+
+Function DiskUsed(Drive:Byte):Int64;
+   begin Exit(DiskSize(Drive) - DiskFree(Drive)) end;
+
+Type TDiskFunc = Function(Disk:Byte):Int64;
+
+{$IFDEF LINUX} // Functions present on both Lin&Win; Linux implementations
+Function F_SysInfo_Disk(DiskFunc:TDiskFunc; DoReturn:Boolean; Arg:Array of PValue):PValue;
+   Var C, Disk:LongWord; V:PValue; DiskName : TStr;
+   begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
+   If (Length(Arg)>1) then
+      For C:=High(Arg) downto 1 do
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
+   If (Length(Arg) >= 1) then begin
+      If (Arg[0]^.Typ = VT_STR)
+         then DiskName := PStr(Arg[0]^.Ptr)^
+         else begin
+         V:=ValToInt(Arg[0]); DiskName := PStr(V^.Ptr)^; FreeVal(V);
+         end;
+      If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
+      Disk := AddDisk(DiskName)
+      end else Disk := DISK_DEFAULT;
+   Exit(NewVal(VT_INT,DiskFunc(Disk)))
+   end;
+
+Function F_SysInfo_Hostname(DoReturn:Boolean; Arg:Array of PValue):PValue;
+   Var C:LongWord;
+   begin
+   If (Length(Arg)>0) then
+      For C:=Low(Arg) to High(Arg) do
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
+   If (DoReturn) then Exit(NewVal(VT_STR,GetHostName())) else Exit(NIL)
+   end;
+{$ENDIF}
+
+{$IFDEF WINDOWS} // Functions present on both Lin&Win; Winderps implementations
+Function F_SysInfo_Disk(DiskFunc:TDiskFunc; DoReturn:Boolean; Arg:Array of PValue):PValue;
+   Var C, Disk:LongWord; V:PValue;
+   begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
+   If (Length(Arg)>1) then
+      For C:=High(Arg) downto 1 do
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
+   If (Length(Arg) >= 1) then begin
+      If (Arg[0]^.Typ >= VT_INT) and (Arg[0]^.Typ <= VT_BIN)
+         then Disk := PQInt(Arg[0]^.Ptr)^
+         else begin
+         V:=ValToInt(Arg[0]); Disk := PQInt(V^.Ptr)^; FreeVal(V);
+         end;
+      If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
+      end else Disk := DISK_DEFAULT;
+   Exit(NewVal(VT_INT,DiskFunc(Disk)))
+   end;
+
+Function F_SysInfo_Hostname(DoReturn:Boolean; Arg:Array of PValue):PValue;
+   Var C:LongWord; Buf : Array[0..255] of Char;
+   begin
+   If (Length(Arg)>0) then
+      For C:=Low(Arg) to High(Arg) do
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
+   If (Not DoReturn) then Exit(NIL);
+   If (GetHostName(@Buf, 256) = 0)
+      then Exit(NewVal(VT_STR, Buf))
+      else Exit(EmptyVal(VT_STR))
+   end;
+{$ENDIF}
+
+// Functions present on both Lin&Win; shared code
+
+Function F_SysInfo_DiskTotal(DoReturn:Boolean; Arg:Array of PValue):PValue;
+   begin Exit(F_SysInfo_Disk(@DiskSize, DoReturn, Arg)) end;
+
+Function F_SysInfo_DiskFree(DoReturn:Boolean; Arg:Array of PValue):PValue;
+   begin Exit(F_SysInfo_Disk(@DiskFree, DoReturn, Arg)) end;
+
+Function F_SysInfo_DiskUsed(DoReturn:Boolean; Arg:Array of PValue):PValue;
+   begin Exit(F_SysInfo_Disk(@DiskUsed, DoReturn, Arg)) end;
 
 end.

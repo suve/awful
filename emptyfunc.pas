@@ -15,7 +15,7 @@ implementation
 
 Procedure Register(FT:PFunTrie);
    begin
-   FT^.SetVal('', @F_);
+   //FT^.SetVal('', @F_);
    FT^.SetVal('nil', @F_)
    end;
 

@@ -43,10 +43,11 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('sqrt',@F_sqrt);
    FT^.SetVal('log',@F_log);
    // Stuff
-   FT^.SetVal('floatprec',@F_SetPrecision);
+   FT^.SetVal('float-precision',@F_SetPrecision);
    FT^.SetVal('fork',@F_fork);
    FT^.SetVal('getenv',@F_getenv);
    // Legacy
+   FT^.SetVal('floatprec',@F_SetPrecision);
    FT^.SetVal('filename',@F_FileName);
    FT^.SetVal('filepath',@F_FilePath);
    end;
@@ -121,19 +122,21 @@ Function F_Sleep(DoReturn:Boolean; Arg:Array of PValue):PValue;
 Function F_SetPrecision(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue;
    begin
-   If (Length(Arg)=0) then Exit(NewVal(VT_INT,Values.RealPrec));
    If (Length(Arg)>1) then
       For C:=High(Arg) downto 1 do
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   If (Arg[0]^.Typ >= VT_INT) and (Arg[0]^.Typ <= VT_BIN)
-      then Values.RealPrec:=PQInt(Arg[0]^.Ptr)^
-      else begin
-      V:=ValToInt(Arg[0]);
-      Values.RealPrec:=PQInt(V^.Ptr)^;
-      FreeVal(V)
+   If (Length(Arg) >= 1) then begin
+      Values.RealForm := ffFixed;
+      If (Arg[0]^.Typ >= VT_INT) and (Arg[0]^.Typ <= VT_BIN)
+         then Values.RealPrec:=PQInt(Arg[0]^.Ptr)^
+         else begin
+         V:=ValToInt(Arg[0]);
+         Values.RealPrec:=PQInt(V^.Ptr)^;
+         FreeVal(V)
+         end;
+      If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0])
       end;
-   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
-   If (Not DoReturn) then Exit(NewVal(VT_INT,Values.RealPrec)) else Exit(NIL)
+   If (DoReturn) then Exit(NewVal(VT_INT,Values.RealPrec)) else Exit(NIL)
    end;
 
 Function F_fork(DoReturn:Boolean; Arg:Array of PValue):PValue;

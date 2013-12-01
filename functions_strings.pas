@@ -15,6 +15,7 @@ Function F_StrLen(DoReturn:Boolean; Arg:Array of PValue):PValue;
 Function F_StrPos(DoReturn:Boolean; Arg:Array of PValue):PValue;
 Function F_SubStr(DoReturn:Boolean; Arg:Array of PValue):PValue;
 Function F_DelStr(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_WriteStr(DoReturn:Boolean; Arg:Array of PValue):PValue;
 
 Function F_Chr_UTF8(DoReturn:Boolean; Arg:Array of PValue):PValue;
 Function F_Chr(DoReturn:Boolean; Arg:Array of PValue):PValue;
@@ -45,6 +46,7 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('str-sub',@F_SubStr);
    FT^.SetVal('str-del',@F_DelStr);
    // Utils
+   FT^.SetVal('str-write',@F_WriteStr);
    FT^.SetVal('perc',@F_Perc);
    end;
 
@@ -347,6 +349,36 @@ Function F_Perc(DoReturn:Boolean; Arg:Array of PValue):PValue;
    If (Length(Arg) >= 2) and (Arg[1]^.Lev >= CurLev) then FreeVal(Arg[1]);
    If (Length(Arg) >= 1) and (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    Exit(NewVal(VT_STR,S))
+   end;
+
+Function F_WriteStr(DoReturn:Boolean; Arg:Array of PValue):PValue;
+   Var Str,Tmp:TStr; C:LongWord;
+   begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
+   Str := ''; Tmp := '';
+   If (Length(Arg) > 0) then
+      For C:=Low(Arg) to High(Arg) do begin
+          Case Arg[C]^.Typ of
+             VT_NIL: WriteStr(Tmp, '{NIL}');
+             VT_NEW: WriteStr(Tmp, '{NEW}');
+             VT_PTR: WriteStr(Tmp, '{PTR}');
+             VT_INT: WriteStr(Tmp, PQInt(Arg[C]^.Ptr)^);
+             VT_HEX: WriteStr(Tmp, Values.HexToStr(PQInt(Arg[C]^.Ptr)^));
+             VT_OCT: WriteStr(Tmp, Values.OctToStr(PQInt(Arg[C]^.Ptr)^));
+             VT_BIN: WriteStr(Tmp, Values.BinToStr(PQInt(Arg[C]^.Ptr)^));
+             VT_FLO: WriteStr(Tmp, Values.FloatToStr(PFloat(Arg[C]^.Ptr)^));
+             VT_BOO: WriteStr(Tmp, PBoolean(Arg[C]^.Ptr)^);
+             VT_STR: WriteStr(Tmp, PAnsiString(Arg[C]^.Ptr)^);
+             VT_UTF: WriteStr(Tmp, '{UTF8}');
+             VT_ARR: WriteStr(Tmp, 'array(',PValTree(Arg[C]^.Ptr)^.Count,')');
+             VT_DIC: WriteStr(Tmp, 'dict(',PValTrie(Arg[C]^.Ptr)^.Count,')');
+             VT_FIL: WriteStr(Tmp, 'file(',PFileVal(Arg[C]^.Ptr)^.Pth,')');
+             else WriteStr(Tmp, '(',Arg[C]^.Typ,')');
+             end;
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
+          Str += Tmp
+          end;
+   Exit(NewVal(VT_STR, Str))
    end;
 
 end.

@@ -3,9 +3,10 @@ unit values;
 {$MODE OBJFPC} {$COPERATORS ON}
 
 interface
-   uses Scapegoat, Trie;
+   uses SysUtils, Scapegoat, Trie;
 
 Var RealPrec : LongWord = 3;
+    RealForm : TFloatFormat = ffFixed;
     CurLev : LongWord = 0;
 
 Type TValueType = (
@@ -65,6 +66,7 @@ Function HexToStr(Int:QInt;Digs:LongWord=0):TStr;
 Function OctToStr(Int:QInt;Digs:LongWord=0):TStr; 
 Function BinToStr(Int:QInt;Digs:LongWord=0):TStr; 
 Function RealToStr(Val:Extended;Prec:LongWord):TStr;
+Function FloatToStr(Val:TFloat):TStr;
 
 Function StrToInt(Str:TStr):QInt;
 Function StrToHex(Str:TStr):QInt;
@@ -122,7 +124,7 @@ Function NewVal(T:TValueType):PValue;
 Function Exv(DoReturn:Boolean):PValue; Inline;
 
 implementation
-   uses Math, SysUtils;
+   uses Math;//, SysUtils;
 
 const Sys16Dig:Array[0..15] of Char=(
       '0','1','2','3','4','5','6','7',
@@ -172,6 +174,9 @@ Function RealToStr(Val:Extended;Prec:LongWord):TStr;
    If (Val<1) then Exit(Res+'.'+StringOfChar('0',Prec)); 
    Res+='.'; Res+=NumToStr(Trunc(Val),10,Prec);
    Exit(Res) end;
+
+Function FloatToStr(Val:TFloat):TStr;
+   begin Exit(FloatToStrF(Val, RealForm, RealPrec, RealPrec)) end;
 
 Function StrToInt(Str:TStr):QInt;
    Var Plus:Boolean; P:LongWord; Res:QInt;
@@ -377,7 +382,7 @@ Function ValToStr(V:PValue):PValue;
       VT_HEX: P^:=HexToStr(PQInt(V^.Ptr)^);
       VT_OCT: P^:=OctToStr(PQInt(V^.Ptr)^);
       VT_BIN: P^:=BinToStr(PQInt(V^.Ptr)^);
-      VT_FLO: P^:=RealToStr(PFloat(V^.Ptr)^,RealPrec);
+      VT_FLO: P^:=FloatToStr(PFloat(V^.Ptr)^);//RealToStr(PFloat(V^.Ptr)^,RealPrec);
       VT_BOO: If (PBoolean(V^.Ptr)^ = TRUE)
                  then P^:='TRUE' else P^:='FALSE';
       VT_STR: P^:=PStr(V^.Ptr)^;
@@ -439,7 +444,7 @@ Function ValSet(A,B:PValue):PValue;
       If (B^.Typ = VT_BIN)
          then (S^):=BinToStr(PQInt(B^.Ptr)^) else
       If (B^.Typ = VT_FLO)
-         then (S^):=RealToStr(PFloat(B^.Ptr)^,RealPrec) else
+         then (S^):=FloatToStr(PFloat(B^.Ptr)^) {RealToStr(PFloat(B^.Ptr)^,RealPrec)} else
       If (B^.Typ = VT_STR)
          then (S^):=(PStr(B^.Ptr)^) else
       If (B^.Typ = VT_ARR)
@@ -582,7 +587,7 @@ Function ValAdd(A,B:PValue):PValue;
       If (B^.Typ = VT_BIN)
          then (S^)+=BinToStr(PQInt(B^.Ptr)^) else
       If (B^.Typ = VT_FLO)
-         then (S^)+=RealToStr(PFloat(B^.Ptr)^,RealPrec) else
+         then (S^)+=FloatToStr(PFloat(B^.Ptr)^) {RealToStr(PFloat(B^.Ptr)^,RealPrec)} else
       If (B^.Typ = VT_STR)
          then (S^)+=(PStr(B^.Ptr)^) else
       If (B^.Typ = VT_BOO)

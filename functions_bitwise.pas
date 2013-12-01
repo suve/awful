@@ -42,46 +42,29 @@ Function F_Not(DoReturn:Boolean; Arg:Array of PValue):PValue;
       end
    end;
 
-Function F_And(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Type TBitwiseFunc = Function(A,B:PValue):PValue;
+
+Function F_Bitwise(Bitwise:TBitwiseFunc; DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue;
    begin
    If (Not DoReturn) or (Length(Arg)<2)
       then Exit(F_(DoReturn, Arg));
    For C:=High(Arg) downto 1 do begin
-       V:=ValAnd(Arg[C-1], Arg[C]);
+       V:=Bitwise(Arg[C-1], Arg[C]);
        If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
        Arg[C] := V
        end;
    If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    Exit(V)
    end;
+
+Function F_And(DoReturn:Boolean; Arg:Array of PValue):PValue;
+   begin Exit(F_Bitwise(@ValAnd, DoReturn, Arg)) end;
 
 Function F_Xor(DoReturn:Boolean; Arg:Array of PValue):PValue;
-   Var C:LongWord; V:PValue;
-   begin
-   If (Not DoReturn) or (Length(Arg)<2)
-      then Exit(F_(DoReturn, Arg));
-   For C:=High(Arg) downto 1 do begin
-       V:=ValXor(Arg[C-1], Arg[C]);
-       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-       Arg[C] := V
-       end;
-   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
-   Exit(V)
-   end;
+   begin Exit(F_Bitwise(@ValXor, DoReturn, Arg)) end;
 
 Function F_Or(DoReturn:Boolean; Arg:Array of PValue):PValue;
-   Var C:LongWord; V:PValue;
-   begin
-   If (Not DoReturn) or (Length(Arg)<2)
-      then Exit(F_(DoReturn, Arg));
-   For C:=High(Arg) downto 1 do begin
-       V:=ValOr(Arg[C-1], Arg[C]);
-       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-       Arg[C] := V
-       end;
-   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
-   Exit(V)
-   end;
+   begin Exit(F_Bitwise(@ValOr, DoReturn, Arg)) end;
 
 end.
