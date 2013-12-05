@@ -3,7 +3,7 @@ unit values;
 {$MODE OBJFPC} {$COPERATORS ON}
 
 interface
-   uses SysUtils, Scapegoat, Trie;
+   uses SysUtils, Trie, NumTrie;
 
 Var RealPrec : LongWord = 3;
     RealForm : TFloatFormat = ffFixed;
@@ -47,11 +47,13 @@ Type PValue = ^TValue;
      PFloat = ^TFloat;
      TFloat = Extended;
      
-     PValTree = ^TValTree;
-     TValTree = specialize GenericScapegoat<PValue>;
+     PArray = ^TArray;
+     TArray = specialize GenericNumTrie<PValue>;
      
-     PValTrie = ^TValTrie;
-     TValTrie = specialize GenericTrie<PValue>;
+     PArr = PArray; TArr = TArray;
+     
+     PDict = ^TDict;
+     TDict = specialize GenericTrie<PValue>;
      
      PFunc = Function(DoReturn:Boolean; Arg:Array of PValue):PValue;
      
@@ -129,7 +131,6 @@ implementation
 const Sys16Dig:Array[0..15] of Char=(
       '0','1','2','3','4','5','6','7',
       '8','9','A','B','C','D','E','F');
-      Alfa = 0.575;
    
 Function NumToStr(Int:QInt;Base:LongWord;Digs:LongWord=0):TStr; 
    Var Tmp:TStr; Plus:Boolean;
@@ -271,8 +272,8 @@ Function ValToInt(V:PValue):PValue;
       VT_FLO: P^:=Trunc(PFloat(V^.Ptr)^);
       VT_BOO: If (PBoolean(V^.Ptr)^ = TRUE) then P^:=1 else P^:=0;
       VT_STR: P^:=StrToInt(PStr(V^.Ptr)^);
-      VT_ARR: P^:=PValTree(V^.Ptr)^.Count;
-      VT_DIC: P^:=PValTrie(V^.Ptr)^.Count;
+      VT_ARR: P^:=PArray(V^.Ptr)^.Count;
+      VT_DIC: P^:=PDict(V^.Ptr)^.Count;
       else P^:=0;
       end;
    Exit(R)
@@ -290,8 +291,8 @@ Function ValToHex(V:PValue):PValue;
       VT_FLO: P^:=Trunc(PFloat(V^.Ptr)^);
       VT_BOO: If (PBoolean(V^.Ptr)^ = TRUE) then P^:=1 else P^:=0;
       VT_STR: P^:=StrToHex(PStr(V^.Ptr)^);
-      VT_ARR: P^:=PValTree(V^.Ptr)^.Count;
-      VT_DIC: P^:=PValTrie(V^.Ptr)^.Count;
+      VT_ARR: P^:=PArray(V^.Ptr)^.Count;
+      VT_DIC: P^:=PDict(V^.Ptr)^.Count;
       else P^:=0;
       end;
    Exit(R)
@@ -309,8 +310,8 @@ Function ValToOct(V:PValue):PValue;
       VT_FLO: P^:=Trunc(PFloat(V^.Ptr)^);
       VT_BOO: If (PBoolean(V^.Ptr)^ = TRUE) then P^:=1 else P^:=0;
       VT_STR: P^:=StrToOct(PStr(V^.Ptr)^);
-      VT_ARR: P^:=PValTree(V^.Ptr)^.Count;
-      VT_DIC: P^:=PValTrie(V^.Ptr)^.Count;
+      VT_ARR: P^:=PArray(V^.Ptr)^.Count;
+      VT_DIC: P^:=PDict(V^.Ptr)^.Count;
       else P^:=0;
       end;
    Exit(R)
@@ -328,8 +329,8 @@ Function ValToBin(V:PValue):PValue;
       VT_FLO: P^:=Trunc(PFloat(V^.Ptr)^);
       VT_BOO: If (PBoolean(V^.Ptr)^ = TRUE) then P^:=1 else P^:=0;
       VT_STR: P^:=StrToBin(PStr(V^.Ptr)^);
-      VT_ARR: P^:=PValTree(V^.Ptr)^.Count;
-      VT_DIC: P^:=PValTrie(V^.Ptr)^.Count;
+      VT_ARR: P^:=PArray(V^.Ptr)^.Count;
+      VT_DIC: P^:=PDict(V^.Ptr)^.Count;
       else P^:=0;
       end;
    Exit(R)
@@ -347,8 +348,8 @@ Function ValToFlo(V:PValue):PValue;
       VT_FLO: P^:=PFloat(V^.Ptr)^;
       VT_BOO: If (PBoolean(V^.Ptr)^ = TRUE) then P^:=1 else P^:=0;
       VT_STR: P^:=StrToReal(PStr(V^.Ptr)^);
-      VT_ARR: P^:=PValTree(V^.Ptr)^.Count;
-      VT_DIC: P^:=PValTrie(V^.Ptr)^.Count;
+      VT_ARR: P^:=PArray(V^.Ptr)^.Count;
+      VT_DIC: P^:=PDict(V^.Ptr)^.Count;
       else P^:=0;
       end;
    Exit(R)
@@ -366,8 +367,8 @@ Function ValToBoo(V:PValue):PValue;
       VT_FLO: P^:=(PFloat(V^.Ptr)^)<>0;
       VT_BOO: P^:=PBoolean(V^.Ptr)^;
       VT_STR: P^:=StrToBoolDef(PStr(V^.Ptr)^,FALSE);
-      VT_ARR: P^:=Not PValTree(V^.Ptr)^.Empty();
-      VT_DIC: P^:=Not PValTrie(V^.Ptr)^.Empty();
+      VT_ARR: P^:=Not PArray(V^.Ptr)^.Empty();
+      VT_DIC: P^:=Not PDict(V^.Ptr)^.Empty();
       else P^:=False;
       end;
    Exit(R)
@@ -386,8 +387,8 @@ Function ValToStr(V:PValue):PValue;
       VT_BOO: If (PBoolean(V^.Ptr)^ = TRUE)
                  then P^:='TRUE' else P^:='FALSE';
       VT_STR: P^:=PStr(V^.Ptr)^;
-      VT_ARR: P^:='array('+IntToStr(PValTrie(V^.Ptr)^.Count)+')';
-      VT_DIC: P^:='dict('+IntToStr(PValTrie(V^.Ptr)^.Count)+')';
+      VT_ARR: P^:='array('+IntToStr(PDict(V^.Ptr)^.Count)+')';
+      VT_DIC: P^:='dict('+IntToStr(PDict(V^.Ptr)^.Count)+')';
       else P^:='';
       end;
    Exit(R)
@@ -395,8 +396,8 @@ Function ValToStr(V:PValue):PValue;
 
 Function ValSet(A,B:PValue):PValue;
    Var R:PValue; I:PQInt; S:PStr; L:PBoolean; D:PFloat;
-       AArr,BArr,NArr:PValTree; AEA:TValTree.TEntryArr;
-       ADic,BDic,NDic:PValTrie; DEA:TValTrie.TEntryArr;
+       AArr,BArr,NArr:PArray; AEA:TArray.TEntryArr;
+       ADic,BDic,NDic:PDict; DEA:TDict.TEntryArr;
        V,oV:PValue; C:LongWord; KeyStr:TStr; KeyInt:QInt;
    begin
    New(R); R^.Typ:=A^.Typ; R^.Lev:=CurLev;
@@ -412,9 +413,9 @@ Function ValSet(A,B:PValue):PValue;
       If (B^.Typ = VT_STR)
          then (I^):=StrToNum(PStr(B^.Ptr)^,A^.Typ) else
       If (B^.Typ = VT_ARR)
-         then (I^):=PValTree(B^.Ptr)^.Count else
+         then (I^):=PArray(B^.Ptr)^.Count else
       If (B^.Typ = VT_DIC)
-         then (I^):=PValTrie(B^.Ptr)^.Count else
+         then (I^):=PDict(B^.Ptr)^.Count else
       If (B^.Typ = VT_BOO)
          then If (PBoolean(B^.Ptr)^) then (I^):=1
       end else
@@ -427,9 +428,9 @@ Function ValSet(A,B:PValue):PValue;
       If (B^.Typ = VT_STR)
          then (D^):=StrToReal(PStr(B^.Ptr)^) else
       If (B^.Typ = VT_ARR)
-         then (D^):=PValTree(B^.Ptr)^.Count else
+         then (D^):=PArray(B^.Ptr)^.Count else
       If (B^.Typ = VT_DIC)
-         then (D^):=PValTrie(B^.Ptr)^.Count else
+         then (D^):=PDict(B^.Ptr)^.Count else
       If (B^.Typ = VT_BOO)
          then If (PBoolean(B^.Ptr)^) then (D^):=1
       end else
@@ -448,9 +449,9 @@ Function ValSet(A,B:PValue):PValue;
       If (B^.Typ = VT_STR)
          then (S^):=(PStr(B^.Ptr)^) else
       If (B^.Typ = VT_ARR)
-         then (S^):=IntToStr(PValTree(B^.Ptr)^.Count) else
+         then (S^):=IntToStr(PArray(B^.Ptr)^.Count) else
       If (B^.Typ = VT_DIC)
-         then (S^):=IntToStr(PValTrie(B^.Ptr)^.Count) else
+         then (S^):=IntToStr(PDict(B^.Ptr)^.Count) else
       If (B^.Typ = VT_BOO)
          then If (PBoolean(B^.Ptr)^) then (S^):='TRUE' else (S^):='FALSE'
       end else
@@ -463,60 +464,59 @@ Function ValSet(A,B:PValue):PValue;
       If (B^.Typ = VT_STR)
          then (L^):=StrToBoolDef(PStr(B^.Ptr)^,FALSE) else
       If (B^.Typ = VT_ARR)
-         then (L^):=(Not PValTree(B^.Ptr)^.Empty) else
+         then (L^):=(Not PArray(B^.Ptr)^.Empty) else
       If (B^.Typ = VT_DIC)
-         then (L^):=(Not PValTrie(B^.Ptr)^.Empty) else
+         then (L^):=(Not PDict(B^.Ptr)^.Empty) else
       If (B^.Typ = VT_BOO)
          then (L^):=(PBoolean(B^.Ptr)^)
       end else
    If (A^.Typ = VT_ARR) then begin
-      New(NArr,Create(Alfa)); R^.Ptr:=NArr;
-      AArr:=PValTree(A^.Ptr);
+      New(NArr,Create()); R^.Ptr:=NArr;
+      AArr:=PArray(A^.Ptr);
       If (Not AArr^.Empty()) then begin
          AEA:=AArr^.ToArray();
          For C:=Low(AEA) to High(AEA) do
-             NArr^.SetValNaive(AEA[C].Key, CopyVal(AEA[C].Val));
+             NArr^.SetVal(AEA[C].Key, CopyVal(AEA[C].Val));
          end;
       If (B^.Typ = VT_ARR) then begin
-         BArr:=PValTree(B^.Ptr);
+         BArr:=PArray(B^.Ptr);
          If (Not BArr^.Empty()) then begin
             AEA:=BArr^.ToArray();
             For C:=Low(AEA) to High(AEA) do
                 If (Not NArr^.IsVal(AEA[C].Key))
-                   then NArr^.SetValNaive(AEA[C].Key, CopyVal(AEA[C].Val))
+                   then NArr^.SetVal(AEA[C].Key, CopyVal(AEA[C].Val))
                    else begin
                    oV:=NArr^.GetVal(AEA[C].Key); V:=ValSet(oV, AEA[C].Val);
-                   FreeVal(oV); NArr^.SetValNaive(AEA[C].Key, V)
+                   FreeVal(oV); NArr^.SetVal(AEA[C].Key, V)
                    end
             end
          end else
       If (B^.Typ = VT_DIC) then begin
-         BDic:=PValTrie(B^.Ptr);
+         BDic:=PDict(B^.Ptr);
          If (Not BDic^.Empty()) then begin
             DEA:=BDic^.ToArray();
             For C:=Low(DEA) to High(DEA) do begin
                 KeyInt:=StrToInt(DEA[C].Key);
                 If (Not NArr^.IsVal(KeyInt))
-                   then NArr^.SetValNaive(KeyInt, CopyVal(DEA[C].Val))
+                   then NArr^.SetVal(KeyInt, CopyVal(DEA[C].Val))
                    else begin
                    oV:=NArr^.GetVal(KeyInt); V:=ValSet(oV, DEA[C].Val);
-                   FreeVal(oV); NArr^.SetValNaive(KeyInt, V)
+                   FreeVal(oV); NArr^.SetVal(KeyInt, V)
                    end
                 end
             end
-         end;
-      NArr^.Rebalance()
-      end;
+         end
+      end else
    If (A^.Typ = VT_DIC) then begin
       New(NDic,Create('!','~')); R^.Ptr:=NDic;
-      ADic:=PValTrie(A^.Ptr);
+      ADic:=PDict(A^.Ptr);
       If (Not ADic^.Empty()) then begin
          DEA:=ADic^.ToArray();
          For C:=Low(DEA) to High(DEA) do
              NDic^.SetVal(DEA[C].Key, CopyVal(DEA[C].Val));
          end;
       If (B^.Typ = VT_DIC) then begin
-         BDic:=PValTrie(B^.Ptr);
+         BDic:=PDict(B^.Ptr);
          If (Not BDic^.Empty()) then begin
             DEA:=BDic^.ToArray();
             For C:=Low(DEA) to High(DEA) do
@@ -529,7 +529,7 @@ Function ValSet(A,B:PValue):PValue;
             end
          end else
       If (B^.Typ = VT_ARR) then begin
-         BArr:=PValTree(B^.Ptr);
+         BArr:=PArray(B^.Ptr);
          If (Not BArr^.Empty()) then begin
             AEA:=BArr^.ToArray();
             For C:=Low(AEA) to High(AEA) do begin
@@ -1368,8 +1368,8 @@ Function NilVal():PValue;
    end;
 
 Procedure FreeVal(Var Val:PValue);
-   Var Arr:PValTree; AEA:TValTree.TEntryArr;
-       Dic:PValTrie; DEA:TValTrie.TEntryArr;
+   Var Arr:PArray; AEA:TArray.TEntryArr;
+       Dic:PDict; DEA:TDict.TEntryArr;
        C:LongWord;
    begin
    Case Val^.Typ of
@@ -1382,7 +1382,7 @@ Procedure FreeVal(Var Val:PValue);
       VT_BOO: Dispose(PBoolean(Val^.Ptr));
       VT_STR: Dispose(PAnsiString(Val^.Ptr));
       VT_ARR: begin
-              Arr:=PValTree(Val^.Ptr);
+              Arr:=PArray(Val^.Ptr);
               If (Not Arr^.Empty()) then begin
                  AEA := Arr^.ToArray();
                  For C:=Low(AEA) to High(AEA) do
@@ -1391,7 +1391,7 @@ Procedure FreeVal(Var Val:PValue);
               Dispose(Arr, Destroy())
               end;
       VT_DIC: begin
-              Dic:=PValTrie(Val^.Ptr);
+              Dic:=PDict(Val^.Ptr);
               If (Not Dic^.Empty()) then begin
                  DEA := Dic^.ToArray();
                  For C:=Low(DEA) to High(DEA) do
@@ -1404,7 +1404,7 @@ Procedure FreeVal(Var Val:PValue);
    end;
 
 Function  EmptyVal(T:TValueType):PValue;
-   Var R:PValue; I:PQInt; S:PStr; D:PFloat; B:PBoolean; Arr:PValTree; Dic:PValTrie; Fil:PFileVal;
+   Var R:PValue; I:PQInt; S:PStr; D:PFloat; B:PBoolean; Arr:PArray; Dic:PDict; Fil:PFileVal;
    begin
    New(R); R^.Lev:=CurLev; R^.Typ:=T;
    Case T of 
@@ -1416,7 +1416,7 @@ Function  EmptyVal(T:TValueType):PValue;
       VT_FLO: begin New(D); (D^):=0.0;        R^.Ptr:=D end;
       VT_STR: begin New(S); (S^):='';         R^.Ptr:=S end;
       VT_BOO: begin New(B); (B^):=False;      R^.Ptr:=B end;
-      VT_ARR: begin New(Arr,Create(Alfa));    R^.Ptr:=Arr end;
+      VT_ARR: begin New(Arr,Create());    R^.Ptr:=Arr end;
       VT_DIC: begin New(Dic,Create('!','~')); R^.Ptr:=Dic end;
       VT_FIL: begin New(Fil); Fil^.arw:='u';
                   Fil^.Pth:=''; Fil^.Buf:=''; R^.Ptr:=Fil end;
@@ -1433,8 +1433,8 @@ Function  CopyVal(V:PValue):PValue;
 
 Function  CopyVal(V:PValue;Lv:LongWord):PValue;
    Var R:PValue; I:PQInt; S:PStr; D:PFloat; B:PBoolean;
-       NArr, OArr : PValTree; NDic, ODic : PValTrie;
-       AEA : TValTree.TEntryArr; DEA : TValTrie.TEntryArr;
+       NArr, OArr : PArray; NDic, ODic : PDict;
+       AEA : TArray.TEntryArr; DEA : TDict.TEntryArr;
        C:LongWord;
    begin
    New(R); R^.Lev:=Lv; R^.Typ:=V^.Typ;
@@ -1447,7 +1447,7 @@ Function  CopyVal(V:PValue;Lv:LongWord):PValue;
       VT_STR: begin New(S); (S^):=PStr(V^.Ptr)^; R^.Ptr:=S end;
       VT_BOO: begin New(B); (B^):=PBool(V^.Ptr)^; R^.Ptr:=B end;
       VT_ARR: begin
-              New(NArr,Create(Alfa)); R^.Ptr:=NArr; OArr:=PValTree(V^.Ptr);
+              New(NArr,Create()); R^.Ptr:=NArr; OArr:=PArray(V^.Ptr);
               If (Not OArr^.Empty()) then begin
                   AEA := OArr^.ToArray();
                   For C:=Low(AEA) to High(AEA) do
@@ -1456,7 +1456,7 @@ Function  CopyVal(V:PValue;Lv:LongWord):PValue;
                          else NArr^.SetVal(AEA[C].Key, AEA[C].Val)
               end end;
       VT_DIC: begin
-              New(NDic,Create('!','~')); R^.Ptr:=NDic; ODic:=PValTrie(V^.Ptr);
+              New(NDic,Create('!','~')); R^.Ptr:=NDic; ODic:=PDict(V^.Ptr);
               If (Not ODic^.Empty()) then begin
                   DEA := ODic^.ToArray();
                   For C:=Low(DEA) to High(DEA) do
@@ -1471,18 +1471,18 @@ Function  CopyVal(V:PValue;Lv:LongWord):PValue;
 
 Procedure SetValLev(V:PValue;Lv:LongWord);
    Var C:LongWord;
-       Arr:PValTree; AEA:TValTree.TEntryArr;
-       Dic:PValTrie; DEA:TValTrie.TEntryArr;
+       Arr:PArray; AEA:TArray.TEntryArr;
+       Dic:PDict; DEA:TDict.TEntryArr;
    begin
    V^.Lev := Lv;
    If (V^.Typ = VT_ARR) then begin
-      Arr:=PValTree(V^.Ptr); If (Arr^.Empty()) then Exit();
+      Arr:=PArray(V^.Ptr); If (Arr^.Empty()) then Exit();
       AEA:=Arr^.ToArray();
       For C:=Low(AEA) to High(AEA) do
           SetValLev(AEA[C].Val, Lv)
       end else
    If (V^.Typ = VT_DIC) then begin
-      Dic:=PValTrie(V^.Ptr); If (Dic^.Empty()) then Exit();
+      Dic:=PDict(V^.Ptr); If (Dic^.Empty()) then Exit();
       DEA:=Dic^.ToArray();
       For C:=Low(DEA) to High(DEA) do
           SetValLev(DEA[C].Val, Lv)
@@ -1491,18 +1491,18 @@ Procedure SetValLev(V:PValue;Lv:LongWord);
 
 Procedure SetValMaxLev(V:PValue;Lv:LongWord);
    Var C:LongWord;
-       Arr:PValTree; AEA:TValTree.TEntryArr;
-       Dic:PValTrie; DEA:TValTrie.TEntryArr;
+       Arr:PArray; AEA:TArray.TEntryArr;
+       Dic:PDict; DEA:TDict.TEntryArr;
    begin
    If (V^.Lev > Lv) then V^.Lev := Lv;
    If (V^.Typ = VT_ARR) then begin
-      Arr:=PValTree(V^.Ptr); If (Arr^.Empty()) then Exit();
+      Arr:=PArray(V^.Ptr); If (Arr^.Empty()) then Exit();
       AEA:=Arr^.ToArray();
       For C:=Low(AEA) to High(AEA) do
           If (AEA[C].Val^.Lev >= Lv) then SetValMaxLev(AEA[C].Val, Lv)
       end else
    If (V^.Typ = VT_DIC) then begin
-      Dic:=PValTrie(V^.Ptr); If (Dic^.Empty()) then Exit();
+      Dic:=PDict(V^.Ptr); If (Dic^.Empty()) then Exit();
       DEA:=Dic^.ToArray();
       For C:=Low(DEA) to High(DEA) do
           If (DEA[C].Val^.Lev > Lv) then SetValMaxLev(DEA[C].Val, Lv)
@@ -1548,11 +1548,11 @@ Function NewVal(T:TValueType;V:TStr):PValue;
    end;
 
 Function NewVal(T:TValueType):PValue;
-   Var R:PValue; Arr : PValTree; Dic : PValTrie;
+   Var R:PValue; Arr : PArray; Dic : PDict;
    begin
    New(R); R^.Typ := T; R^.Lev := CurLev;
    Case T of
-      VT_ARR: begin New(Arr,Create(Alfa)); R^.Ptr := Arr end;
+      VT_ARR: begin New(Arr,Create()); R^.Ptr := Arr end;
       VT_DIC: begin New(Dic,Create('!','~')); R^.Ptr := Dic end;
          else begin R^.Typ := VT_NIL; R^.Ptr := NIL end
       end;

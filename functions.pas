@@ -320,9 +320,9 @@ Function F_sizeof(DoReturn:Boolean; Arg:Array of PValue):PValue;
    If (PStr(Arg[0]^.Ptr)^ = 'float' ) then C:=SizeOf(TFloat) else
    If (PStr(Arg[0]^.Ptr)^ = 'string') then C:=SizeOf(TStr) else
    If (PStr(Arg[0]^.Ptr)^ = 'bool'  ) then C:=SizeOf(Bool) else
-   If (PStr(Arg[0]^.Ptr)^ = 'arr'   ) then C:=SizeOf(TValTree) else
-   If (PStr(Arg[0]^.Ptr)^ = 'array' ) then C:=SizeOf(TValTree) else
-   If (PStr(Arg[0]^.Ptr)^ = 'dict'  ) then C:=SizeOf(TValTrie) else
+   If (PStr(Arg[0]^.Ptr)^ = 'arr'   ) then C:=SizeOf(TArray) else
+   If (PStr(Arg[0]^.Ptr)^ = 'array' ) then C:=SizeOf(TArray) else
+   If (PStr(Arg[0]^.Ptr)^ = 'dict'  ) then C:=SizeOf(TDict) else
       (* else *) C:=0;
    If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    Exit(NewVal(VT_INT,C*8))

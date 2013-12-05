@@ -242,50 +242,50 @@ Function F_SysInfo_DomainName(DoReturn:Boolean; Arg:Array of PValue):PValue;
 
 Function F_SysInfo_All(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var SI:PSysInfo; C:LongWord; F:Text; T:Int64;
-       Val:PValue; Dict:PValTrie;
-       AV:PValue; Arr:PValTree;
+       Val:PValue; Dict:PDict;
+       AV:PValue; Arr:PArray;
    begin
    If (Length(Arg) > 0) then F_(False, Arg);
    If (Not DoReturn) then Exit(NIL);
    
-   Val:=EmptyVal(VT_DIC); Dict:=PValTrie(Val^.Ptr); New(SI);
+   Val:=EmptyVal(VT_DIC); Dict:=PDict(Val^.Ptr); New(SI);
    If (SysInfo(SI) = 0) then begin
-      AV:=EmptyVal(VT_ARR); Arr:=PValTree(AV^.Ptr);
-      For C:=0 to 2 do Arr^.SetValNaive(C, NewVal(VT_FLO,SI^.Loads[C]/65535));
-      Arr^.Rebalance(); Dict^.SetVal('load',AV);
+      AV:=EmptyVal(VT_ARR); Arr:=PArray(AV^.Ptr);
+      For C:=0 to 2 do Arr^.SetVal(C, NewVal(VT_FLO,SI^.Loads[C]/65535));
+      Dict^.SetVal('load',AV);
       
-      AV:=EmptyVal(VT_ARR); Arr:=PValTree(AV^.Ptr);
-      Arr^.SetValNaive(0, NewVal(VT_INT, SI^.TotalRam));
-      Arr^.SetValNaive(1, NewVal(VT_INT, SI^.FreeRam));
-      Arr^.SetValNaive(2, NewVal(VT_INT, SI^.TotalRam - SI^.FreeRam));
-      Arr^.Rebalance(); Dict^.SetVal('ram',AV);
+      AV:=EmptyVal(VT_ARR); Arr:=PArray(AV^.Ptr);
+      Arr^.SetVal(0, NewVal(VT_INT, SI^.TotalRam));
+      Arr^.SetVal(1, NewVal(VT_INT, SI^.FreeRam));
+      Arr^.SetVal(2, NewVal(VT_INT, SI^.TotalRam - SI^.FreeRam));
+      Dict^.SetVal('ram',AV);
       
-      AV:=EmptyVal(VT_ARR); Arr:=PValTree(AV^.Ptr);
-      Arr^.SetValNaive(0, NewVal(VT_INT, SI^.TotalSwap));
-      Arr^.SetValNaive(1, NewVal(VT_INT, SI^.FreeSwap));
-      Arr^.SetValNaive(2, NewVal(VT_INT, SI^.TotalSwap - SI^.FreeSwap));
-      Arr^.Rebalance(); Dict^.SetVal('swap',AV);
+      AV:=EmptyVal(VT_ARR); Arr:=PArray(AV^.Ptr);
+      Arr^.SetVal(0, NewVal(VT_INT, SI^.TotalSwap));
+      Arr^.SetVal(1, NewVal(VT_INT, SI^.FreeSwap));
+      Arr^.SetVal(2, NewVal(VT_INT, SI^.TotalSwap - SI^.FreeSwap));
+      Dict^.SetVal('swap',AV);
       
       Dict^.SetVal('uptime', NewVal(VT_INT, SI^.Uptime));
       Dict^.SetVal('procs', NewVal(VT_INT, SI^.Procs))
       end;
-   AV:=EmptyVal(VT_ARR); Arr:=PValTree(AV^.Ptr);
-   Arr^.SetValNaive(0, NewVal(VT_INT, DiskSize(ROOTDISK)));
-   Arr^.SetValNaive(1, NewVal(VT_INT, DiskFree(ROOTDISK)));
-   Arr^.SetValNaive(2, NewVal(VT_INT, DiskSize(ROOTDISK) - DiskFree(ROOTDISK)));
-   Arr^.Rebalance();Dict^.SetVal('disk',AV);
+   AV:=EmptyVal(VT_ARR); Arr:=PArray(AV^.Ptr);
+   Arr^.SetVal(0, NewVal(VT_INT, DiskSize(ROOTDISK)));
+   Arr^.SetVal(1, NewVal(VT_INT, DiskFree(ROOTDISK)));
+   Arr^.SetVal(2, NewVal(VT_INT, DiskSize(ROOTDISK) - DiskFree(ROOTDISK)));
+   Dict^.SetVal('disk',AV);
    
-   AV:=EmptyVal(VT_ARR); Arr:=PValTree(AV^.Ptr); C:=0;
+   AV:=EmptyVal(VT_ARR); Arr:=PArray(AV^.Ptr); C:=0;
    While (FileExists('/sys/class/thermal/thermal_zone'+IntToStr(C)+'/temp')) do begin
       Assign(F, '/sys/class/thermal/thermal_zone'+IntToStr(C)+'/temp');
       {$I-} Reset(F); {$I+}; 
       If (IOResult = 0) then begin
          Readln(F, T); Close(F)
          end else T:=0;
-      Arr^.SetValNaive(C, NewVal(VT_FLO, T/1000));
+      Arr^.SetVal(C, NewVal(VT_FLO, T/1000));
       C := C + 1
       end;
-   Arr^.Rebalance(); Dict^.SetVal('thermal', AV);
+   Dict^.SetVal('thermal', AV);
    
    Dict^.SetVal('hostname', NewVal(VT_STR, GetHostName()));
    Dict^.SetVal('domain', NewVal(VT_STR, GetDomainName()));

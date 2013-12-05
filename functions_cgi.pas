@@ -825,13 +825,13 @@ Function F_ArrNum(Var Arr:TKeyValArr; DoReturn:Boolean; Var Arg:Array of PValue)
    end;
 
 Function F_ArrDict(Var Arr:TKeyValArr; DoReturn:Boolean; Var Arg:Array of PValue):PValue;
-   Var C:LongWord; V:PValue; Dic:PValTrie;
+   Var C:LongWord; V:PValue; Dic:PDict;
    begin
    If (Length(Arg)>0) then
       For C:=Low(Arg) to High(Arg) do
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    If (Not DoReturn) then Exit(NIL);
-   V:=EmptyVal(VT_DIC); Dic:=PValTrie(V^.Ptr);
+   V:=EmptyVal(VT_DIC); Dic:=PDict(V^.Ptr);
    If (Length(Arr) > 0) then 
       For C:=Low(Arr) to High(Arr) do
           Dic^.SetVal(Arr[C].Key, NewVal(VT_STR, Arr[C].Val));
