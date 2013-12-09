@@ -4,7 +4,7 @@ interface
    uses Values;
 
 Type TTokenType = (
-     TK_EXPR, TK_CONS, TK_VARI, TK_REFE, TK_AVAL, TK_AREF, TK_BADT);
+     TK_EXPR, TK_CONS, TK_LITE, TK_VARI, TK_REFE, TK_AVAL, TK_AREF, TK_BADT);
      
      PExpr = ^TExpr;
      PToken = ^TToken;
@@ -47,6 +47,8 @@ Procedure FreeToken(T:PToken);
          FreeExpr(PExpr(T^.Ptr));
       TK_CONS: 
          ; // Pointer to a value in const trie. Value will be freed when flushing consts
+      TK_LITE:
+         FreeVal(PValue(T^.Ptr));
       TK_VARI, TK_REFE:
          Dispose(PStr(T^.Ptr));
       TK_AVAL, TK_AREF: begin

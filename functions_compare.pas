@@ -18,6 +18,7 @@ Function F_Le(DoReturn:Boolean; Arg:Array of PValue):PValue;
 
 
 implementation
+   uses Values_Compare, EmptyFunc;
 
 Procedure Register(FT:PFunTrie);
    begin
@@ -32,22 +33,24 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('le',@F_le);     FT^.SetVal('<=',@F_Le);
    end;
 
-Type TCompareFunc = Function(A,B:PValue):PValue;
+Type TCompareFunc = Function(A,B:PValue):Boolean;
 
 Function F_Compare(CompareVals:TCompareFunc; DoReturn:Boolean; Arg:Array of PValue):PValue;
-   Var C:LongWord; V:PValue; R:Boolean;
+   Var C, F :LongWord; R:Boolean;
    begin R:=True;
+   If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg) < 2) then begin
       If ((Length(Arg) = 1) and (Arg[0]^.Lev >= CurLev)) then FreeVal(Arg[0]);
       If (DoReturn) then Exit(NewVal(VT_BOO, False)) else Exit(NIL)
       end;
+   F := High(Arg);
    For C:=(High(Arg)-1) downto Low(Arg) do begin
-       V:=CompareVals(Arg[C],Arg[C+1]);
-       If (Arg[C+1]^.Lev >= CurLev) then FreeVal(Arg[C+1]);
-       If (Not PBool(V^.Ptr)^) then R:=False;
-       FreeVal(V)
+       R:=CompareVals(Arg[C],Arg[F]);
+       If (Arg[F]^.Lev >= CurLev) then FreeVal(Arg[F]); F -= 1;
+       If (Not R) then Break
        end;
-   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
+   For C:=F downto 0 do
+       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    If (DoReturn) then Exit(NewVal(VT_BOO, R)) else Exit(NilVal)
    end;
 

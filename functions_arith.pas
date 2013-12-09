@@ -17,6 +17,7 @@ Function F_Pow(DoReturn:Boolean; Arg:Array of PValue):PValue;
 
 
 implementation
+   uses Values_Arith;
 
 Procedure Register(FT:PFunTrie);
    begin
@@ -29,23 +30,17 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('pow',@F_Pow);   FT^.SetVal('^',@F_Pow);
    end;
 
-Type TArithFunc = Function(A,B:PValue):PValue;
+Type TArithProc = Procedure(A,B:PValue);
 
-Function F_Arith(Arith:TArithFunc; DoReturn:Boolean; Arg:Array of PValue):PValue;
-   Var C:LongWord; R:PValue;
+Function F_Arith(Arith:TArithProc; DoReturn:Boolean; Arg:Array of PValue):PValue;
+   Var C:LongWord; 
    begin
    If (Length(Arg)=0) then begin
       If (DoReturn) then Exit(NilVal()) else Exit(NIL) end;
    If (Length(Arg)>1) then
-      For C:=(High(Arg)-1) downto Low(Arg) do begin
-          R:=Arith(Arg[C],Arg[C+1]);
-          If (Arg[C+1]^.Lev >= CurLev) then FreeVal(Arg[C+1]);
-          If (Arg[C]^.Lev >= CurLev) then begin
-             FreeVal(Arg[C]); Arg[C]:=R
-             end else begin
-             SwapPtrs(Arg[C],R);
-             FreeVal(R)
-             end
+      For C:=High(Arg) downto 1 do begin
+          Arith(Arg[C-1],Arg[C]);
+          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
           end;
    If (DoReturn) then begin
       If (Arg[0]^.Lev >= CurLev)

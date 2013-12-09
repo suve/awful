@@ -14,7 +14,7 @@ Function F_Or(DoReturn:Boolean; Arg:Array of PValue):PValue;
 
 
 implementation
-   uses EmptyFunc;
+   uses Values_Bitwise, EmptyFunc;
 
 Procedure Register(FT:PFunTrie);
    begin

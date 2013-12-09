@@ -26,7 +26,7 @@ Function F_Perc(DoReturn:Boolean; Arg:Array of PValue):PValue;
 Function UTF8_Char(Code:LongWord):ShortString;
 
 implementation
-   uses SysUtils, EmptyFunc;
+   uses Values_Arith, SysUtils, EmptyFunc;
 
 
 Procedure Register(FT:PFunTrie);
@@ -316,7 +316,7 @@ Function F_Chr_UTF8(DoReturn:Boolean; Arg:Array of PValue):PValue;
    end;
 
 Function F_Perc(DoReturn:Boolean; Arg:Array of PValue):PValue;
-   Var C:LongWord; A,V:PValue; I:PQInt; S:AnsiString; D:PFloat;
+   Var C:LongWord; V:PValue; I:PQInt; S:AnsiString; D:PFloat;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg)=0) then Exit(NewVal(VT_STR,'0%')) else S:='';
@@ -325,15 +325,13 @@ Function F_Perc(DoReturn:Boolean; Arg:Array of PValue):PValue;
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
    If (Length(Arg)>=2) then begin
       If (Arg[0]^.Typ = VT_FLO) then begin
-         A:=CopyVal(Arg[0]); D:=PFloat(A^.Ptr); (D^)*=100;
-         V:=ValDiv(A,Arg[1]); FreeVal(A);
+         V:=CopyVal(Arg[0]); D:=PFloat(V^.Ptr); (D^)*=100; ValDiv(V,Arg[1]);
          S:=Values.IntToStr(Trunc(PFloat(V^.Ptr)^))+'%';
          FreeVal(V)
          end else begin
          If (Arg[0]^.Typ >= VT_INT) and (Arg[0]^.Typ <= VT_BIN)
-            then A:=CopyVal(Arg[0]) else A:=ValToInt(Arg[0]);
-         I:=PQInt(A^.Ptr); (I^)*=100;
-         V:=ValDiv(A,Arg[1]); FreeVal(A);
+            then V:=CopyVal(Arg[0]) else V:=ValToInt(Arg[0]);
+         I:=PQInt(V^.Ptr); (I^)*=100; ValDiv(V,Arg[1]);
          S:=Values.IntToStr(PQInt(V^.Ptr)^)+'%';
          FreeVal(V)
          end
@@ -341,9 +339,9 @@ Function F_Perc(DoReturn:Boolean; Arg:Array of PValue):PValue;
       If (Arg[0]^.Typ = VT_FLO)
          then S:=Values.IntToStr(Trunc(100*PFloat(Arg[0]^.Ptr)^))+'%'
          else begin
-         A:=ValToFlo(Arg[0]);
-         S:=Values.IntToStr(Trunc(100*PFloat(A^.Ptr)^))+'%';
-         FreeVal(A)
+         V:=ValToFlo(Arg[0]);
+         S:=Values.IntToStr(Trunc(100*PFloat(V^.Ptr)^))+'%';
+         FreeVal(V)
          end
       end;
    If (Length(Arg) >= 2) and (Arg[1]^.Lev >= CurLev) then FreeVal(Arg[1]);

@@ -26,7 +26,7 @@ Function F_DateTime_MS(DoReturn:Boolean; Arg:Array of PValue):PValue;
 Function F_DateTime_String(DoReturn:Boolean; Arg:Array of PValue):PValue;
 
 implementation
-   uses SysUtils, EmptyFunc;
+   uses Values_Arith, SysUtils, EmptyFunc;
 
 Procedure Register(FT:PFunTrie);
    begin
@@ -172,9 +172,8 @@ Function F_DateTime_Decode(DoReturn:Boolean; Arg:Array of PValue):PValue;
        If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]) 
        else begin
        T:=NewVal(VT_INT,dec[C]);
-       V:=ValSet(Arg[C],T);
-       SwapPtrs(Arg[C],V);
-       FreeVal(T); FreeVal(V)
+       ValSet(Arg[C],T);
+       FreeVal(T)
        end;
    If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
    If (DoReturn) then Exit(NewVal(VT_BOO,True)) else Exit(NIL)

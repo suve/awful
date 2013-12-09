@@ -85,7 +85,7 @@ Function F_Write(DoReturn:Boolean; Arg:Array of PValue):PValue;
              VT_ARR: Write('array(',PArray(Arg[C]^.Ptr)^.Count,')');
              VT_DIC: Write('dict(',PDict(Arg[C]^.Ptr)^.Count,')');
              VT_FIL: Write('file(',PFileVal(Arg[C]^.Ptr)^.Pth,')');
-             else Write('(',Arg[C]^.Typ,')');
+             else Write('(',Arg[C]^.Typ,')')
              end;
           If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
           end;
