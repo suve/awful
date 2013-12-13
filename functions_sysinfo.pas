@@ -1,4 +1,4 @@
-unit functions_sysinfo;
+unit functions_sysinfo; {$INLINE ON}
 
 interface
    uses Values;
@@ -6,32 +6,31 @@ interface
 Procedure Register(FT:PFunTrie);
 
 {$IFDEF LINUX}
-Function F_SysInfo_Get(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_SysInfo_Uptime(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_SysInfo_Load(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_SysInfo_RAMtotal(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_SysInfo_RAMfree(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_SysInfo_RAMbuffer(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_SysInfo_RAMused(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_SysInfo_SwapTotal(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_SysInfo_SwapFree(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_SysInfo_SwapUsed(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_SysInfo_Procnum(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_SysInfo_Thermal(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_SysInfo_DomainName(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_SysInfo_Get(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_Uptime(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_Load(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_RAMtotal(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_RAMfree(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_RAMbuffer(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_RAMused(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_SwapTotal(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_SwapFree(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_SwapUsed(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_Procnum(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_Thermal(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_DomainName(DoReturn:Boolean; Arg:PArrPVal):PValue;
+   Function F_SysInfo_All(DoReturn:Boolean; Arg:PArrPVal):PValue;
 {$ENDIF}
 
-Function F_SysInfo_Hostname(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_SysInfo_DiskFree(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_SysInfo_DiskTotal(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_SysInfo_DiskUsed(DoReturn:Boolean; Arg:Array of PValue):PValue;
-
-{$IFDEF LINUX}
-Function F_SysInfo_All(DoReturn:Boolean; Arg:Array of PValue):PValue;
-{$ENDIF}
+Function F_SysInfo_Hostname(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_DiskFree(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_DiskTotal(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_DiskUsed(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_System(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_Version(DoReturn:Boolean; Arg:PArrPVal):PValue;
 
 implementation
-   uses SysUtils,
+   uses SysUtils, Process,
         {$IFDEF LINUX}Unix, Linux,{$ENDIF}
         {$IFDEF WINDOWS}Winsock,{$ENDIF}
         EmptyFunc;
@@ -40,31 +39,38 @@ Const DISK_DEFAULT = 0;
       {$IFDEF LINUX} ROOTDISK = 3; {$ENDIF}
 
 {$IFDEF LINUX}
-Var SI:PSysInfo;
+Var     SI : PSysInfo = NIL;
+    unameR : AnsiString = '';
+    unameS : AnsiString = '';
+{$ENDIF}
+
+{$IFDEF WINDOWS}
+Var Winderps : AnsiString = '';
 {$ENDIF}
 
 Procedure Register(FT:PFunTrie);
    begin
-   {$IFDEF LINUX}
-   FT^.SetVal('sysinfo-get',@F_SysInfo_Get);
-   FT^.SetVal('sysinfo-uptime',@F_SysInfo_Uptime);
-   FT^.SetVal('sysinfo-load',@F_SysInfo_Load);
-   FT^.SetVal('sysinfo-ram-total',@F_SysInfo_RAMtotal);
-   FT^.SetVal('sysinfo-ram-free',@F_SysInfo_RAMfree);
-   FT^.SetVal('sysinfo-ram-used',@F_SysInfo_RAMused);
-   FT^.SetVal('sysinfo-ram-buffer',@F_SysInfo_RAMbuffer);
-   FT^.SetVal('sysinfo-swap-total',@F_SysInfo_SwapTotal);
-   FT^.SetVal('sysinfo-swap-free',@F_SysInfo_SwapFree);
-   FT^.SetVal('sysinfo-swap-used',@F_SysInfo_SwapUsed);
-   FT^.SetVal('sysinfo-procnum',@F_SysInfo_Procnum);
-   FT^.SetVal('sysinfo-thermal',@F_SysInfo_Thermal);
-   FT^.SetVal('sysinfo-domainname',@F_SysInfo_DomainName);
-   FT^.SetVal('sysinfo',@F_SysInfo_All);
-   {$ENDIF}
+   FT^.SetVal('sysinfo-get'       ,{$IFDEF LINUX}@F_SysInfo_Get       {$ELSE}@F_{$ENDIF});
+   FT^.SetVal('sysinfo-uptime'    ,{$IFDEF LINUX}@F_SysInfo_Uptime    {$ELSE}@F_{$ENDIF});
+   FT^.SetVal('sysinfo-load'      ,{$IFDEF LINUX}@F_SysInfo_Load      {$ELSE}@F_{$ENDIF});
+   FT^.SetVal('sysinfo-ram-total' ,{$IFDEF LINUX}@F_SysInfo_RAMtotal  {$ELSE}@F_{$ENDIF});
+   FT^.SetVal('sysinfo-ram-free'  ,{$IFDEF LINUX}@F_SysInfo_RAMfree   {$ELSE}@F_{$ENDIF});
+   FT^.SetVal('sysinfo-ram-used'  ,{$IFDEF LINUX}@F_SysInfo_RAMused   {$ELSE}@F_{$ENDIF});
+   FT^.SetVal('sysinfo-ram-buffer',{$IFDEF LINUX}@F_SysInfo_RAMbuffer {$ELSE}@F_{$ENDIF});
+   FT^.SetVal('sysinfo-swap-total',{$IFDEF LINUX}@F_SysInfo_SwapTotal {$ELSE}@F_{$ENDIF});
+   FT^.SetVal('sysinfo-swap-free' ,{$IFDEF LINUX}@F_SysInfo_SwapFree  {$ELSE}@F_{$ENDIF});
+   FT^.SetVal('sysinfo-swap-used' ,{$IFDEF LINUX}@F_SysInfo_SwapUsed  {$ELSE}@F_{$ENDIF});
+   FT^.SetVal('sysinfo-procnum'   ,{$IFDEF LINUX}@F_SysInfo_Procnum   {$ELSE}@F_{$ENDIF});
+   FT^.SetVal('sysinfo-thermal'   ,{$IFDEF LINUX}@F_SysInfo_Thermal   {$ELSE}@F_{$ENDIF});
+   FT^.SetVal('sysinfo-domainname',{$IFDEF LINUX}@F_SysInfo_DomainName{$ELSE}@F_{$ENDIF});
+   FT^.SetVal('sysinfo'           ,{$IFDEF LINUX}@F_SysInfo_All       {$ELSE}@F_{$ENDIF});
+   // Functions implemented on both platforms
    FT^.SetVal('sysinfo-hostname',@F_SysInfo_Hostname);
    FT^.SetVal('sysinfo-disk-total',@F_SysInfo_DiskTotal);
    FT^.SetVal('sysinfo-disk-free',@F_SysInfo_DiskFree);
    FT^.SetVal('sysinfo-disk-used',@F_SysInfo_DiskUsed);
+   FT^.SetVal('sysinfo-system',@F_SysInfo_System);
+   FT^.SetVal('sysinfo-version',@F_SysInfo_Version);
    end;
 
 {$IFDEF LINUX}
@@ -77,150 +83,161 @@ Function GetSysInfo():Boolean;
    Exit(True)
    end;
 
-Function F_SysInfo_Get(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function GetSystem():AnsiString; Inline;
+   begin 
+   If (unameS = '') then ; //RunCommand('/usr/bin/uname',['-s'],unameS);
+   Exit(unameS) end;
+
+Function GetVersion():AnsiString; Inline;
+   begin
+   If (unameR = '') then ; //RunCommand('/usr/bin/uname',['-r'],unameR);
+   Exit(unameR)
+   end;
+
+Function F_SysInfo_Get(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C:LongWord; GSI:Boolean;
    begin
-   If (Length(Arg)>0) then
-      For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
+   If (Length(Arg^)>0) then
+      For C:=Low(Arg^) to High(Arg^) do
+          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
    GSI := GetSysInfo();
    If (DoReturn) then Exit(NewVal(VT_BOO, GSI)) else Exit(NIL)
    end;
 
-Function F_SysInfo_Uptime(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_SysInfo_Uptime(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C:LongWord; 
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
-   If (Length(Arg)>0) then
-      For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
+   If (Length(Arg^)>0) then
+      For C:=Low(Arg^) to High(Arg^) do
+          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
    If (SI = NIL) then If (Not GetSysInfo()) then Exit(NilVal());
    Exit(NewVal(VT_INT,SI^.Uptime))
    end;
 
-Function F_SysInfo_Load(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_SysInfo_Load(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C:LongWord; V:PValue; L:Int64;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
-   If (Length(Arg)=0) then Exit(NewVal(VT_FLO,SI^.Loads[0]/65535));
-   For C:=High(Arg) downto 1 do
-       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   If (Arg[0]^.Typ >= VT_INT) and (Arg[0]^.Typ <= VT_BIN)
-      then L:=PQInt(Arg[0]^.Ptr)^
+   If (Length(Arg^)=0) then Exit(NewVal(VT_FLO,SI^.Loads[0]/65535));
+   For C:=High(Arg^) downto 1 do
+       If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
+   If (Arg^[0]^.Typ >= VT_INT) and (Arg^[0]^.Typ <= VT_BIN)
+      then L:=PQInt(Arg^[0]^.Ptr)^
       else begin
-      V:=ValToInt(Arg[0]);
+      V:=ValToInt(Arg^[0]);
       L:=PQInt(V^.Ptr)^;
       FreeVal(V)
       end;
-   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
+   If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
    If (L < 0) or (L > 2) then L:=0;
    If (SI = NIL) then If (Not GetSysInfo()) then Exit(NilVal());
    Exit(NewVal(VT_FLO,SI^.Loads[L]/65535))
    end;
 
-Function F_SysInfo_RAMtotal(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_SysInfo_RAMtotal(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C:LongWord;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
-   If (Length(Arg)>0) then
-      For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
+   If (Length(Arg^)>0) then
+      For C:=Low(Arg^) to High(Arg^) do
+          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
    If (SI = NIL) then If (Not GetSysInfo()) then Exit(NilVal());
    Exit(NewVal(VT_INT,SI^.TotalRam))
    end;
 
-Function F_SysInfo_RAMfree(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_SysInfo_RAMfree(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C:LongWord;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
-   If (Length(Arg)>0) then
-      For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
+   If (Length(Arg^)>0) then
+      For C:=Low(Arg^) to High(Arg^) do
+          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
    If (SI = NIL) then If (Not GetSysInfo()) then Exit(NilVal());
    Exit(NewVal(VT_INT,SI^.FreeRam))
    end;
 
-Function F_SysInfo_RAMused(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_SysInfo_RAMused(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C:LongWord;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
-   If (Length(Arg)>0) then
-      For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
+   If (Length(Arg^)>0) then
+      For C:=Low(Arg^) to High(Arg^) do
+          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
    If (SI = NIL) then If (Not GetSysInfo()) then Exit(NilVal());
    Exit(NewVal(VT_INT,(SI^.TotalRam - SI^.FreeRam - SI^.BufferRam)))
    end;
 
-Function F_SysInfo_RAMbuffer(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_SysInfo_RAMbuffer(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C:LongWord;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
-   If (Length(Arg)>0) then
-      For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
+   If (Length(Arg^)>0) then
+      For C:=Low(Arg^) to High(Arg^) do
+          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
    If (SI = NIL) then If (Not GetSysInfo()) then Exit(NilVal());
    Exit(NewVal(VT_INT,SI^.BufferRam))
    end;
 
-Function F_SysInfo_SwapTotal(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_SysInfo_SwapTotal(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C:LongWord;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
-   If (Length(Arg)>0) then
-      For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
+   If (Length(Arg^)>0) then
+      For C:=Low(Arg^) to High(Arg^) do
+          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
    If (SI = NIL) then If (Not GetSysInfo()) then Exit(NilVal());
    Exit(NewVal(VT_INT,SI^.TotalSwap))
    end;
 
-Function F_SysInfo_SwapFree(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_SysInfo_SwapFree(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C:LongWord;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
-   If (Length(Arg)>0) then
-      For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
+   If (Length(Arg^)>0) then
+      For C:=Low(Arg^) to High(Arg^) do
+          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
    If (SI = NIL) then If (Not GetSysInfo()) then Exit(NilVal());
    Exit(NewVal(VT_INT,SI^.FreeSwap))
    end;
 
-Function F_SysInfo_SwapUsed(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_SysInfo_SwapUsed(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C:LongWord;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
-   If (Length(Arg)>0) then
-      For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
+   If (Length(Arg^)>0) then
+      For C:=Low(Arg^) to High(Arg^) do
+          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
    If (SI = NIL) then If (Not GetSysInfo()) then Exit(NilVal());
    Exit(NewVal(VT_INT,(SI^.TotalSwap - SI^.FreeSwap)))
    end;
 
-Function F_SysInfo_Procnum(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_SysInfo_Procnum(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C:LongWord;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
-   If (Length(Arg)>0) then
-      For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
+   If (Length(Arg^)>0) then
+      For C:=Low(Arg^) to High(Arg^) do
+          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
    If (SI = NIL) then If (Not GetSysInfo()) then Exit(NilVal());
    Exit(NewVal(VT_INT,SI^.Procs))
    end;
 
-Function F_SysInfo_Thermal(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_SysInfo_Thermal(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C:LongWord; V:PValue; Z,T:Int64; F:Text;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
-   If (Length(Arg)=0) then Z:=0 else begin
-      For C:=High(Arg) downto 1 do
-          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-      If (Arg[0]^.Typ >= VT_INT) and (Arg[0]^.Typ <= VT_BIN)
-         then Z:=PQInt(Arg[0]^.Ptr)^
+   If (Length(Arg^)=0) then Z:=0 else begin
+      For C:=High(Arg^) downto 1 do
+          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
+      If (Arg^[0]^.Typ >= VT_INT) and (Arg^[0]^.Typ <= VT_BIN)
+         then Z:=PQInt(Arg^[0]^.Ptr)^
          else begin
-         V:=ValToInt(Arg[0]);
+         V:=ValToInt(Arg^[0]);
          Z:=PQInt(V^.Ptr)^;
          FreeVal(V)
          end;
-      If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0])
+      If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0])
       end;
    If (Z < 0) then Z:=0;
    Assign(F,'/sys/class/thermal/thermal_zone'+IntToStr(Z)+'/temp');
@@ -231,21 +248,18 @@ Function F_SysInfo_Thermal(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Exit(NewVal(VT_FLO,T/1000))
    end;
 
-Function F_SysInfo_DomainName(DoReturn:Boolean; Arg:Array of PValue):PValue;
-   Var C:LongWord;
+Function F_SysInfo_DomainName(DoReturn:Boolean; Arg:PArrPVal):PValue;
    begin
-   If (Length(Arg)>0) then
-      For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
+   If (Length(Arg^)>0) then F_(False, Arg);
    If (DoReturn) then Exit(NewVal(VT_STR,GetDomainName())) else Exit(NIL)
    end;
 
-Function F_SysInfo_All(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_SysInfo_All(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var SI:PSysInfo; C:LongWord; F:Text; T:Int64;
        Val:PValue; Dict:PDict;
        AV:PValue; Arr:PArray;
    begin
-   If (Length(Arg) > 0) then F_(False, Arg);
+   If (Length(Arg^) > 0) then F_(False, Arg);
    If (Not DoReturn) then Exit(NIL);
    
    Val:=EmptyVal(VT_DIC); Dict:=PDict(Val^.Ptr); New(SI);
@@ -288,88 +302,147 @@ Function F_SysInfo_All(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Dict^.SetVal('thermal', AV);
    
    Dict^.SetVal('hostname', NewVal(VT_STR, GetHostName()));
-   Dict^.SetVal('domain', NewVal(VT_STR, GetDomainName()));
+   Dict^.SetVal('domain',   NewVal(VT_STR, GetDomainName()));
+   Dict^.SetVal('system',   NewVal(VT_STR, GetSystem()));
+   Dict^.SetVal('version',  NewVal(VT_STR, GetVersion()));
    
    Dispose(SI); Exit(Val)
    end;
 {$ENDIF} //end of Linux-only functions
 
-Function DiskUsed(Drive:Byte):Int64;
+Function DiskUsed(Drive:Byte):Int64; 
    begin Exit(DiskSize(Drive) - DiskFree(Drive)) end;
 
 Type TDiskFunc = Function(Disk:Byte):Int64;
 
 {$IFDEF LINUX} // Functions present on both Lin&Win; Linux implementations
-Function F_SysInfo_Disk(DiskFunc:TDiskFunc; DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_SysInfo_Disk(DiskFunc:TDiskFunc; DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C, Disk:LongWord; V:PValue; DiskName : TStr;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
-   If (Length(Arg)>1) then
-      For C:=High(Arg) downto 1 do
-          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   If (Length(Arg) >= 1) then begin
-      If (Arg[0]^.Typ = VT_STR)
-         then DiskName := PStr(Arg[0]^.Ptr)^
+   If (Length(Arg^)>1) then
+      For C:=High(Arg^) downto 1 do
+          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
+   If (Length(Arg^) >= 1) then begin
+      If (Arg^[0]^.Typ = VT_STR)
+         then DiskName := PStr(Arg^[0]^.Ptr)^
          else begin
-         V:=ValToInt(Arg[0]); DiskName := PStr(V^.Ptr)^; FreeVal(V);
+         V:=ValToInt(Arg^[0]); DiskName := PStr(V^.Ptr)^; FreeVal(V);
          end;
-      If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
+      If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
       Disk := AddDisk(DiskName)
       end else Disk := DISK_DEFAULT;
    Exit(NewVal(VT_INT,DiskFunc(Disk)))
    end;
 
-Function F_SysInfo_Hostname(DoReturn:Boolean; Arg:Array of PValue):PValue;
-   Var C:LongWord;
+Function F_SysInfo_Hostname(DoReturn:Boolean; Arg:PArrPVal):PValue;
    begin
-   If (Length(Arg)>0) then
-      For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
+   If (Length(Arg^)>0) then F_(False, Arg);
    If (DoReturn) then Exit(NewVal(VT_STR,GetHostName())) else Exit(NIL)
+   end;
+
+Function F_SysInfo_System(DoReturn:Boolean; Arg:PArrPVal):PValue;
+   begin
+   If (Length(Arg^)>0) then F_(False, Arg);
+   If (DoReturn) then Exit(NewVal(VT_STR,GetSystem())) else Exit(NIL)
+   end;
+
+Function F_SysInfo_Version(DoReturn:Boolean; Arg:PArrPVal):PValue;
+   begin
+   If (Length(Arg^)>0) then F_(False, Arg);
+   If (DoReturn) then Exit(NewVal(VT_STR,GetVersion())) else Exit(NIL)
    end;
 {$ENDIF}
 
 {$IFDEF WINDOWS} // Functions present on both Lin&Win; Winderps implementations
-Function F_SysInfo_Disk(DiskFunc:TDiskFunc; DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_SysInfo_Disk(DiskFunc:TDiskFunc; DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C, Disk:LongWord; V:PValue;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
-   If (Length(Arg)>1) then
-      For C:=High(Arg) downto 1 do
-          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   If (Length(Arg) >= 1) then begin
-      If (Arg[0]^.Typ >= VT_INT) and (Arg[0]^.Typ <= VT_BIN)
-         then Disk := PQInt(Arg[0]^.Ptr)^
+   If (Length(Arg^)>1) then
+      For C:=High(Arg^) downto 1 do
+          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
+   If (Length(Arg^) >= 1) then begin
+      If (Arg^[0]^.Typ >= VT_INT) and (Arg^[0]^.Typ <= VT_BIN)
+         then Disk := PQInt(Arg^[0]^.Ptr)^
          else begin
-         V:=ValToInt(Arg[0]); Disk := PQInt(V^.Ptr)^; FreeVal(V);
+         V:=ValToInt(Arg^[0]); Disk := PQInt(V^.Ptr)^; FreeVal(V);
          end;
-      If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
+      If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
       end else Disk := DISK_DEFAULT;
    Exit(NewVal(VT_INT,DiskFunc(Disk)))
    end;
 
-Function F_SysInfo_Hostname(DoReturn:Boolean; Arg:Array of PValue):PValue;
-   Var C:LongWord; Buf : Array[0..255] of Char;
+Function F_SysInfo_Hostname(DoReturn:Boolean; Arg:PArrPVal):PValue;
+   Var Buf : Array[0..255] of Char;
    begin
-   If (Length(Arg)>0) then
-      For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
+   If (Length(Arg^)>0) then F_(False, Arg);
    If (Not DoReturn) then Exit(NIL);
    If (GetHostName(@Buf, 256) = 0)
       then Exit(NewVal(VT_STR, Buf))
       else Exit(EmptyVal(VT_STR))
    end;
+
+Function F_SysInfo_System(DoReturn:Boolean; Arg:PArrPVal):PValue;
+   begin
+   If (Length(Arg^)>0) then F_(False, Arg);
+   If (Not DoReturn) then Exit(NIL);
+   If (Win32Platform = 2) then begin
+      If (Win32MajorVersion = 6) then begin
+         If (Win32MinorVersion = 3) then Exit(NewVal(VT_STR,'Windows 8.1'   )) else
+         If (Win32MinorVersion = 2) then Exit(NewVal(VT_STR,'Windows 8'     )) else
+         If (Win32MinorVersion = 1) then Exit(NewVal(VT_STR,'Windows 7'     )) else
+         If (Win32MinorVersion = 0) then Exit(NewVal(VT_STR,'Windows Vista' )) else
+         end else
+      If (Win32MajorVersion = 5) then begin
+         If (Win32MinorVersion = 1) then Exit(NewVal(VT_STR,'Windows XP'    )) else
+         If (Win32MinorVersion = 0) then Exit(NewVal(VT_STR,'Windows 2000'  )) else
+         end else
+      If (Win32MajorVersion = 4) then begin
+         If (Win32MinorVersion = 0) then Exit(NewVal(VT_STR,'Windows NT 4.0')) else
+         end else
+      end else
+   If (Win32Platform = 1) then begin
+      If (Win32MajorVersion = 4) then begin
+         If (Win32MinorVersion = 90) then Exit(NewVal(VT_STR,'Windows ME'    )) else
+         If (Win32MinorVersion = 10) then Exit(NewVal(VT_STR,'Windows 98'    )) else
+         If (Win32MinorVersion =  0) then Exit(NewVal(VT_STR,'Windows 95'    )) else
+         end else
+      end else
+   If (Win32Platform = 0) then begin
+      If (Win32MajorVersion = 3) then begin
+         If (Win32MinorVersion = 10) then Exit(NewVal(VT_STR,'Windows 3.1'    )) else
+         If (Win32MinorVersion =  0) then Exit(NewVal(VT_STR,'Windows 3.0'    )) else
+         end else
+      If (Win32MajorVersion = 2) then begin
+         If (Win32MinorVersion =  0) then Exit(NewVal(VT_STR,'Windows 2.0'    )) else
+         end else
+      If (Win32MajorVersion = 1) then begin
+         If (Win32MinorVersion =  0) then Exit(NewVal(VT_STR,'Windows 1.0'    )) else
+         end else
+      end;
+   Exit(NewVal(VT_STR,'Windows (Unknown)'))
+   end;
+
+Function F_SysInfo_Version(DoReturn:Boolean; Arg:PArrPVal):PValue;
+   begin
+   If (Length(Arg^)>0) then F_(False, Arg);
+   If (Not DoReturn) then Exit(NIL);
+   Exit(NewVal(VT_STR, Values.IntToStr(Win32Platform)+'.'+
+                       Values.IntToStr(Win32MajorVersion)+'.'+
+                       Values.IntToStr(Win32MinorVersion)))
+   end;
 {$ENDIF}
 
 // Functions present on both Lin&Win; shared code
 
-Function F_SysInfo_DiskTotal(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_SysInfo_DiskTotal(DoReturn:Boolean; Arg:PArrPVal):PValue;
    begin Exit(F_SysInfo_Disk(@DiskSize, DoReturn, Arg)) end;
 
-Function F_SysInfo_DiskFree(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_SysInfo_DiskFree(DoReturn:Boolean; Arg:PArrPVal):PValue;
    begin Exit(F_SysInfo_Disk(@DiskFree, DoReturn, Arg)) end;
 
-Function F_SysInfo_DiskUsed(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_SysInfo_DiskUsed(DoReturn:Boolean; Arg:PArrPVal):PValue;
    begin Exit(F_SysInfo_Disk(@DiskUsed, DoReturn, Arg)) end;
 
 end.

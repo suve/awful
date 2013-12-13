@@ -7,23 +7,23 @@ Const dtf_def = 'yyyy"-"mm"-"dd" "hh":"nn';
 
 Procedure Register(FT:PFunTrie);
 
-Function F_DateTime_Start(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_DateTime_FileStart(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_DateTime_Now(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_DateTime_Date(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_DateTime_Time(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_DateTime_Encode(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_DateTime_Decode(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_DateTime_Make(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_DateTime_Day(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_DateTime_Month(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_DateTime_Year(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_DateTime_DOW(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_DateTime_Hour(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_DateTime_Min(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_DateTime_Sec(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_DateTime_MS(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_DateTime_String(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_DateTime_Start(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_DateTime_FileStart(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_DateTime_Now(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_DateTime_Date(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_DateTime_Time(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_DateTime_Encode(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_DateTime_Decode(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_DateTime_Make(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_DateTime_Day(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_DateTime_Month(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_DateTime_Year(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_DateTime_DOW(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_DateTime_Hour(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_DateTime_Min(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_DateTime_Sec(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_DateTime_MS(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_DateTime_String(DoReturn:Boolean; Arg:PArrPVal):PValue;
 
 implementation
    uses Values_Arith, SysUtils, EmptyFunc;
@@ -49,71 +49,71 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('datetime-string',@F_DateTime_String);
    end;
 
-Function F_DateTime_Start(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_DateTime_Start(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C:LongWord;
    begin
-   If (Length(Arg)>0) then
-      For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
+   If (Length(Arg^)>0) then
+      For C:=Low(Arg^) to High(Arg^) do
+          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
    If (DoReturn) then Exit(NewVal(VT_FLO,GLOB_dt)) else Exit(NIL)
    end;
 
-Function F_DateTime_FileStart(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_DateTime_FileStart(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C:LongWord;
    begin
-   If (Length(Arg)>0) then
-      For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
+   If (Length(Arg^)>0) then
+      For C:=Low(Arg^) to High(Arg^) do
+          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
    If (DoReturn) then Exit(NewVal(VT_FLO,GLOB_sdt)) else Exit(NIL)
    end;
 
-Function F_DateTime_Now(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_DateTime_Now(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C:LongWord;
    begin
-   If (Length(Arg)>0) then
-      For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
+   If (Length(Arg^)>0) then
+      For C:=Low(Arg^) to High(Arg^) do
+          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
    If (DoReturn) then Exit(NewVal(VT_FLO,SysUtils.Now())) else Exit(NIL)
    end;
 
-Function F_DateTime_Date(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_DateTime_Date(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C:LongWord;
    begin
-   If (Length(Arg)>0) then
-      For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
+   If (Length(Arg^)>0) then
+      For C:=Low(Arg^) to High(Arg^) do
+          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
    If (DoReturn) then Exit(NewVal(VT_FLO,SysUtils.Date())) else Exit(NIL)
    end;
 
-Function F_DateTime_Time(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_DateTime_Time(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C:LongWord;
    begin
-   If (Length(Arg)>0) then
-      For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
+   If (Length(Arg^)>0) then
+      For C:=Low(Arg^) to High(Arg^) do
+          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
    If (DoReturn) then Exit(NewVal(VT_FLO,SysUtils.Time())) else Exit(NIL)
    end;
 
-Function F_DateTime_Encode(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_DateTime_Encode(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Const ARRLEN = 7; ARRHI = 6;
    Var C,H:LongWord; V:PValue;
        DT:Array[0..ARRHI] of LongInt; R:TDateTime;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
-   If (Length(Arg)>ARRLEN) then begin H:=ARRHI;
-      For C:=High(Arg) downto ARRLEN do
-          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
-      end else H:=High(Arg);
+   If (Length(Arg^)>ARRLEN) then begin H:=ARRHI;
+      For C:=High(Arg^) downto ARRLEN do
+          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
+      end else H:=High(Arg^);
    For C:=0 to ARRHI do dt[C]:=0;
    For C:=H downto 0 do begin
-       If (Arg[C]^.Typ >= VT_INT) and (Arg[C]^.Typ <= VT_BIN) 
-          then dt[C]:=PQInt(Arg[C]^.Ptr)^
+       If (Arg^[C]^.Typ >= VT_INT) and (Arg^[C]^.Typ <= VT_BIN) 
+          then dt[C]:=PQInt(Arg^[C]^.Ptr)^
           else begin
-          V:=ValToInt(Arg[C]);
+          V:=ValToInt(Arg^[C]);
           dt[C]:=PQInt(V^.Ptr)^;
           FreeVal(V)
           end;
-       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
+       If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
        end;
    Try R:=SysUtils.EncodeDate(dt[0],dt[1],dt[2]);
        R+=SysUtils.EncodeTime(dt[3],dt[4],dt[5],dt[6]);
@@ -121,26 +121,26 @@ Function F_DateTime_Encode(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Exit(NewVal(VT_FLO,R))
    end;
 
-Function F_DateTime_Make(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_DateTime_Make(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Const ARRLEN = 5; ARRHI = 4;
    Var C,H:LongWord; V:PValue;
        dt:Array[0..ARRHI] of LongInt; R:TDateTime;
    begin R:=0;
    If (Not DoReturn) then Exit(F_(False, Arg));
-   If (Length(Arg)>ARRLEN) then begin H:=ARRHI;
-      For C:=High(Arg) downto ARRLEN do
-          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
-      end else H:=High(Arg);
+   If (Length(Arg^)>ARRLEN) then begin H:=ARRHI;
+      For C:=High(Arg^) downto ARRLEN do
+          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
+      end else H:=High(Arg^);
    For C:=0 to ARRHI do dt[C]:=0;
    For C:=H downto 0 do begin
-       If (Arg[C]^.Typ >= VT_INT) and (Arg[C]^.Typ <= VT_BIN) 
-          then dt[C]:=PQInt(Arg[C]^.Ptr)^
+       If (Arg^[C]^.Typ >= VT_INT) and (Arg^[C]^.Typ <= VT_BIN) 
+          then dt[C]:=PQInt(Arg^[C]^.Ptr)^
           else begin
-          V:=ValToInt(Arg[C]);
+          V:=ValToInt(Arg^[C]);
           dt[C]:=PQInt(V^.Ptr)^;
           FreeVal(V)
           end;
-       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
+       If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
        end;
    R+=dt[4]; R/=1000; //Add milisecs
    R+=dt[3]; R/=60;   //Add secs
@@ -150,184 +150,184 @@ Function F_DateTime_Make(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Exit(NewVal(VT_FLO,R))
    end;
 
-Function F_DateTime_Decode(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_DateTime_Decode(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C,H:LongWord; V,T:PValue; dt:TDateTime; dec:Array[1..8] of Word;
    begin
-   If (Length(Arg)<2) then begin
+   If (Length(Arg^)<2) then begin
       If (DoReturn) then Exit(NewVal(VT_BOO,False)) else Exit(NIL) end;
-   If (Length(Arg)>9) then begin H:=8;
-      For C:=High(Arg) downto 9 do
-          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
-      end else H:=High(Arg);
-   If (Arg[0]^.Typ = VT_FLO)
-      then dt:=(PFloat(Arg[0]^.Ptr)^)
+   If (Length(Arg^)>9) then begin H:=8;
+      For C:=High(Arg^) downto 9 do
+          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
+      end else H:=High(Arg^);
+   If (Arg^[0]^.Typ = VT_FLO)
+      then dt:=(PFloat(Arg^[0]^.Ptr)^)
       else begin
-      V:=ValToFlo(Arg[0]);
+      V:=ValToFlo(Arg^[0]);
       dt:=(PFloat(V^.Ptr)^);
       FreeVal(V)
       end;
    DecodeDateFully(dt,dec[1],dec[2],dec[3],dec[4]);
    DecodeTime(dt,dec[5],dec[6],dec[7],dec[8]);
    For C:=H downto 1 do
-       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]) 
+       If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]) 
        else begin
        T:=NewVal(VT_INT,dec[C]);
-       ValSet(Arg[C],T);
+       ValSet(Arg^[C],T);
        FreeVal(T)
        end;
-   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
+   If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
    If (DoReturn) then Exit(NewVal(VT_BOO,True)) else Exit(NIL)
    end;
 
 
-Function F_DateTime_Day(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_DateTime_Day(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C:LongWord; V:PValue; dt:TDateTime; D,M,Y:Word;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
-   If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
-   For C:=High(Arg) downto 1 do
-      If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   If (Arg[0]^.Typ = VT_FLO)
-      then dt:=(PFloat(Arg[0]^.Ptr)^)
+   If (Length(Arg^)=0) then Exit(NewVal(VT_INT,0));
+   For C:=High(Arg^) downto 1 do
+      If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
+   If (Arg^[0]^.Typ = VT_FLO)
+      then dt:=(PFloat(Arg^[0]^.Ptr)^)
       else begin
-      V:=ValToFlo(Arg[0]);
+      V:=ValToFlo(Arg^[0]);
       dt:=(PFloat(V^.Ptr)^);
       FreeVal(V)
       end;
-   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
+   If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
    DecodeDate(dt,Y,M,D);
    Exit(NewVal(VT_INT,D))
    end;
 
-Function F_DateTime_Month(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_DateTime_Month(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C:LongWord; V:PValue; dt:TDateTime; D,M,Y:Word;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
-   If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
-   For C:=High(Arg) downto 1 do
-      If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   If (Arg[0]^.Typ = VT_FLO)
-      then dt:=(PFloat(Arg[0]^.Ptr)^)
+   If (Length(Arg^)=0) then Exit(NewVal(VT_INT,0));
+   For C:=High(Arg^) downto 1 do
+      If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
+   If (Arg^[0]^.Typ = VT_FLO)
+      then dt:=(PFloat(Arg^[0]^.Ptr)^)
       else begin
-      V:=ValToFlo(Arg[0]);
+      V:=ValToFlo(Arg^[0]);
       dt:=(PFloat(V^.Ptr)^);
       FreeVal(V)
       end;
-   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
+   If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
    DecodeDate(dt,Y,M,D);
    Exit(NewVal(VT_INT,M))
    end;
 
-Function F_DateTime_Year(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_DateTime_Year(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C:LongWord; V:PValue; dt:TDateTime; D,M,Y:Word;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
-   If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
-   For C:=High(Arg) downto 1 do
-      If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   If (Arg[0]^.Typ = VT_FLO)
-      then dt:=(PFloat(Arg[0]^.Ptr)^)
+   If (Length(Arg^)=0) then Exit(NewVal(VT_INT,0));
+   For C:=High(Arg^) downto 1 do
+      If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
+   If (Arg^[0]^.Typ = VT_FLO)
+      then dt:=(PFloat(Arg^[0]^.Ptr)^)
       else begin
-      V:=ValToFlo(Arg[0]);
+      V:=ValToFlo(Arg^[0]);
       dt:=(PFloat(V^.Ptr)^);
       FreeVal(V)
       end;
-   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
+   If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
    DecodeDate(dt,Y,M,D);
    Exit(NewVal(VT_INT,Y))
    end;
 
-Function F_DateTime_DOW(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_DateTime_DOW(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C:LongWord; V:PValue; dt:TDateTime; D,M,Y,DOW:Word;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
-   If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
-   For C:=High(Arg) downto 1 do
-      If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   If (Arg[0]^.Typ = VT_FLO)
-      then dt:=(PFloat(Arg[0]^.Ptr)^)
+   If (Length(Arg^)=0) then Exit(NewVal(VT_INT,0));
+   For C:=High(Arg^) downto 1 do
+      If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
+   If (Arg^[0]^.Typ = VT_FLO)
+      then dt:=(PFloat(Arg^[0]^.Ptr)^)
       else begin
-      V:=ValToFlo(Arg[0]);
+      V:=ValToFlo(Arg^[0]);
       dt:=(PFloat(V^.Ptr)^);
       FreeVal(V)
       end;
-   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
+   If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
    DecodeDateFully(dt,Y,M,D,DOW);
    Exit(NewVal(VT_INT,DOW))
    end;
 
-Function F_DateTime_Hour(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_DateTime_Hour(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C:LongWord; V:PValue; dt:TDateTime; H,M,S,MS:Word;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
-   If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
-   For C:=High(Arg) downto 1 do
-      If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   If (Arg[0]^.Typ = VT_FLO)
-      then dt:=(PFloat(Arg[0]^.Ptr)^)
+   If (Length(Arg^)=0) then Exit(NewVal(VT_INT,0));
+   For C:=High(Arg^) downto 1 do
+      If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
+   If (Arg^[0]^.Typ = VT_FLO)
+      then dt:=(PFloat(Arg^[0]^.Ptr)^)
       else begin
-      V:=ValToFlo(Arg[0]);
+      V:=ValToFlo(Arg^[0]);
       dt:=(PFloat(V^.Ptr)^);
       FreeVal(V)
       end;
-   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
+   If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
    DecodeTime(dt,H,M,S,MS);
    Exit(NewVal(VT_INT,H))
    end;
 
-Function F_DateTime_Min(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_DateTime_Min(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C:LongWord; V:PValue; dt:TDateTime; H,M,S,MS:Word;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
-   If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
-   For C:=High(Arg) downto 1 do
-      If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   If (Arg[0]^.Typ = VT_FLO)
-      then dt:=(PFloat(Arg[0]^.Ptr)^)
+   If (Length(Arg^)=0) then Exit(NewVal(VT_INT,0));
+   For C:=High(Arg^) downto 1 do
+      If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
+   If (Arg^[0]^.Typ = VT_FLO)
+      then dt:=(PFloat(Arg^[0]^.Ptr)^)
       else begin
-      V:=ValToFlo(Arg[0]);
+      V:=ValToFlo(Arg^[0]);
       dt:=(PFloat(V^.Ptr)^);
       FreeVal(V)
       end;
-   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
+   If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
    DecodeTime(dt,H,M,S,MS);
    Exit(NewVal(VT_INT,M))
    end;
 
-Function F_DateTime_Sec(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_DateTime_Sec(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C:LongWord; V:PValue; dt:TDateTime; H,M,S,MS:Word;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
-   If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
-   For C:=High(Arg) downto 1 do
-      If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   If (Arg[0]^.Typ = VT_FLO)
-      then dt:=(PFloat(Arg[0]^.Ptr)^)
+   If (Length(Arg^)=0) then Exit(NewVal(VT_INT,0));
+   For C:=High(Arg^) downto 1 do
+      If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
+   If (Arg^[0]^.Typ = VT_FLO)
+      then dt:=(PFloat(Arg^[0]^.Ptr)^)
       else begin
-      V:=ValToFlo(Arg[0]);
+      V:=ValToFlo(Arg^[0]);
       dt:=(PFloat(V^.Ptr)^);
       FreeVal(V)
       end;
-   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
+   If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
    DecodeTime(dt,H,M,S,MS);
    Exit(NewVal(VT_INT,S))
    end;
 
-Function F_DateTime_ms(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_DateTime_ms(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C:LongWord; V:PValue; dt:TDateTime; H,M,S,MS:Word;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
-   If (Length(Arg)=0) then Exit(NewVal(VT_INT,0));
-   For C:=High(Arg) downto 1 do
-      If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   If (Arg[0]^.Typ = VT_FLO)
-      then dt:=(PFloat(Arg[0]^.Ptr)^)
+   If (Length(Arg^)=0) then Exit(NewVal(VT_INT,0));
+   For C:=High(Arg^) downto 1 do
+      If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
+   If (Arg^[0]^.Typ = VT_FLO)
+      then dt:=(PFloat(Arg^[0]^.Ptr)^)
       else begin
-      V:=ValToFlo(Arg[0]);
+      V:=ValToFlo(Arg^[0]);
       dt:=(PFloat(V^.Ptr)^);
       FreeVal(V)
       end;
-   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
+   If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
    DecodeTime(dt,H,M,S,MS);
    Exit(NewVal(VT_INT,MS))
    end;
@@ -411,25 +411,25 @@ Function dtf(S:AnsiString):AnsiString;
    If (Q) then Exit(R+'"') else Exit(R)
    end;
 
-Function F_DateTime_String(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_DateTime_String(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C:LongWord; V:PValue; dt:TDateTime; S,F:AnsiString;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
-   If (Length(Arg) > 2) then
-      For C:=High(Arg) downto 2 do
-          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   If (Length(Arg) >= 2) and (Arg[1]^.Typ = VT_STR)
-      then F:=dtf(PStr(Arg[1]^.Ptr)^)
+   If (Length(Arg^) > 2) then
+      For C:=High(Arg^) downto 2 do
+          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
+   If (Length(Arg^) >= 2) and (Arg^[1]^.Typ = VT_STR)
+      then F:=dtf(PStr(Arg^[1]^.Ptr)^)
       else F:=dtf_def;
-   If (Length(Arg) > 0) and (Arg[0]^.Typ = VT_FLO)
-      then dt:=(PFloat(Arg[0]^.Ptr)^) else
-   If (Length(Arg) > 0) then begin
-      V:=ValToFlo(Arg[0]);
+   If (Length(Arg^) > 0) and (Arg^[0]^.Typ = VT_FLO)
+      then dt:=(PFloat(Arg^[0]^.Ptr)^) else
+   If (Length(Arg^) > 0) then begin
+      V:=ValToFlo(Arg^[0]);
       dt:=(PFloat(V^.Ptr)^);
       FreeVal(V)
       end else dt:=SysUtils.Now();
-   If (Length(Arg) >= 2) and (Arg[1]^.Lev >= CurLev) then FreeVal(Arg[1]);
-   If (Length(Arg) >= 1) and (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
+   If (Length(Arg^) >= 2) and (Arg^[1]^.Lev >= CurLev) then FreeVal(Arg^[1]);
+   If (Length(Arg^) >= 1) and (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
    DateTimeToString(S,F,dt);
    Exit(NewVal(VT_STR,S))
    end;

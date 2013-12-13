@@ -5,16 +5,16 @@ interface
 
 Procedure Register(FT:PFunTrie);
 
-Function F_Write(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_Writeln(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_Write(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Writeln(DoReturn:Boolean; Arg:PArrPVal):PValue;
 
-Function F_Read(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_Readln(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_GetChar(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_Read(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Readln(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_GetChar(DoReturn:Boolean; Arg:PArrPVal):PValue;
 
-Function F_stdin_BufferFlush(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_stdin_BufferClear(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_stdin_BufferPush(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_stdin_BufferFlush(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_stdin_BufferClear(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_stdin_BufferPush(DoReturn:Boolean; Arg:PArrPVal):PValue;
 
 implementation
    uses EmptyFunc, Functions_CGI, SysUtils;
@@ -51,7 +51,7 @@ Function CapitalizeHeader(Hdr:TStr):TStr;
    Exit(Hdr)
    end;
 
-Function F_Write(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_Write(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C:LongWord;
    begin
    {$IFDEF CGI}
@@ -68,31 +68,31 @@ Function F_Write(DoReturn:Boolean; Arg:Array of PValue):PValue;
       WasOutput := True
       end;
    {$ENDIF}
-   If (Length(Arg) > 0) then
-      For C:=Low(Arg) to High(Arg) do begin
-          Case Arg[C]^.Typ of
+   If (Length(Arg^) > 0) then
+      For C:=Low(Arg^) to High(Arg^) do begin
+          Case Arg^[C]^.Typ of
              VT_NIL: Write('{NIL}');
              VT_NEW: Write('{NEW}');
              VT_PTR: Write('{PTR}');
-             VT_INT: Write(PQInt(Arg[C]^.Ptr)^);
-             VT_HEX: Write(Values.HexToStr(PQInt(Arg[C]^.Ptr)^));
-             VT_OCT: Write(Values.OctToStr(PQInt(Arg[C]^.Ptr)^));
-             VT_BIN: Write(Values.BinToStr(PQInt(Arg[C]^.Ptr)^));
-             VT_FLO: Write(Values.FloatToStr(PFloat(Arg[C]^.Ptr)^));
-             VT_BOO: Write(PBoolean(Arg[C]^.Ptr)^);
-             VT_STR: Write(PAnsiString(Arg[C]^.Ptr)^);
+             VT_INT: Write(PQInt(Arg^[C]^.Ptr)^);
+             VT_HEX: Write(Values.HexToStr(PQInt(Arg^[C]^.Ptr)^));
+             VT_OCT: Write(Values.OctToStr(PQInt(Arg^[C]^.Ptr)^));
+             VT_BIN: Write(Values.BinToStr(PQInt(Arg^[C]^.Ptr)^));
+             VT_FLO: Write(Values.FloatToStr(PFloat(Arg^[C]^.Ptr)^));
+             VT_BOO: Write(PBoolean(Arg^[C]^.Ptr)^);
+             VT_STR: Write(PAnsiString(Arg^[C]^.Ptr)^);
              VT_UTF: Write('{UTF8}');
-             VT_ARR: Write('array(',PArray(Arg[C]^.Ptr)^.Count,')');
-             VT_DIC: Write('dict(',PDict(Arg[C]^.Ptr)^.Count,')');
-             VT_FIL: Write('file(',PFileVal(Arg[C]^.Ptr)^.Pth,')');
-             else Write('(',Arg[C]^.Typ,')')
+             VT_ARR: Write('array(',PArray(Arg^[C]^.Ptr)^.Count,')');
+             VT_DIC: Write('dict(',PDict(Arg^[C]^.Ptr)^.Count,')');
+             VT_FIL: Write('file(',PFileVal(Arg^[C]^.Ptr)^.Pth,')');
+             else Write('(',Arg^[C]^.Typ,')')
              end;
-          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
+          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
           end;
    If (DoReturn) then Exit(NewVal(VT_STR,'')) else Exit(NIL)
    end;
 
-Function F_Writeln(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_Writeln(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var R:PValue;
    begin
    R:=F_Write(DoReturn, Arg);
@@ -129,100 +129,100 @@ Procedure FillVar(V:PValue; Buff : PStr; Pos : LongWord);
    Delete(Buff^, 1, Pos+1)
    end;
 
-Function F_stdio(DoTrim, DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_stdio(DoTrim, DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C, P : LongWord; 
    begin
-   If (Length(Arg)=0) then If (DoReturn) then Exit(NilVal()) else Exit(NIL);
-   For C:=Low(Arg) to High(Arg) do begin 
+   If (Length(Arg^)=0) then If (DoReturn) then Exit(NilVal()) else Exit(NIL);
+   For C:=Low(Arg^) to High(Arg^) do begin 
       P := FillBuffer(Input, @stdinBuffer, DoTrim);
-      FillVar(Arg[C], @stdinBuffer, P);
-      If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
+      FillVar(Arg^[C], @stdinBuffer, P);
+      If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
       end;
    If (DoReturn) then Exit(NilVal()) else Exit(NIL)
    end;
 
-Function F_read(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_read(DoReturn:Boolean; Arg:PArrPVal):PValue;
    begin Exit(F_stdio(TRIM_YES, DoReturn, Arg)) end;
 
-Function F_readln(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_readln(DoReturn:Boolean; Arg:PArrPVal):PValue;
    begin Exit(F_stdio(TRIM_NO, DoReturn, Arg)) end;
 
-Function F_getchar(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_getchar(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var Chr:Char;
    begin
-   If (Length(Arg)>0) then F_(False, Arg);
+   If (Length(Arg^)>0) then F_(False, Arg);
    FillBuffer(Input, @stdinBuffer, TRIM_NO);
    Chr:=stdinBuffer[1]; Delete(stdinBuffer, 1, 1);
    If (DoReturn) then Exit(NewVal(VT_STR, Chr)) else Exit(NIL)
    end;
 
-Function F_stdin_BufferFlush(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_stdin_BufferFlush(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var V:PValue;
    begin
-   If (Length(Arg)>0) then F_(False, Arg);
+   If (Length(Arg^)>0) then F_(False, Arg);
    If (DoReturn) then V:=NewVal(VT_STR, stdinBuffer) else V:=NIL;
    stdinBuffer := ''; Exit(V)
    end;
 
-Function F_stdin_BufferClear(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_stdin_BufferClear(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var V:PValue;
    begin
-   If (Length(Arg)>0) then F_(False, Arg);
+   If (Length(Arg^)>0) then F_(False, Arg);
    If (DoReturn) then V:=NewVal(VT_INT, Length(stdinBuffer)) else V:=NIL;
    stdinBuffer := ''; Exit(V)
    end;
 
-Function F_stdin_BufferPush(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_stdin_BufferPush(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C:LongWord;
    begin
-   If (Length(Arg)>0) then
-      For C:=Low(Arg) to High(Arg) do begin
+   If (Length(Arg^)>0) then
+      For C:=Low(Arg^) to High(Arg^) do begin
           If (Length(stdinBuffer) > 0) and (stdinBuffer[Length(stdinBuffer)]<>#32) then stdinBuffer += #32;
-          Case Arg[C]^.Typ of
-             VT_BOO: stdinBuffer += SysUtils.BoolToStr(PBool(Arg[C]^.Ptr)^);
-             VT_BIN: stdinBuffer += Values.BinToStr(PQInt(Arg[C]^.Ptr)^);
-             VT_OCT: stdinBuffer += Values.OctToStr(PQInt(Arg[C]^.Ptr)^);
-             VT_INT: stdinBuffer += Values.IntToStr(PQInt(Arg[C]^.Ptr)^);
-             VT_HEX: stdinBuffer += Values.HexToStr(PQInt(Arg[C]^.Ptr)^);
-             VT_FLO: stdinBuffer += Values.FloatToStr(PFloat(Arg[C]^.Ptr)^){RealToStr(PFloat(Arg[C]^.Ptr)^, 5)};
-             VT_STR: stdinBuffer += PStr(Arg[C]^.Ptr)^;
+          Case Arg^[C]^.Typ of
+             VT_BOO: stdinBuffer += SysUtils.BoolToStr(PBool(Arg^[C]^.Ptr)^);
+             VT_BIN: stdinBuffer += Values.BinToStr(PQInt(Arg^[C]^.Ptr)^);
+             VT_OCT: stdinBuffer += Values.OctToStr(PQInt(Arg^[C]^.Ptr)^);
+             VT_INT: stdinBuffer += Values.IntToStr(PQInt(Arg^[C]^.Ptr)^);
+             VT_HEX: stdinBuffer += Values.HexToStr(PQInt(Arg^[C]^.Ptr)^);
+             VT_FLO: stdinBuffer += Values.FloatToStr(PFloat(Arg^[C]^.Ptr)^){RealToStr(PFloat(Arg^[C]^.Ptr)^, 5)};
+             VT_STR: stdinBuffer += PStr(Arg^[C]^.Ptr)^;
              end;
-          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
+          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
           end;
    If (DoReturn) then Exit(NilVal()) else Exit(NIL)
    end;
 
 (*
-Function F_fopen(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_fopen(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var Mode:Char; PS:PStr; S:TStr; I:QInt; V:PValue; F:PFileVal;
    begin
-   If (Length(Arg)<2) then Exit(F_(DoReturn, Arg));
-   If (Length(Arg)>2) then F_(False, Arg[2..High(Arg)]);
+   If (Length(Arg^)<2) then Exit(F_(DoReturn, Arg^));
+   If (Length(Arg^)>2) then F_(False, Arg^[2..High(Arg^)]);
    // Determine mode
-   If (Arg[1]^.Typ = VT_STR) then begin
-      PS := PStr(Arg[1]^.Ptr);
+   If (Arg^[1]^.Typ = VT_STR) then begin
+      PS := PStr(Arg^[1]^.Ptr);
       If (Length(PS^)>0) then Mode:=PS^[1] else Mode:='r'
       end else
-   If (Arg[1]^.Typ >= VT_INT) and (Arg[1]^.Typ <= VT_FLO) then begin
-      If (Arg[1]^.Typ <> VT_FLO) then I:=PQInt(Arg[1]^.Ptr)^
-                                 else I:=Trunc(PDouble(Arg[1]^.Ptr)^);
+   If (Arg^[1]^.Typ >= VT_INT) and (Arg^[1]^.Typ <= VT_FLO) then begin
+      If (Arg^[1]^.Typ <> VT_FLO) then I:=PQInt(Arg^[1]^.Ptr)^
+                                 else I:=Trunc(PDouble(Arg^[1]^.Ptr)^);
       Case (I) of
          2: Mode := 'w';
          1: Mode := 'a';
          else Mode := 'r'
       end end else begin
-      V:=ValToBoo(Arg[1]);
+      V:=ValToBoo(Arg^[1]);
       If (PBool(V^.Ptr)^) then Mode:='w' else Mode:='r';
       FreeVal(V)
       end;
    // Determine file path
-   If (Arg[0]^.Typ = VT_STR) then S:=PStr(Arg[0]^.Ptr)^
+   If (Arg^[0]^.Typ = VT_STR) then S:=PStr(Arg^[0]^.Ptr)^
       else begin
-      V:=ValToStr(Arg[0]); S:=PStr(V^.Ptr)^; FreeVal(V)
+      V:=ValToStr(Arg^[0]); S:=PStr(V^.Ptr)^; FreeVal(V)
       end;
    // Free args
-   If (Arg[1]^.Lev >= CurLev) then FreeVal(Arg[1]);
-   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
+   If (Arg^[1]^.Lev >= CurLev) then FreeVal(Arg^[1]);
+   If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
    // Create value and open file
    V:=EmptyVal(VT_FIL); F:=PFileVal(V^.Ptr);
    F^.Pth := ExpandFileName(S); F^.arw := Mode;

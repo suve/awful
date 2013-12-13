@@ -4,7 +4,7 @@ interface
    uses Values;
 
 Type TTokenType = (
-     TK_EXPR, TK_CONS, TK_LITE, TK_VARI, TK_REFE, TK_AVAL, TK_AREF, TK_BADT);
+     TK_EXPR, TK_CONS, TK_LITE, TK_VARI, TK_REFE, TK_AVAL, TK_AREF, TK_STRU, TK_BADT);
      
      PExpr = ^TExpr;
      PToken = ^TToken;

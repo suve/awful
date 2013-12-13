@@ -23,38 +23,38 @@ Var Headers:TKeyValArr;
 
 Procedure Register(FT:PFunTrie);
 
-Function F_Doctype(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_EncodeURL(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_DecodeURL(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_EncodeHTML(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_DecodeHTML(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_Doctype(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_EncodeURL(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_DecodeURL(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_EncodeHTML(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_DecodeHTML(DoReturn:Boolean; Arg:PArrPVal):PValue;
 
 {$IFDEF CGI}
-Function F_HTTPheader(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_HTTPcookie(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_HTTPheader(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_HTTPcookie(DoReturn:Boolean; Arg:PArrPVal):PValue;
 {$ELSE}
-Function F_GetProcess(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_PostProcess(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_CakeProcess(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_GetProcess(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_PostProcess(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_CakeProcess(DoReturn:Boolean; Arg:PArrPVal):PValue;
 {$ENDIF}
 
-Function F_GetIs_(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_GetVal(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_GetKey(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_GetNum(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_GetDict(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_GetIs_(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_GetVal(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_GetKey(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_GetNum(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_GetDict(DoReturn:Boolean; Arg:PArrPVal):PValue;
 
-Function F_PostIs_(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_PostVal(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_PostKey(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_PostNum(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_PostDict(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_PostIs_(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_PostVal(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_PostKey(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_PostNum(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_PostDict(DoReturn:Boolean; Arg:PArrPVal):PValue;
 
-Function F_CakeIs_(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_CakeVal(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_CakeKey(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_CakeNum(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_CakeDict(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_CakeIs_(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_CakeVal(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_CakeKey(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_CakeNum(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_CakeDict(DoReturn:Boolean; Arg:PArrPVal):PValue;
 
 Function EncodeURL(Str:AnsiString):AnsiString;
 Function DecodeURL(Str:AnsiString):AnsiString;
@@ -484,50 +484,50 @@ Function DecodeHTML(Str:AnsiString):AnsiString;
    end;
 
 
-Function F_ParseString(Func:TStrFunc; DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_ParseString(Func:TStrFunc; DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C:LongWord; V:PValue; S:AnsiString;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
-   If (Length(Arg) = 0) then Exit(NewVal(VT_STR, ''));
-   For C:=High(Arg) downto 1 do
-       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   If (Arg[0]^.Typ = VT_STR)
-      then S:=PStr(Arg[0]^.Ptr)^
+   If (Length(Arg^) = 0) then Exit(NewVal(VT_STR, ''));
+   For C:=High(Arg^) downto 1 do
+       If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
+   If (Arg^[0]^.Typ = VT_STR)
+      then S:=PStr(Arg^[0]^.Ptr)^
       else begin
-      V:=ValToStr(Arg[0]);
+      V:=ValToStr(Arg^[0]);
       S:=PStr(V^.Ptr)^;
       FreeVal(V)
       end;
-   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
+   If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
    Exit(NewVal(VT_STR,Func(S)))
    end;
 
-Function F_DecodeURL(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_DecodeURL(DoReturn:Boolean; Arg:PArrPVal):PValue;
    begin Exit(F_ParseString(@DecodeURL, DoReturn, Arg)) end;
 
-Function F_EncodeURL(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_EncodeURL(DoReturn:Boolean; Arg:PArrPVal):PValue;
    begin Exit(F_ParseString(@EncodeURL, DoReturn, Arg)) end;
    
-Function F_EncodeHTML(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_EncodeHTML(DoReturn:Boolean; Arg:PArrPVal):PValue;
    begin Exit(F_ParseString(@EncodeHTML, DoReturn, Arg)) end;
    
-Function F_DecodeHTML(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_DecodeHTML(DoReturn:Boolean; Arg:PArrPVal):PValue;
    begin Exit(F_ParseString(@DecodeHTML, DoReturn, Arg)) end;
    
    
 {$IFDEF CGI}
-Function F_HTTPheader(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_HTTPheader(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var T:PValue; K,V:AnsiString; C:LongWord; Match:Boolean;
    begin
-   If (Length(Arg)=0) then If (DoReturn) then Exit(NilVal()) else Exit(NIL);
-   If (Arg[0]^.Typ <> VT_STR) then begin
-      T:=ValToStr(Arg[0]); K:=PStr(T^.Ptr)^; FreeVal(T)
-      end else K:=PStr(Arg[0]^.Ptr)^;
+   If (Length(Arg^)=0) then If (DoReturn) then Exit(NilVal()) else Exit(NIL);
+   If (Arg^[0]^.Typ <> VT_STR) then begin
+      T:=ValToStr(Arg^[0]); K:=PStr(T^.Ptr)^; FreeVal(T)
+      end else K:=PStr(Arg^[0]^.Ptr)^;
    K:=LowerCase(Trim(K));
-   If (Length(Arg)>=2) then begin
-      If (Arg[1]^.Typ <> VT_STR) then begin
-         T:=ValToStr(Arg[1]); V:=PStr(T^.Ptr)^; FreeVal(T)
-         end else V:=PStr(Arg[1]^.Ptr)^;
+   If (Length(Arg^)>=2) then begin
+      If (Arg^[1]^.Typ <> VT_STR) then begin
+         T:=ValToStr(Arg^[1]); V:=PStr(T^.Ptr)^; FreeVal(T)
+         end else V:=PStr(Arg^[1]^.Ptr)^;
       Match := False;
       If (Length(Headers)>0) then
          For C:=Low(Headers) to High(Headers) do
@@ -540,7 +540,7 @@ Function F_HTTPheader(DoReturn:Boolean; Arg:Array of PValue):PValue;
          Headers[High(Headers)].Val:=V
          end
       end else
-   If (Length(Arg)=1) then
+   If (Length(Arg^)=1) then
       If (Length(Headers)>0) then
          For C:=Low(Headers) to High(Headers) do
              If (K = Headers[C].Key) then begin
@@ -550,16 +550,16 @@ Function F_HTTPheader(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Exit(F_(DoReturn, Arg))
    end;
 
-Function F_HTTPcookie(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_HTTPcookie(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var T:PValue; K,V:AnsiString;
    begin
-   If (Length(Arg) < 2) then If (DoReturn) then Exit(NilVal()) else Exit(NIL);
-   If (Arg[0]^.Typ <> VT_STR) then begin
-      T:=ValToStr(Arg[0]); K:=PStr(T^.Ptr)^; FreeVal(T)
-      end else K:=PStr(Arg[0]^.Ptr)^;
-   If (Arg[1]^.Typ <> VT_STR) then begin
-      T:=ValToStr(Arg[1]); V:=PStr(T^.Ptr)^; FreeVal(T)
-      end else V:=PStr(Arg[1]^.Ptr)^;
+   If (Length(Arg^) < 2) then If (DoReturn) then Exit(NilVal()) else Exit(NIL);
+   If (Arg^[0]^.Typ <> VT_STR) then begin
+      T:=ValToStr(Arg^[0]); K:=PStr(T^.Ptr)^; FreeVal(T)
+      end else K:=PStr(Arg^[0]^.Ptr)^;
+   If (Arg^[1]^.Typ <> VT_STR) then begin
+      T:=ValToStr(Arg^[1]); V:=PStr(T^.Ptr)^; FreeVal(T)
+      end else V:=PStr(Arg^[1]^.Ptr)^;
    SetLength(Cookies, Length(Cookies)+1);
    Cookies[High(Cookies)].Name := Trim(K);
    Cookies[High(Cookies)].Value := V;
@@ -728,108 +728,108 @@ Function ArrNum(Var Arr:TKeyValArr):LongWord;
    begin Exit(Length(Arr)) end;
 
 {$IFNDEF CGI}
-Function F_GetProcess(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_GetProcess(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C:LongWord;
    begin
-   If (Length(Arg)>0) then
-      For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
+   If (Length(Arg^)>0) then
+      For C:=Low(Arg^) to High(Arg^) do
+          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
    ProcessGet();
    If (DoReturn) then Exit(NilVal()) else Exit(Nil)
    end;
 
-Function F_PostProcess(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_PostProcess(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C:LongWord;
    begin
-   If (Length(Arg)>0) then
-      For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
+   If (Length(Arg^)>0) then
+      For C:=Low(Arg^) to High(Arg^) do
+          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
    ProcessPost();
    If (DoReturn) then Exit(NilVal()) else Exit(Nil)
    end;
 
-Function F_CakeProcess(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_CakeProcess(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C:LongWord;
    begin
-   If (Length(Arg)>0) then
-      For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
+   If (Length(Arg^)>0) then
+      For C:=Low(Arg^) to High(Arg^) do
+          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
    ProcessCake();
    If (DoReturn) then Exit(NilVal()) else Exit(Nil)
    end;
 {$ENDIF}
 
-Function F_ArrIs_(Var Arr:TKeyValArr; DoReturn:Boolean; Var Arg:Array of PValue):PValue;
+Function F_ArrIs_(Var Arr:TKeyValArr; DoReturn:Boolean; Var Arg:PArrPVal):PValue;
    Var B:Boolean; C:LongWord; V:PValue;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
-   If (Length(Arg)=0) then Exit(NewVal(VT_BOO,True));
-   B:=True; For C:=High(Arg) downto Low(Arg) do begin
-      If (Arg[C]^.Typ<>VT_STR)
+   If (Length(Arg^)=0) then Exit(NewVal(VT_BOO,True));
+   B:=True; For C:=High(Arg^) downto Low(Arg^) do begin
+      If (Arg^[C]^.Typ<>VT_STR)
          then begin
-            V:=ValToStr(Arg[C]);
+            V:=ValToStr(Arg^[C]);
             If (Not ArrSet(Arr, PStr(V^.Ptr)^)) then B:=False;
             FreeVal(V);
          end else
-         If (Not ArrSet(Arr, PStr(Arg[C]^.Ptr)^)) then B:=False;
-      If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
+         If (Not ArrSet(Arr, PStr(Arg^[C]^.Ptr)^)) then B:=False;
+      If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
       end;
    Exit(NewVal(VT_BOO,B))
    end;
 
-Function F_ArrVal(Var Arr:TKeyValArr; DoReturn:Boolean; Var Arg:Array of PValue):PValue;
+Function F_ArrVal(Var Arr:TKeyValArr; DoReturn:Boolean; Var Arg:PArrPVal):PValue;
    Var C:LongWord; V:PValue; S:AnsiString;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
-   If (Length(Arg)=0) then Exit(NewVal(VT_STR,''));
-   For C:=High(Arg) downto 1 do
-      If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   If (Arg[0]^.Typ >= VT_INT) and (Arg[0]^.Typ <= VT_BIN)
-      then S:=ArrStr(Arr, PQInt(Arg[0]^.Ptr)^) else
-   If (Arg[0]^.Typ = VT_STR)
-      then S:=ArrStr(Arr, PStr(Arg[0]^.Ptr)^)
+   If (Length(Arg^)=0) then Exit(NewVal(VT_STR,''));
+   For C:=High(Arg^) downto 1 do
+      If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
+   If (Arg^[0]^.Typ >= VT_INT) and (Arg^[0]^.Typ <= VT_BIN)
+      then S:=ArrStr(Arr, PQInt(Arg^[0]^.Ptr)^) else
+   If (Arg^[0]^.Typ = VT_STR)
+      then S:=ArrStr(Arr, PStr(Arg^[0]^.Ptr)^)
       else begin
-      V:=ValToStr(Arg[0]);
+      V:=ValToStr(Arg^[0]);
       S:=ArrStr(Arr, PStr(V^.Ptr)^);
       FreeVal(V)
       end;
-   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
+   If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
    Exit(NewVal(VT_STR,S))
    end;
 
-Function F_ArrKey(Var Arr:TKeyValArr; DoReturn:Boolean; Var Arg:Array of PValue):PValue;
+Function F_ArrKey(Var Arr:TKeyValArr; DoReturn:Boolean; Var Arg:PArrPVal):PValue;
    Var C:LongWord; V:PValue; S:AnsiString;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
-   If (Length(Arg)=0) then Exit(NewVal(VT_STR,''));
-   For C:=High(Arg) downto 1 do
-      If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   If (Arg[0]^.Typ >= VT_INT) and (Arg[0]^.Typ <= VT_BIN)
-      then S:=ArrKey(Arr, PQInt(Arg[0]^.Ptr)^)
+   If (Length(Arg^)=0) then Exit(NewVal(VT_STR,''));
+   For C:=High(Arg^) downto 1 do
+      If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
+   If (Arg^[0]^.Typ >= VT_INT) and (Arg^[0]^.Typ <= VT_BIN)
+      then S:=ArrKey(Arr, PQInt(Arg^[0]^.Ptr)^)
       else begin
-      V:=ValToInt(Arg[0]);
+      V:=ValToInt(Arg^[0]);
       S:=ArrKey(Arr, PQInt(V^.Ptr)^);
       FreeVal(V)
       end;
-   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
+   If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
    Exit(NewVal(VT_STR,S))
    end;
 
-Function F_ArrNum(Var Arr:TKeyValArr; DoReturn:Boolean; Var Arg:Array of PValue):PValue;
+Function F_ArrNum(Var Arr:TKeyValArr; DoReturn:Boolean; Var Arg:PArrPVal):PValue;
    Var C:LongWord;
    begin
-   If (Length(Arg)>0) then
-      For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
+   If (Length(Arg^)>0) then
+      For C:=Low(Arg^) to High(Arg^) do
+          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
    If (DoReturn) then Exit(NewVal(VT_INT,ArrNum(Arr))) else Exit(NIL)
    end;
 
-Function F_ArrDict(Var Arr:TKeyValArr; DoReturn:Boolean; Var Arg:Array of PValue):PValue;
+Function F_ArrDict(Var Arr:TKeyValArr; DoReturn:Boolean; Var Arg:PArrPVal):PValue;
    Var C:LongWord; V:PValue; Dic:PDict;
    begin
-   If (Length(Arg)>0) then
-      For C:=Low(Arg) to High(Arg) do
-          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
+   If (Length(Arg^)>0) then
+      For C:=Low(Arg^) to High(Arg^) do
+          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
    If (Not DoReturn) then Exit(NIL);
    V:=EmptyVal(VT_DIC); Dic:=PDict(V^.Ptr);
    If (Length(Arr) > 0) then 
@@ -838,52 +838,52 @@ Function F_ArrDict(Var Arr:TKeyValArr; DoReturn:Boolean; Var Arg:Array of PValue
    Exit(V)
    end;
 
-Function F_GetIs_(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_GetIs_(DoReturn:Boolean; Arg:PArrPVal):PValue;
    begin Exit(F_ArrIs_(GetArr, DoReturn, Arg)) end;
    
-Function F_GetVal(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_GetVal(DoReturn:Boolean; Arg:PArrPVal):PValue;
    begin Exit(F_ArrVal(GetArr, DoReturn, Arg)) end;
    
-Function F_GetKey(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_GetKey(DoReturn:Boolean; Arg:PArrPVal):PValue;
    begin Exit(F_ArrKey(GetArr, DoReturn, Arg)) end;
    
-Function F_GetNum(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_GetNum(DoReturn:Boolean; Arg:PArrPVal):PValue;
    begin Exit(F_ArrNum(GetArr, DoReturn, Arg)) end;
    
-Function F_GetDict(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_GetDict(DoReturn:Boolean; Arg:PArrPVal):PValue;
    begin Exit(F_ArrDict(GetArr, DoReturn, Arg)) end;
 
-Function F_PostIs_(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_PostIs_(DoReturn:Boolean; Arg:PArrPVal):PValue;
    begin Exit(F_ArrIs_(PostArr, DoReturn, Arg)) end;
    
-Function F_PostVal(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_PostVal(DoReturn:Boolean; Arg:PArrPVal):PValue;
    begin Exit(F_ArrVal(PostArr, DoReturn, Arg)) end;
    
-Function F_PostKey(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_PostKey(DoReturn:Boolean; Arg:PArrPVal):PValue;
    begin Exit(F_ArrKey(PostArr, DoReturn, Arg)) end;
    
-Function F_PostNum(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_PostNum(DoReturn:Boolean; Arg:PArrPVal):PValue;
    begin Exit(F_ArrNum(PostArr, DoReturn, Arg)) end;
    
-Function F_PostDict(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_PostDict(DoReturn:Boolean; Arg:PArrPVal):PValue;
    begin Exit(F_ArrDict(PostArr, DoReturn, Arg)) end;
    
-Function F_CakeIs_(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_CakeIs_(DoReturn:Boolean; Arg:PArrPVal):PValue;
    begin Exit(F_ArrIs_(CakeArr, DoReturn, Arg)) end;
    
-Function F_CakeVal(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_CakeVal(DoReturn:Boolean; Arg:PArrPVal):PValue;
    begin Exit(F_ArrVal(CakeArr, DoReturn, Arg)) end;
    
-Function F_CakeKey(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_CakeKey(DoReturn:Boolean; Arg:PArrPVal):PValue;
    begin Exit(F_ArrKey(CakeArr, DoReturn, Arg)) end;
    
-Function F_CakeNum(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_CakeNum(DoReturn:Boolean; Arg:PArrPVal):PValue;
    begin Exit(F_ArrNum(CakeArr, DoReturn, Arg)) end;
    
-Function F_CakeDict(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_CakeDict(DoReturn:Boolean; Arg:PArrPVal):PValue;
    begin Exit(F_ArrDict(CakeArr, DoReturn, Arg)) end;
 
-Function F_Doctype(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_Doctype(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Const HTML5 = '<!DOCTYPE html>';
          HTML4_LOOSE = '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">';
          XHTML1_1 = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">';
@@ -891,12 +891,12 @@ Function F_Doctype(DoReturn:Boolean; Arg:Array of PValue):PValue;
    Var C:LongWord; V:PValue; S,R:AnsiString; I:Int64;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
-   If (Length(Arg)=0) then Exit(NewVal(VT_STR, DEFAULT));
-   For C:=High(Arg) downto 1 do
-      If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   If (Arg[0]^.Typ = VT_STR)
+   If (Length(Arg^)=0) then Exit(NewVal(VT_STR, DEFAULT));
+   For C:=High(Arg^) downto 1 do
+      If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
+   If (Arg^[0]^.Typ = VT_STR)
       then begin
-      S:=PStr(Arg[0]^.Ptr)^;
+      S:=PStr(Arg^[0]^.Ptr)^;
       If (S='html5') then
          R:=(HTML5) else
       If (S='html4-strict') then
@@ -915,7 +915,7 @@ Function F_Doctype(DoReturn:Boolean; Arg:Array of PValue):PValue;
          R:=(XHTML1_1) else
          {else} R:=DEFAULT
       end else begin
-      V:=ValToInt(Arg[0]); I:=(PQInt(V^.Ptr)^); FreeVal(V);
+      V:=ValToInt(Arg^[0]); I:=(PQInt(V^.Ptr)^); FreeVal(V);
       If (I = 5) then 
          R := (HTML5) else
       If (I = 4) then 
@@ -924,7 +924,7 @@ Function F_Doctype(DoReturn:Boolean; Arg:Array of PValue):PValue;
          R := (XHTML1_1) else
          {else} R:=DEFAULT
       end;
-   If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
+   If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
    Exit(NewVal(VT_STR,R))
    end;
 

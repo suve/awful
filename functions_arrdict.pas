@@ -5,16 +5,16 @@ interface
 
 Procedure Register(FT:PFunTrie);
 
-Function F_array(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_array_count(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_array_empty(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_array_flush(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_array_print(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_array(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_array_count(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_array_empty(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_array_flush(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_array_print(DoReturn:Boolean; Arg:PArrPVal):PValue;
 
-Function F_dict(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_dict_nextkey(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_dict_keys(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_dict_values(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_dict(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_dict_nextkey(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_dict_keys(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_dict_values(DoReturn:Boolean; Arg:PArrPVal):PValue;
 
 implementation
    uses EmptyFunc;
@@ -36,177 +36,177 @@ Procedure Register(FT:PFunTrie);
    end;
 
 
-Function F_array(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_array(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C:LongWord; T:PArray; A,V:PValue;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
    A:=EmptyVal(VT_ARR); T:=PArray(A^.Ptr);
-   If (Length(Arg)>0) then
-      For C:=Low(Arg) to High(Arg) do begin
-          If (Arg[C]^.Lev >= CurLev)
-             then V:=Arg[C]
-             else V:=CopyVal(Arg[C]);
+   If (Length(Arg^)>0) then
+      For C:=Low(Arg^) to High(Arg^) do begin
+          If (Arg^[C]^.Lev >= CurLev)
+             then V:=Arg^[C]
+             else V:=CopyVal(Arg^[C]);
           T^.SetVal(C,V)
           end;
    Exit(A)
    end;
 
-Function F_dict(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_dict(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C:LongWord; T:PDict; Key:AnsiString; A,V,oV:PValue;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
    A:=EmptyVal(VT_DIC); T:=PDict(A^.Ptr);
-   If (Length(Arg)>0) then
-      For C:=Low(Arg) to High(Arg) do
+   If (Length(Arg^)>0) then
+      For C:=Low(Arg^) to High(Arg^) do
           If ((C mod 2)=0) then begin
-             If (Arg[C]^.Typ <> VT_STR) then begin
-                V:=ValToStr(Arg[C]); Key:=PStr(V^.Ptr)^; FreeVal(V)
-                end else Key:=PStr(Arg[C]^.Ptr)^;
-             If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
+             If (Arg^[C]^.Typ <> VT_STR) then begin
+                V:=ValToStr(Arg^[C]); Key:=PStr(V^.Ptr)^; FreeVal(V)
+                end else Key:=PStr(Arg^[C]^.Ptr)^;
+             If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
              end else begin
-             If (Arg[C]^.Lev >= CurLev)
-                then V:=Arg[C]
-                else V:=CopyVal(Arg[C]);
+             If (Arg^[C]^.Lev >= CurLev)
+                then V:=Arg^[C]
+                else V:=CopyVal(Arg^[C]);
              If (T^.IsVal(Key)) then begin oV:=T^.GetVal(Key); FreeVal(oV) end;
                 T^.SetVal(Key, V)
              end;
-   If ((Length(Arg) mod 2) = 1) then begin
+   If ((Length(Arg^) mod 2) = 1) then begin
       If (T^.IsVal(Key)) then begin oV:=T^.GetVal(Key); FreeVal(oV) end;
       T^.SetVal(Key, NilVal)
       end;
    Exit(A)
    end;
 
-Function F_array_count(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_array_count(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C,R:LongWord;
    begin R:=0;
    If (Not DoReturn) then Exit(F_(False, Arg));
-   If (Length(Arg)>0) then
-      For C:=High(Arg) downto Low(Arg) do begin
-          If (Arg[C]^.Typ = VT_ARR) then R += PArray(Arg[C]^.Ptr)^.Count else
-          If (Arg[C]^.Typ = VT_DIC) then R += PDict(Arg[C]^.Ptr)^.Count;
-          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
+   If (Length(Arg^)>0) then
+      For C:=High(Arg^) downto Low(Arg^) do begin
+          If (Arg^[C]^.Typ = VT_ARR) then R += PArray(Arg^[C]^.Ptr)^.Count else
+          If (Arg^[C]^.Typ = VT_DIC) then R += PDict(Arg^[C]^.Ptr)^.Count;
+          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
           end;
    Exit(NewVal(VT_INT,R))
    end;
 
-Function F_array_empty(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_array_empty(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C : LongWord; B:Boolean;
    begin B:=False;
    If (Not DoReturn) then Exit(F_(False, Arg));
-   If (Length(Arg)>0) then
-      For C:=High(Arg) downto Low(Arg) do begin
-          If (Arg[C]^.Typ = VT_ARR) then B:=(B or (PArray(Arg[C]^.Ptr)^.Empty)) else
-          If (Arg[C]^.Typ = VT_DIC) then B:=(B or (PDict(Arg[C]^.Ptr)^.Empty));
-          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
+   If (Length(Arg^)>0) then
+      For C:=High(Arg^) downto Low(Arg^) do begin
+          If (Arg^[C]^.Typ = VT_ARR) then B:=(B or (PArray(Arg^[C]^.Ptr)^.Empty)) else
+          If (Arg^[C]^.Typ = VT_DIC) then B:=(B or (PDict(Arg^[C]^.Ptr)^.Empty));
+          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
           end;
    Exit(NewVal(VT_BOO,B))
    end;
 
-Function F_dict_nextkey(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_dict_nextkey(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C:LongWord; T:PDict; K:AnsiString; V:PValue;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
-   If (Length(Arg)>=3) then
-      For C:=High(Arg) downto 2 do
-          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-   If (Length(Arg)>=2) then begin
-      If (Arg[1]^.Typ = VT_STR) then K:=PStr(Arg[1]^.Ptr)^
+   If (Length(Arg^)>=3) then
+      For C:=High(Arg^) downto 2 do
+          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
+   If (Length(Arg^)>=2) then begin
+      If (Arg^[1]^.Typ = VT_STR) then K:=PStr(Arg^[1]^.Ptr)^
          else begin
-         V:=ValToStr(Arg[1]); K:=PStr(V^.Ptr)^;
+         V:=ValToStr(Arg^[1]); K:=PStr(V^.Ptr)^;
          FreeVal(V) end;
-      If (Arg[1]^.Lev >= CurLev) then FreeVal(Arg[1])
+      If (Arg^[1]^.Lev >= CurLev) then FreeVal(Arg^[1])
       end else K:='';
-   If (Length(Arg)>=1) then begin
-      If (Arg[0]^.Typ <> VT_DIC) then begin
-         If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
+   If (Length(Arg^)>=1) then begin
+      If (Arg^[0]^.Typ <> VT_DIC) then begin
+         If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
          Exit(NilVal()) end;
-      T:=PDict(Arg[0]^.Ptr); K:=T^.NextKey(K);
-      If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0]);
+      T:=PDict(Arg^[0]^.Ptr); K:=T^.NextKey(K);
+      If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
       Exit(NewVal(VT_STR,K))
       end;
    Exit(NilVal())
    end;
 
-Function F_dict_keys(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_dict_keys(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C,D,I:LongWord; R :PValue; Arr:PArray; Dic:PDict; DEA:TDict.TEntryArr;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
    R:=EmptyVal(VT_ARR); Arr:=PArray(R^.Ptr); I:=0;
-   If (Length(Arg)>0) then For C:=Low(Arg) to High(Arg) do begin
-      If (Arg[C]^.Typ = VT_DIC) then begin
-         Dic := PDict(Arg[C]^.Ptr); DEA := Dic^.ToArray();
+   If (Length(Arg^)>0) then For C:=Low(Arg^) to High(Arg^) do begin
+      If (Arg^[C]^.Typ = VT_DIC) then begin
+         Dic := PDict(Arg^[C]^.Ptr); DEA := Dic^.ToArray();
          If (Not Dic^.Empty()) then
             For D:=Low(DEA) to High(DEA) do begin
                 Arr^.SetVal(I, NewVal(VT_STR, DEA[D].Key));
                 I += 1 end
          end;
-      If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
+      If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
       end;
    Exit(R)
    end;
 
-Function F_dict_values(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_dict_values(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C,D,I:LongWord; R :PValue; Arr:PArray; Dic:PDict; DEA:TDict.TEntryArr;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
    R:=EmptyVal(VT_ARR); Arr:=PArray(R^.Ptr); I:=0;
-   If (Length(Arg)>0) then For C:=Low(Arg) to High(Arg) do begin
-      If (Arg[C]^.Typ = VT_DIC) then begin
-         Dic := PDict(Arg[C]^.Ptr); DEA := Dic^.ToArray();
+   If (Length(Arg^)>0) then For C:=Low(Arg^) to High(Arg^) do begin
+      If (Arg^[C]^.Typ = VT_DIC) then begin
+         Dic := PDict(Arg^[C]^.Ptr); DEA := Dic^.ToArray();
          If (Not Dic^.Empty()) then
             For D:=Low(DEA) to High(DEA) do begin
                 Arr^.SetVal(I, CopyVal(DEA[D].Val));
                 I += 1 end
          end;
-      If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
+      If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
       end;
    Exit(R)
    end;
 
-Function F_array_flush(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_array_flush(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C,I,R:LongWord;
        Arr:PArray; AEA:TArray.TEntryArr;
        Dic:PDict; DEA:TDict.TEntryArr;
    begin R:=0;
-   If (Length(Arg)>0) then
-      For C:=High(Arg) downto Low(Arg) do begin
-          If (Arg[C]^.Typ = VT_ARR) then begin
-             Arr:=PArray(Arg[C]^.Ptr); 
+   If (Length(Arg^)>0) then
+      For C:=High(Arg^) downto Low(Arg^) do begin
+          If (Arg^[C]^.Typ = VT_ARR) then begin
+             Arr:=PArray(Arg^[C]^.Ptr); 
              If (Not Arr^.Empty()) then begin
                 AEA:=Arr^.ToArray(); Arr^.Flush(); R += Length(AEA);
                 For I:=Low(AEA) to High(AEA) do
                     FreeVal(AEA[I].Val)
              end end;
-          If (Arg[C]^.Typ = VT_DIC) then begin
-             Dic:=PDict(Arg[C]^.Ptr); 
+          If (Arg^[C]^.Typ = VT_DIC) then begin
+             Dic:=PDict(Arg^[C]^.Ptr); 
              If (Not Dic^.Empty()) then begin
                 DEA:=Dic^.ToArray(); Dic^.Flush(); R += Length(DEA);
                 For I:=Low(DEA) to High(DEA) do
                     FreeVal(DEA[I].Val)
              end end;
-          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C])
+          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
           end;
    If (DoReturn) then Exit(NewVal(VT_INT,R)) else Exit(NIL)
    end;
 
-Function F_array_print(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_array_print(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C,I:LongWord; R:Boolean; V:PValue; S:AnsiString;
        Arr:PArray; AEA:TArray.TEntryArr;
        Dic:PDict; DEA:TDict.TEntryArr;
    begin R:=False;
-   If (Length(Arg) >= 2) then begin
-      For C:=High(Arg) downto 2 do
-          If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
-      If (Arg[1]^.Typ <> VT_BOO) then begin
-         V:=ValToBoo(Arg[1]); R:=PBool(V^.Ptr)^; FreeVal(V)
-         end else R:=PBool(Arg[1]^.Ptr)^;
-      If (Arg[1]^.Lev >= CurLev) then FreeVal(Arg[1])
+   If (Length(Arg^) >= 2) then begin
+      For C:=High(Arg^) downto 2 do
+          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
+      If (Arg^[1]^.Typ <> VT_BOO) then begin
+         V:=ValToBoo(Arg^[1]); R:=PBool(V^.Ptr)^; FreeVal(V)
+         end else R:=PBool(Arg^[1]^.Ptr)^;
+      If (Arg^[1]^.Lev >= CurLev) then FreeVal(Arg^[1])
       end;
-   If (Length(Arg) > 0) then begin
-       If (Arg[0]^.Typ = VT_ARR) then begin
+   If (Length(Arg^) > 0) then begin
+       If (Arg^[0]^.Typ = VT_ARR) then begin
           S:='array(';
-          Arr:=PArray(Arg[0]^.Ptr); 
+          Arr:=PArray(Arg^[0]^.Ptr); 
           If (Not Arr^.Empty()) then begin
              AEA:=Arr^.ToArray(); 
              For I:=Low(AEA) to High(AEA) do begin
@@ -218,9 +218,9 @@ Function F_array_print(DoReturn:Boolean; Arg:Array of PValue):PValue;
                  end;
           S += ')'
           end end else
-       If (Arg[0]^.Typ = VT_DIC) then begin
+       If (Arg^[0]^.Typ = VT_DIC) then begin
           S := 'dict(';
-          Dic:=PDict(Arg[0]^.Ptr); 
+          Dic:=PDict(Arg^[0]^.Ptr); 
           If (Not Dic^.Empty()) then begin
              DEA:=Dic^.ToArray(); 
              For I:=Low(DEA) to High(DEA) do begin
@@ -231,8 +231,8 @@ Function F_array_print(DoReturn:Boolean; Arg:Array of PValue):PValue;
                  If (I < High(DEA)) then S += ', '
                  end;
           S += ')'
-          end end else WriteStr(S, '{', Arg[0]^.Typ, '}');
-       If (Arg[0]^.Lev >= CurLev) then FreeVal(Arg[0])
+          end end else WriteStr(S, '{', Arg^[0]^.Typ, '}');
+       If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0])
        end;
    If (R) then begin 
       If (DoReturn) then Exit(NewVal(VT_STR, S)) else Exit(NIL)

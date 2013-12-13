@@ -55,7 +55,10 @@ Type PValue = ^TValue;
      PDict = ^TDict;
      TDict = specialize GenericTrie<PValue>;
      
-     PFunc = Function(DoReturn:Boolean; Arg:Array of PValue):PValue;
+     TArrPVal = Array of PValue;
+     PArrPVal = ^TArrPVal;
+     
+     PFunc = Function(DoReturn:Boolean; Arg:PArrPVal):PValue;
      
 Const RETURN_VALUE_YES = True; RETURN_VALUE_NO = False;
      
@@ -367,7 +370,7 @@ Function ValToStr(V:PValue):PValue;
       VT_BOO: If (PBoolean(V^.Ptr)^ = TRUE)
                  then P^:='TRUE' else P^:='FALSE';
       VT_STR: P^:=PStr(V^.Ptr)^;
-      VT_ARR: P^:='array('+IntToStr(PDict(V^.Ptr)^.Count)+')';
+      VT_ARR: P^:='array('+IntToStr(PArray(V^.Ptr)^.Count)+')';
       VT_DIC: P^:='dict('+IntToStr(PDict(V^.Ptr)^.Count)+')';
       else P^:='';
       end;
@@ -381,10 +384,33 @@ Function NilVal():PValue;
    Exit(R)
    end;
 
-Procedure FreeVal(Val:PValue);
+Procedure FreeVal_Arr(Val:PValue);
    Var Arr:PArray; AEA:TArray.TEntryArr;
-       Dic:PDict; DEA:TDict.TEntryArr;
        C:LongWord;
+   begin
+   Arr:=PArray(Val^.Ptr);
+   If (Not Arr^.Empty()) then begin
+      AEA := Arr^.ToArray();
+      For C:=Low(AEA) to High(AEA) do
+          If (AEA[C].Val^.Lev >= CurLev) then FreeVal(AEA[C].Val)
+      end;
+   Dispose(Arr, Destroy())
+   end;
+
+Procedure FreeVal_Dict(Val:PValue);
+   Var Dic:PDict; DEA:TDict.TEntryArr;
+       C:LongWord;
+   begin
+   Dic:=PDict(Val^.Ptr);
+   If (Not Dic^.Empty()) then begin
+      DEA := Dic^.ToArray();
+      For C:=Low(DEA) to High(DEA) do
+          If (DEA[C].Val^.Lev >= CurLev) then FreeVal(DEA[C].Val)
+      end;
+   Dispose(Dic, Destroy())
+   end;
+
+Procedure FreeVal(Val:PValue);
    begin
    Case Val^.Typ of
       VT_NIL: ;
@@ -395,24 +421,8 @@ Procedure FreeVal(Val:PValue);
       VT_FLO: Dispose(PFloat(Val^.Ptr));
       VT_BOO: Dispose(PBoolean(Val^.Ptr));
       VT_STR: Dispose(PAnsiString(Val^.Ptr));
-      VT_ARR: begin
-              Arr:=PArray(Val^.Ptr);
-              If (Not Arr^.Empty()) then begin
-                 AEA := Arr^.ToArray();
-                 For C:=Low(AEA) to High(AEA) do
-                     If (AEA[C].Val^.Lev >= CurLev) then FreeVal(AEA[C].Val)
-                 end;
-              Dispose(Arr, Destroy())
-              end;
-      VT_DIC: begin
-              Dic:=PDict(Val^.Ptr);
-              If (Not Dic^.Empty()) then begin
-                 DEA := Dic^.ToArray();
-                 For C:=Low(DEA) to High(DEA) do
-                     If (DEA[C].Val^.Lev >= CurLev) then FreeVal(DEA[C].Val)
-                 end;
-              Dispose(Dic, Destroy())
-              end;
+      VT_ARR: FreeVal_Arr(Val);
+      VT_DIC: FreeVal_Dict(Val);
       end;
    Dispose(Val)
    end;
@@ -445,11 +455,34 @@ Function  CopyTyp(V:PValue):PValue;
 Function  CopyVal(V:PValue):PValue;
    begin Exit(CopyVal(V, CurLev)) end;
 
+Procedure CopyVal_Arr(V,R:PValue;Lv:LongWord);
+   Var NArr, OArr : PArray; AEA : TArray.TEntryArr; 
+       C:LongWord;
+   begin
+   New(NArr,Create()); R^.Ptr:=NArr; OArr:=PArray(V^.Ptr);
+   If (Not OArr^.Empty()) then begin
+       AEA := OArr^.ToArray();
+       For C:=Low(AEA) to High(AEA) do
+           If (AEA[C].Val^.Lev >= Lv)
+              then NArr^.SetVal(AEA[C].Key, CopyVal(AEA[C].Val, Lv))
+              else NArr^.SetVal(AEA[C].Key, AEA[C].Val)
+   end end;
+
+Procedure CopyVal_Dict(V,R:PValue;Lv:LongWord);
+   Var NDic, ODic : PDict; DEA : TDict.TEntryArr;
+       C:LongWord;
+   begin
+   New(NDic,Create('!','~')); R^.Ptr:=NDic; ODic:=PDict(V^.Ptr);
+   If (Not ODic^.Empty()) then begin
+       DEA := ODic^.ToArray();
+       For C:=Low(DEA) to High(DEA) do
+           If (DEA[C].Val^.Lev >= Lv)
+              then NDic^.SetVal(DEA[C].Key, CopyVal(DEA[C].Val, Lv))
+              else NDic^.SetVal(DEA[C].Key, DEA[C].Val)
+   end end;
+
 Function  CopyVal(V:PValue;Lv:LongWord):PValue;
    Var R:PValue; I:PQInt; S:PStr; D:PFloat; B:PBoolean;
-       NArr, OArr : PArray; NDic, ODic : PDict;
-       AEA : TArray.TEntryArr; DEA : TDict.TEntryArr;
-       C:LongWord;
    begin
    New(R); R^.Lev:=Lv; R^.Typ:=V^.Typ;
    Case V^.Typ of 
@@ -460,24 +493,8 @@ Function  CopyVal(V:PValue;Lv:LongWord):PValue;
       VT_FLO: begin New(D); (D^):=PFloat(V^.Ptr)^; R^.Ptr:=D end;
       VT_STR: begin New(S); (S^):=PStr(V^.Ptr)^; R^.Ptr:=S end;
       VT_BOO: begin New(B); (B^):=PBool(V^.Ptr)^; R^.Ptr:=B end;
-      VT_ARR: begin
-              New(NArr,Create()); R^.Ptr:=NArr; OArr:=PArray(V^.Ptr);
-              If (Not OArr^.Empty()) then begin
-                  AEA := OArr^.ToArray();
-                  For C:=Low(AEA) to High(AEA) do
-                      If (AEA[C].Val^.Lev >= Lv)
-                         then NArr^.SetVal(AEA[C].Key, CopyVal(AEA[C].Val, Lv))
-                         else NArr^.SetVal(AEA[C].Key, AEA[C].Val)
-              end end;
-      VT_DIC: begin
-              New(NDic,Create('!','~')); R^.Ptr:=NDic; ODic:=PDict(V^.Ptr);
-              If (Not ODic^.Empty()) then begin
-                  DEA := ODic^.ToArray();
-                  For C:=Low(DEA) to High(DEA) do
-                      If (DEA[C].Val^.Lev >= Lv)
-                         then NDic^.SetVal(DEA[C].Key, CopyVal(DEA[C].Val, Lv))
-                         else NDic^.SetVal(DEA[C].Key, DEA[C].Val)
-              end end;
+      VT_ARR: CopyVal_Arr(V,R,Lv);
+      VT_DIC: CopyVal_Dict(V,R,Lv);
       else R^.Ptr:=NIL
       end;
    Exit(R)

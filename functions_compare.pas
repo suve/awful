@@ -1,20 +1,20 @@
 unit functions_compare;
 
-{$MODE OBJFPC} {$COPERATORS ON}
+{$MODE OBJFPC} {$COPERATORS ON} {$INLINE ON}
 
 interface
    uses Values;
 
 Procedure Register(FT:PFunTrie);
 
-Function F_Eq(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_Seq(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_Neq(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_SNeq(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_Gt(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_Ge(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_Lt(DoReturn:Boolean; Arg:Array of PValue):PValue;
-Function F_Le(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_Eq(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Seq(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Neq(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SNeq(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Gt(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Ge(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Lt(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Le(DoReturn:Boolean; Arg:PArrPVal):PValue;
 
 
 implementation
@@ -35,47 +35,47 @@ Procedure Register(FT:PFunTrie);
 
 Type TCompareFunc = Function(A,B:PValue):Boolean;
 
-Function F_Compare(CompareVals:TCompareFunc; DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_Compare(CompareVals:TCompareFunc; DoReturn:Boolean; Arg:PArrPVal):PValue; Inline;
    Var C, F :LongWord; R:Boolean;
    begin R:=True;
    If (Not DoReturn) then Exit(F_(False, Arg));
-   If (Length(Arg) < 2) then begin
-      If ((Length(Arg) = 1) and (Arg[0]^.Lev >= CurLev)) then FreeVal(Arg[0]);
+   If (Length(Arg^) < 2) then begin
+      If ((Length(Arg^) = 1) and (Arg^[0]^.Lev >= CurLev)) then FreeVal(Arg^[0]);
       If (DoReturn) then Exit(NewVal(VT_BOO, False)) else Exit(NIL)
       end;
-   F := High(Arg);
-   For C:=(High(Arg)-1) downto Low(Arg) do begin
-       R:=CompareVals(Arg[C],Arg[F]);
-       If (Arg[F]^.Lev >= CurLev) then FreeVal(Arg[F]); F -= 1;
+   F := High(Arg^);
+   For C:=(High(Arg^)-1) downto Low(Arg^) do begin
+       R:=CompareVals(Arg^[C],Arg^[F]);
+       If (Arg^[F]^.Lev >= CurLev) then FreeVal(Arg^[F]); F -= 1;
        If (Not R) then Break
        end;
    For C:=F downto 0 do
-       If (Arg[C]^.Lev >= CurLev) then FreeVal(Arg[C]);
+       If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
    If (DoReturn) then Exit(NewVal(VT_BOO, R)) else Exit(NilVal)
    end;
 
-Function F_Eq(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_Eq(DoReturn:Boolean; Arg:PArrPVal):PValue;
    begin Exit(F_Compare(@ValEq, DoReturn, Arg)) end;
 
-Function F_Neq(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_Neq(DoReturn:Boolean; Arg:PArrPVal):PValue;
    begin Exit(F_Compare(@ValNeq, DoReturn, Arg)) end;
 
-Function F_SEq(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_SEq(DoReturn:Boolean; Arg:PArrPVal):PValue;
    begin Exit(F_Compare(@ValSeq, DoReturn, Arg)) end;
 
-Function F_SNEq(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_SNEq(DoReturn:Boolean; Arg:PArrPVal):PValue;
    begin Exit(F_Compare(@ValSneq, DoReturn, Arg)) end;
 
-Function F_Gt(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_Gt(DoReturn:Boolean; Arg:PArrPVal):PValue;
    begin Exit(F_Compare(@ValGt, DoReturn, Arg)) end;
 
-Function F_Ge(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_Ge(DoReturn:Boolean; Arg:PArrPVal):PValue;
    begin Exit(F_Compare(@ValGe, DoReturn, Arg)) end;
 
-Function F_Lt(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_Lt(DoReturn:Boolean; Arg:PArrPVal):PValue;
    begin Exit(F_Compare(@ValLt, DoReturn, Arg)) end;
 
-Function F_Le(DoReturn:Boolean; Arg:Array of PValue):PValue;
+Function F_Le(DoReturn:Boolean; Arg:PArrPVal):PValue;
    begin Exit(F_Compare(@ValLe, DoReturn, Arg)) end;
 
 end.
