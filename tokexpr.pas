@@ -4,7 +4,7 @@ interface
    uses Values;
 
 Type TTokenType = (
-     TK_EXPR, TK_CONS, TK_LITE, TK_VARI, TK_REFE, TK_AVAL, TK_AREF, TK_STRU, TK_BADT);
+     TK_EXPR, TK_CONS, TK_LITE, TK_VARI, TK_REFE, TK_AVAL, TK_AREF, TK_AFLY, TK_BADT);
      
      PExpr = ^TExpr;
      PToken = ^TToken;
@@ -12,7 +12,7 @@ Type TTokenType = (
      
      PArrTk = ^TArrTk;
      TArrTk = record
-     Nam : TStr;
+     Ptr : Pointer;
      Ind : Array of PToken
      end;
      
@@ -28,9 +28,9 @@ Type TTokenType = (
      end;
      
      TProc = record
-     Nu : LongWord;
-     Ex : Array of PExpr;
-     Ar : Array of AnsiString;
+     Num : LongWord;
+     Exp : Array of PExpr;
+     Arg : Array of AnsiString;
      end;
 
 Procedure FreeToken(T:PToken);
@@ -40,7 +40,7 @@ Procedure FreeProc(Var P:TProc);
 implementation
 
 Procedure FreeToken(T:PToken);
-   Var atk:PArrTk; C:LongWord;
+   Var atk:PArrTk; S:PStr; C:LongWord;
    begin
    Case (T^.Typ) of
       TK_EXPR: 
@@ -52,7 +52,13 @@ Procedure FreeToken(T:PToken);
       TK_VARI, TK_REFE:
          Dispose(PStr(T^.Ptr));
       TK_AVAL, TK_AREF: begin
-         atk:=PArrTk(T^.Ptr); 
+         atk:=PArrTk(T^.Ptr);
+         S:=PStr(atk^.Ptr); Dispose(S); 
+         For C:=Low(atk^.Ind) to High(atk^.Ind) do FreeToken(atk^.Ind[C]);
+         SetLength(atk^.Ind, 0); Dispose(atk)
+         end;
+      TK_AFLY: begin
+         atk:=PArrTk(T^.Ptr); FreeExpr(PExpr(atk^.Ptr)); 
          For C:=Low(atk^.Ind) to High(atk^.Ind) do FreeToken(atk^.Ind[C]);
          SetLength(atk^.Ind, 0); Dispose(atk)
          end;
@@ -74,10 +80,10 @@ Procedure FreeExpr(E:PExpr);
 Procedure FreeProc(Var P:TProc);
    Var C:LongWord;
    begin
-   If (Length(P.Ex)>0) then
-      For C:=Low(P.Ex) to High(P.Ex) do
-          FreeExpr(P.Ex[C]);
-   SetLength(P.Ex, 0); SetLength(P.Ar, 0)
+   If (Length(P.Exp)>0) then
+      For C:=Low(P.Exp) to High(P.Exp) do
+          FreeExpr(P.Exp[C]);
+   SetLength(P.Exp, 0); SetLength(P.Arg, 0)
    end;
 
 end.

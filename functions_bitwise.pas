@@ -1,6 +1,6 @@
 unit functions_bitwise;
 
-{$MODE OBJFPC} {$COPERATORS ON} {$INLINE ON}
+{$INCLUDE defines.inc} {$INLINE ON}
 
 interface
    uses Values;
@@ -21,7 +21,7 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('bwnot',@F_not);    FT^.SetVal('b!',@F_Not);
    FT^.SetVal('bwand',@F_and);    FT^.SetVal('b&',@F_and);
    FT^.SetVal('bwxor',@F_xor);    FT^.SetVal('b^',@F_xor);
-   FT^.SetVal('bwor' ,@F_or);     FT^.SetVal('b|',@F_or);
+   FT^.SetVal('bwor' ,@F_or);     FT^.SetVal('b?',@F_or);
    end;
 
 Function F_Not(DoReturn:Boolean; Arg:PArrPVal):PValue;

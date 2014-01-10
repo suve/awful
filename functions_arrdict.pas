@@ -1,5 +1,7 @@
 unit functions_arrdict;
 
+{$INCLUDE defines.inc} {$INLINE ON}
+
 interface
    uses Values;
 
@@ -10,6 +12,8 @@ Function F_array_count(DoReturn:Boolean; Arg:PArrPVal):PValue;
 Function F_array_empty(DoReturn:Boolean; Arg:PArrPVal):PValue;
 Function F_array_flush(DoReturn:Boolean; Arg:PArrPVal):PValue;
 Function F_array_print(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_array_contains_eq(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_array_contains_seq(DoReturn:Boolean; Arg:PArrPVal):PValue;
 
 Function F_dict(DoReturn:Boolean; Arg:PArrPVal):PValue;
 Function F_dict_nextkey(DoReturn:Boolean; Arg:PArrPVal):PValue;
@@ -17,7 +21,9 @@ Function F_dict_keys(DoReturn:Boolean; Arg:PArrPVal):PValue;
 Function F_dict_values(DoReturn:Boolean; Arg:PArrPVal):PValue;
 
 implementation
-   uses EmptyFunc;
+   uses Values_Compare, EmptyFunc, Globals;
+
+Type TCompareFunc = Function(A,B:PValue):Boolean;
 
 Procedure Register(FT:PFunTrie);
    begin
@@ -33,6 +39,8 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('arr-count',@F_array_count); FT^.SetVal('dict-count',@F_array_count);
    FT^.SetVal('arr-empty',@F_array_empty); FT^.SetVal('dict-empty',@F_array_empty);
    FT^.SetVal('arr-print',@F_array_print); FT^.SetVal('dict-print',@F_array_print);
+   FT^.SetVal('arr-contains',@F_array_contains_eq); FT^.SetVal('dict-contains',@F_array_contains_eq);
+   FT^.SetVal('arr-contains-seq',@F_array_contains_seq); FT^.SetVal('dict-contains-seq',@F_array_contains_seq);
    end;
 
 
@@ -190,6 +198,46 @@ Function F_array_flush(DoReturn:Boolean; Arg:PArrPVal):PValue;
    If (DoReturn) then Exit(NewVal(VT_INT,R)) else Exit(NIL)
    end;
 
+Function F_array_contains(DoReturn:Boolean; Arg:PArrPVal; Cmpr:TCompareFunc):PValue; Inline;
+   Var C,I,Lo,Hi:LongInt; Cont:Array of TBool; Res:Boolean;
+       Arr:PArray; AEA:TArray.TEntryArr;
+       Dic:PDict; DEA:TDict.TEntryArr;
+   begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
+   If (Length(Arg^) < 2) then begin
+      F_(False, Arg); Exit(NewVal(VT_BOO, False))
+      end;
+   SetLength(Cont, Length(Arg^));
+   For C:=1 to High(Arg^) do Cont[C]:=False;
+   If (Arg^[0]^.Typ = VT_ARR) then begin
+      Arr:=PArray(Arg^[0]^.Ptr); AEA:=Arr^.ToArray();
+      Lo:=Low(AEA); Hi:=High(AEA);
+      For C:=1 to High(Arg^) do
+          For I:=Lo to Hi do 
+              If (ValEq(Arg^[C], AEA[I].Val)) then begin
+                 Cont[C] := True; Break
+                 end;
+      end else
+   If (Arg^[0]^.Typ = VT_DIC) then begin
+      Dic:=PDict(Arg^[0]^.Ptr); DEA:=Dic^.ToArray();
+      Lo:=Low(DEA); Hi:=High(DEA);
+      For C:=1 to High(Arg^) do
+          For I:=Lo to Hi do 
+              If (ValEq(Arg^[C], DEA[I].Val)) then begin
+                 Cont[C] := True; Break
+                 end;
+      end;
+   F_(False, Arg); Res := True;
+   For C:=1 to High(Arg^) do Res := Res and Cont[C];
+   Exit(NewVal(VT_BOO, Res))
+   end;
+
+Function F_array_contains_eq(DoReturn:Boolean; Arg:PArrPVal):PValue;
+   begin Exit(F_array_contains(DoReturn, Arg, @Values_Compare.ValEq)) end;
+
+Function F_array_contains_seq(DoReturn:Boolean; Arg:PArrPVal):PValue;
+   begin Exit(F_array_contains(DoReturn, Arg, @Values_Compare.ValSeq)) end;
+
 Function F_array_print(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C,I:LongWord; R:Boolean; V:PValue; S:AnsiString;
        Arr:PArray; AEA:TArray.TEntryArr;
@@ -237,7 +285,7 @@ Function F_array_print(DoReturn:Boolean; Arg:PArrPVal):PValue;
    If (R) then begin 
       If (DoReturn) then Exit(NewVal(VT_STR, S)) else Exit(NIL)
       end else begin
-      Writeln(S); If DoReturn then Exit(NilVal()) else Exit(NIL)
+      Writeln(YukStdOut^, S); If DoReturn then Exit(NilVal()) else Exit(NIL)
       end
    end;
 

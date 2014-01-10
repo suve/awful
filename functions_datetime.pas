@@ -1,4 +1,6 @@
-unit functions_datetime; {$MODE OBJFPC}
+unit functions_datetime; 
+
+{$INCLUDE defines.inc}
 
 interface
    uses Values;
@@ -26,7 +28,7 @@ Function F_DateTime_MS(DoReturn:Boolean; Arg:PArrPVal):PValue;
 Function F_DateTime_String(DoReturn:Boolean; Arg:PArrPVal):PValue;
 
 implementation
-   uses Values_Arith, SysUtils, EmptyFunc;
+   uses Values_Arith, SysUtils, EmptyFunc, CoreFunc, Globals;
 
 Procedure Register(FT:PFunTrie);
    begin

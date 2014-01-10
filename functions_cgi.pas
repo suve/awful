@@ -189,7 +189,6 @@ Function DecodeHTML(Str:AnsiString):AnsiString;
    Function DecodeEntity(E:AnsiString):AnsiString;
       Var Codepoint:QInt; 
       begin
-      //Writeln('DecodeEntity: "',E,'"');
       If (E[1]='#') then begin
          If (E[2]='x') then Codepoint:=Values.StrToHex(E)
                        else Codepoint:=Values.StrToInt(E)

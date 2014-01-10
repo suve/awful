@@ -1,6 +1,6 @@
 unit functions_boole;
 
-{$MODE OBJFPC} {$COPERATORS ON}
+{$INCLUDE defines.inc}
 
 interface
    uses Values;
@@ -21,7 +21,7 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('not',@F_not);    FT^.SetVal('!',@F_Not);
    FT^.SetVal('and',@F_and);    FT^.SetVal('&&',@F_and);
    FT^.SetVal('xor',@F_xor);    FT^.SetVal('^^',@F_xor);
-   FT^.SetVal('or' ,@F_or);     FT^.SetVal('||',@F_or);
+   FT^.SetVal('or' ,@F_or);     FT^.SetVal('??',@F_or);
    FT^.SetVal('impl',@F_impl);  FT^.SetVal('->',@F_impl);
    end;
 

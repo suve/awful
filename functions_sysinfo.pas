@@ -1,4 +1,6 @@
-unit functions_sysinfo; {$INLINE ON}
+unit functions_sysinfo;
+
+{$INCLUDE defines.inc} {$INLINE ON}
 
 interface
    uses Values;
@@ -85,12 +87,12 @@ Function GetSysInfo():Boolean;
 
 Function GetSystem():AnsiString; Inline;
    begin 
-   If (unameS = '') then ; //RunCommand('/usr/bin/uname',['-s'],unameS);
+   If (unameS = '') then begin RunCommand('/usr/bin/uname',['-s'],unameS); unameS:=Trim(unameS) end;
    Exit(unameS) end;
 
 Function GetVersion():AnsiString; Inline;
    begin
-   If (unameR = '') then ; //RunCommand('/usr/bin/uname',['-r'],unameR);
+   If (unameR = '') then begin RunCommand('/usr/bin/uname',['-r'],unameR); unameR:=Trim(unameR) end;
    Exit(unameR)
    end;
 

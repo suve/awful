@@ -18,17 +18,19 @@ implementation
 Function ValSeq(A,B:PValue):Boolean;
    begin
    If (A^.Typ <> B^.Typ) then Exit(False);
-   If (A^.Typ >= VT_INT) and (A^.Typ <= VT_BIN) then
-      Exit((PQInt(A^.Ptr)^) = (PQInt(B^.Ptr)^)) else
-   If (A^.Typ = VT_FLO) then
-      Exit((PFloat(A^.Ptr)^) = (PFloat(B^.Ptr)^)) else
-   If (A^.Typ = VT_STR) then
-      Exit((PStr(A^.Ptr)^) = (PStr(B^.Ptr)^)) else
-   If (A^.Typ = VT_BOO) then
-      Exit((PBool(A^.Ptr)^) = (PBool(B^.Ptr)^)) else
-   If (A^.Typ = VT_NIL) and (B^.Typ = VT_NIL) then Exit(True) else
-      {else} Exit(False)
-   end;
+   Case (A^.Typ) of
+      VT_INT .. VT_BIN:
+         Exit((PQInt(A^.Ptr)^) = (PQInt(B^.Ptr)^));
+      VT_FLO:
+         Exit((PFloat(A^.Ptr)^) = (PFloat(B^.Ptr)^));
+      VT_STR:
+         Exit((PStr(A^.Ptr)^) = (PStr(B^.Ptr)^));
+      VT_BOO:
+         Exit((PBool(A^.Ptr)^) = (PBool(B^.Ptr)^));
+      VT_NIL: 
+         Exit(B^.Typ = VT_NIL)
+      else Exit(False)
+   end end;
 
 Function ValSNeq(A,B:PValue):Boolean;
    begin Exit(Not ValSeq(A,B)) end;

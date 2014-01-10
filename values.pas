@@ -13,7 +13,8 @@ Type TValueType = (
      VT_NIL, VT_NEW,
      VT_PTR,
      VT_BOO,
-     VT_INT, VT_HEX, VT_OCT, VT_BIN, VT_FLO,
+     VT_INT, VT_HEX, VT_OCT, VT_BIN,
+     VT_FLO,
      VT_STR, VT_UTF,
      VT_ARR, VT_DIC,
      VT_FIL);
@@ -22,18 +23,18 @@ Const VT_LOG = VT_BOO; VT_DICT = VT_DIC;
 
 Type PValue = ^TValue;
      TValue = record
-     Typ : TValueType;
-     Lev : LongWord;
-     Ptr : Pointer
-     end;
+        Typ : TValueType;
+        Lev : LongWord;
+        Ptr : Pointer
+        end;
      
      PFileVal = ^TFileVal;
      TFileVal = record
-     Fil : System.Text;
-     arw : Char;
-     Pth : AnsiString;
-     Buf : AnsiString
-     end;
+        Fil : System.Text;
+        arw : Char;
+        Pth : AnsiString;
+        Buf : AnsiString
+        end;
      
      PQInt = ^QInt;
      QInt = Int64;
@@ -41,8 +42,8 @@ Type PValue = ^TValue;
      PStr = ^TStr;
      TStr = AnsiString;
      
-     PBool = ^Bool;
-     Bool = Boolean;
+     PBool = ^TBool;
+     TBool = Boolean;
      
      PFloat = ^TFloat;
      TFloat = Extended;
@@ -73,7 +74,7 @@ Function BinToStr(Int:QInt;Digs:LongWord=0):TStr;
 Function RealToStr(Val:Extended;Prec:LongWord):TStr;
 Function FloatToStr(Val:TFloat):TStr;
 
-Function BoolToInt(B:Bool):LongWord; Inline;
+Function BoolToInt(B:TBool):LongWord; Inline;
 
 Function StrToInt(Str:TStr):QInt;
 Function StrToHex(Str:TStr):QInt;
@@ -102,7 +103,7 @@ Procedure SetValMaxLev(V:PValue;Lv:LongWord);
 
 Function NewVal(T:TValueType;V:TFloat):PValue;
 Function NewVal(T:TValueType;V:Int64):PValue;
-Function NewVal(T:TValueType;V:Bool):PValue;
+Function NewVal(T:TValueType;V:TBool):PValue;
 Function NewVal(T:TValueType;V:TStr):PValue;
 Function NewVal(T:TValueType):PValue;
 
@@ -240,7 +241,7 @@ Function StrToReal(Str:TStr):TFloat;
       end else Exit(StrToInt(Str))
    end;
 
-Function BoolToInt(B:Bool):LongWord; Inline;
+Function BoolToInt(B:TBool):LongWord; Inline;
    begin If (B) then Exit(1) else Exit(0) end;
 
 Function ValToInt(V:PValue):PValue;
@@ -248,10 +249,7 @@ Function ValToInt(V:PValue):PValue;
    begin
    New(R); R^.Typ:=VT_INT; R^.Lev:=CurLev; New(P); R^.Ptr:=P;
    Case V^.Typ of
-      VT_INT: P^:=PQInt(V^.Ptr)^;
-      VT_HEX: P^:=PQInt(V^.Ptr)^;
-      VT_OCT: P^:=PQInt(V^.Ptr)^;
-      VT_BIN: P^:=PQInt(V^.Ptr)^;
+      VT_INT .. VT_BIN: P^:=PQInt(V^.Ptr)^;
       VT_FLO: P^:=Trunc(PFloat(V^.Ptr)^);
       VT_BOO: If (PBoolean(V^.Ptr)^ = TRUE) then P^:=1 else P^:=0;
       VT_STR: P^:=StrToInt(PStr(V^.Ptr)^);
@@ -267,10 +265,7 @@ Function ValToHex(V:PValue):PValue;
    begin
    New(R); R^.Typ:=VT_HEX; R^.Lev:=CurLev; New(P); R^.Ptr:=P;
    Case V^.Typ of
-      VT_INT: P^:=PQInt(V^.Ptr)^;
-      VT_HEX: P^:=PQInt(V^.Ptr)^;
-      VT_OCT: P^:=PQInt(V^.Ptr)^;
-      VT_BIN: P^:=PQInt(V^.Ptr)^;
+      VT_INT .. VT_BIN: P^:=PQInt(V^.Ptr)^;
       VT_FLO: P^:=Trunc(PFloat(V^.Ptr)^);
       VT_BOO: If (PBoolean(V^.Ptr)^ = TRUE) then P^:=1 else P^:=0;
       VT_STR: P^:=StrToHex(PStr(V^.Ptr)^);
@@ -286,10 +281,7 @@ Function ValToOct(V:PValue):PValue;
    begin
    New(R); R^.Typ:=VT_OCT; R^.Lev:=CurLev; New(P); R^.Ptr:=P;
    Case V^.Typ of
-      VT_INT: P^:=PQInt(V^.Ptr)^;
-      VT_HEX: P^:=PQInt(V^.Ptr)^;
-      VT_OCT: P^:=PQInt(V^.Ptr)^;
-      VT_BIN: P^:=PQInt(V^.Ptr)^;
+      VT_INT .. VT_BIN: P^:=PQInt(V^.Ptr)^;
       VT_FLO: P^:=Trunc(PFloat(V^.Ptr)^);
       VT_BOO: If (PBoolean(V^.Ptr)^ = TRUE) then P^:=1 else P^:=0;
       VT_STR: P^:=StrToOct(PStr(V^.Ptr)^);
@@ -305,10 +297,7 @@ Function ValToBin(V:PValue):PValue;
    begin
    New(R); R^.Typ:=VT_BIN; R^.Lev:=CurLev; New(P); R^.Ptr:=P;
    Case V^.Typ of
-      VT_INT: P^:=PQInt(V^.Ptr)^;
-      VT_HEX: P^:=PQInt(V^.Ptr)^;
-      VT_OCT: P^:=PQInt(V^.Ptr)^;
-      VT_BIN: P^:=PQInt(V^.Ptr)^;
+      VT_INT .. VT_BIN: P^:=PQInt(V^.Ptr)^;
       VT_FLO: P^:=Trunc(PFloat(V^.Ptr)^);
       VT_BOO: If (PBoolean(V^.Ptr)^ = TRUE) then P^:=1 else P^:=0;
       VT_STR: P^:=StrToBin(PStr(V^.Ptr)^);
@@ -324,10 +313,7 @@ Function ValToFlo(V:PValue):PValue;
    begin
    New(R); R^.Typ:=VT_FLO; R^.Lev:=CurLev; New(P); R^.Ptr:=P;
    Case V^.Typ of
-      VT_INT: P^:=PQInt(V^.Ptr)^;
-      VT_HEX: P^:=PQInt(V^.Ptr)^;
-      VT_OCT: P^:=PQInt(V^.Ptr)^;
-      VT_BIN: P^:=PQInt(V^.Ptr)^;
+      VT_INT .. VT_BIN: P^:=PQInt(V^.Ptr)^;
       VT_FLO: P^:=PFloat(V^.Ptr)^;
       VT_BOO: If (PBoolean(V^.Ptr)^ = TRUE) then P^:=1 else P^:=0;
       VT_STR: P^:=StrToReal(PStr(V^.Ptr)^);
@@ -343,11 +329,8 @@ Function ValToBoo(V:PValue):PValue;
    begin
    New(R); R^.Typ:=VT_BOO; R^.Lev:=CurLev; New(P); R^.Ptr:=P;
    Case V^.Typ of
-      VT_INT: P^:=(PQInt(V^.Ptr)^)<>0;
-      VT_HEX: P^:=(PQInt(V^.Ptr)^)<>0;
-      VT_OCT: P^:=(PQInt(V^.Ptr)^)<>0;
-      VT_BIN: P^:=(PQInt(V^.Ptr)^)<>0;
-      VT_FLO: P^:=(PFloat(V^.Ptr)^)<>0;
+      VT_INT .. VT_BIN: P^:=(PQInt(V^.Ptr)^)<>0;
+      VT_FLO: P^:=Abs(PFloat(V^.Ptr)^)>=1.0;
       VT_BOO: P^:=PBoolean(V^.Ptr)^;
       VT_STR: P^:=StrToBoolDef(PStr(V^.Ptr)^,FALSE);
       VT_ARR: P^:=Not PArray(V^.Ptr)^.Empty();
@@ -433,17 +416,15 @@ Function  EmptyVal(T:TValueType):PValue;
    New(R); R^.Lev:=CurLev; R^.Typ:=T;
    Case T of 
       VT_NIL: R^.Ptr := NIL;
-      VT_INT: begin New(I); (I^):=0;          R^.Ptr:=I end;
-      VT_HEX: begin New(I); (I^):=0;          R^.Ptr:=I end;
-      VT_OCT: begin New(I); (I^):=0;          R^.Ptr:=I end;
-      VT_BIN: begin New(I); (I^):=0;          R^.Ptr:=I end;
+      VT_INT .. VT_BIN:
+              begin New(I); (I^):=0;          R^.Ptr:=I end;
       VT_FLO: begin New(D); (D^):=0.0;        R^.Ptr:=D end;
       VT_STR: begin New(S); (S^):='';         R^.Ptr:=S end;
       VT_BOO: begin New(B); (B^):=False;      R^.Ptr:=B end;
-      VT_ARR: begin New(Arr,Create());    R^.Ptr:=Arr end;
+      VT_ARR: begin New(Arr,Create());        R^.Ptr:=Arr end;
       VT_DIC: begin New(Dic,Create('!','~')); R^.Ptr:=Dic end;
       VT_FIL: begin New(Fil); Fil^.arw:='u';
-                  Fil^.Pth:=''; Fil^.Buf:=''; R^.Ptr:=Fil end;
+                    Fil^.Pth:=''; Fil^.Buf:=''; R^.Ptr:=Fil end;
       else R^.Ptr:=NIL
       end;
    Exit(R)
@@ -486,10 +467,7 @@ Function  CopyVal(V:PValue;Lv:LongWord):PValue;
    begin
    New(R); R^.Lev:=Lv; R^.Typ:=V^.Typ;
    Case V^.Typ of 
-      VT_INT: begin New(I); (I^):=PQInt(V^.Ptr)^; R^.Ptr:=I end;
-      VT_HEX: begin New(I); (I^):=PQInt(V^.Ptr)^; R^.Ptr:=I end;
-      VT_OCT: begin New(I); (I^):=PQInt(V^.Ptr)^; R^.Ptr:=I end;
-      VT_BIN: begin New(I); (I^):=PQInt(V^.Ptr)^; R^.Ptr:=I end;
+      VT_INT .. VT_BIN: begin New(I); (I^):=PQInt(V^.Ptr)^; R^.Ptr:=I end;
       VT_FLO: begin New(D); (D^):=PFloat(V^.Ptr)^; R^.Ptr:=D end;
       VT_STR: begin New(S); (S^):=PStr(V^.Ptr)^; R^.Ptr:=S end;
       VT_BOO: begin New(B); (B^):=PBool(V^.Ptr)^; R^.Ptr:=B end;
@@ -564,7 +542,7 @@ Function NewVal(T:TValueType;V:Int64):PValue;
    P^:=V; Exit(R)
    end;
 
-Function NewVal(T:TValueType;V:Bool):PValue;
+Function NewVal(T:TValueType;V:TBool):PValue;
    Var R:PValue; P:PBool;
    begin
    New(R); R^.Typ:=VT_BOO; New(P); R^.Ptr:=P; R^.Lev:=CurLev;

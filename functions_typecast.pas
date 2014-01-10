@@ -1,5 +1,7 @@
 unit functions_typecast;
 
+{$INCLUDE defines.inc}
+
 interface
    uses Values;
 

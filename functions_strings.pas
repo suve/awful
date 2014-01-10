@@ -1,5 +1,7 @@
 unit functions_strings;
 
+{$INCLUDE defines.inc}
+
 interface
    uses Values;
 
@@ -80,7 +82,6 @@ Function UTF8_Char(Code:LongWord):ShortString;
    While (C > 0) do begin
       S += MakeChar(%10000000, C, C-5); C -= 6
       end;
-   //For C:=1 to Length(S) do Write(BinToStr(Ord(S[C]),8),#32,HexToStr(Ord(S[C]),2),' | '); Writeln;
    Exit(S)
    end;
 

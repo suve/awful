@@ -1,6 +1,6 @@
 unit functions_compare;
 
-{$MODE OBJFPC} {$COPERATORS ON} {$INLINE ON}
+{$INCLUDE defines.inc} {$INLINE ON}
 
 interface
    uses Values;

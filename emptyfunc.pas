@@ -3,10 +3,6 @@ unit emptyfunc;
 interface
    uses Values;
 
-Var GLOB_MS:Comp; GLOB_dt:TDateTime;
-    GLOB_SMS:Comp; GLOB_sdt:TDateTime;
-    YukPath:AnsiString;
-
 Procedure Register(FT:PFunTrie);
 
 Function F_(DoReturn:Boolean; Arg:PArrPVal):PValue;
