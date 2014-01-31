@@ -46,7 +46,7 @@ Type PValue = ^TValue;
      TBool = Boolean;
      
      PFloat = ^TFloat;
-     TFloat = Extended;
+     TFloat = ValReal;
      
      PArray = ^TArray;
      TArray = specialize GenericNumTrie<PValue>;
@@ -71,7 +71,7 @@ Function IntToStr(Int:QInt;Digs:LongWord=0):TStr;
 Function HexToStr(Int:QInt;Digs:LongWord=0):TStr; 
 Function OctToStr(Int:QInt;Digs:LongWord=0):TStr; 
 Function BinToStr(Int:QInt;Digs:LongWord=0):TStr; 
-Function RealToStr(Val:Extended;Prec:LongWord):TStr;
+//Function RealToStr(Val:Extended;Prec:LongWord):TStr;
 Function FloatToStr(Val:TFloat):TStr;
 
 Function BoolToInt(B:TBool):LongWord; Inline;
@@ -83,6 +83,14 @@ Function StrToBin(Str:TStr):QInt;
 Function StrToNum(Str:TStr;Tp:TValueType):QInt;
 Function StrToReal(Str:TStr):TFloat;
 
+Function ValAsBin(V:PValue):QInt;
+Function ValAsOct(V:PValue):QInt;
+Function ValAsInt(V:PValue):QInt;
+Function ValAsHex(V:PValue):QInt;
+Function ValAsFlo(V:PValue):TFloat;
+Function ValAsBoo(V:PValue):TBool;
+Function ValAsStr(V:PValue):TStr;
+
 Function ValToInt(V:PValue):PValue;
 Function ValToHex(V:PValue):PValue;
 Function ValToOct(V:PValue):PValue;
@@ -93,6 +101,8 @@ Function ValToStr(V:PValue):PValue;
 
 Function  NilVal():PValue;
 Procedure FreeVal(Val:PValue);
+Procedure DestroyVal(Val:PValue);
+Procedure AnnihilateVal(Val:PValue);
 Function  EmptyVal(T:TValueType):PValue;
 Function  CopyTyp(V:PValue):PValue;
 Function  CopyVal(V:PValue):PValue;
@@ -109,13 +119,25 @@ Function NewVal(T:TValueType):PValue;
 
 Function Exv(DoReturn:Boolean):PValue; Inline;
 
+Procedure SpareVars_Prepare();
+Procedure SpareVars_Destroy();
+
 implementation
    uses Math; 
+
+Const SpareVarsPerType = SizeOf(NativeInt)*8;
+
+Type TSpareArray = record
+        Arr : Array[1..SpareVarsPerType] of PValue;
+        Num : LongWord;
+        end;
+
+Var SpareVars : Array[TValueType] of TSpareArray;
 
 const Sys16Dig:Array[0..15] of Char=(
       '0','1','2','3','4','5','6','7',
       '8','9','A','B','C','D','E','F');
-   
+  
 Function NumToStr(Int:QInt;Base:LongWord;Digs:LongWord=0):TStr; 
    Var Tmp:TStr; Plus:Boolean;
    Begin Tmp:='';
@@ -151,6 +173,7 @@ Function NumToStr(Num:QInt;Tp:TValueType):TStr;
       VT_BIN: Exit(BinToStr(Num));
    end end;
 
+(*
 Function RealToStr(Val:Extended;Prec:LongWord):TStr;
    Var Res:TStr;
    begin 
@@ -159,6 +182,7 @@ Function RealToStr(Val:Extended;Prec:LongWord):TStr;
    If (Val<1) then Exit(Res+'.'+StringOfChar('0',Prec)); 
    Res+='.'; Res+=NumToStr(Trunc(Val),10,Prec);
    Exit(Res) end;
+*)
 
 Function FloatToStr(Val:TFloat):TStr;
    begin Exit(FloatToStrF(Val, RealForm, RealPrec, RealPrec)) end;
@@ -244,156 +268,266 @@ Function StrToReal(Str:TStr):TFloat;
 Function BoolToInt(B:TBool):LongWord; Inline;
    begin If (B) then Exit(1) else Exit(0) end;
 
-Function ValToInt(V:PValue):PValue;
-   Var R:PValue; P:PQInt;
+Function CreateVal(T:TValueType):PValue;
+   Var R:PValue; I:PQInt; S:PStr; D:PFloat; B:PBoolean; Arr:PArray; Dic:PDict; Fil:PFileVal;
    begin
-   New(R); R^.Typ:=VT_INT; R^.Lev:=CurLev; New(P); R^.Ptr:=P;
+   If (SpareVars[T].Num > 0) then begin
+      R := SpareVars[T].Arr[SpareVars[T].Num];
+      SpareVars[T].Num -= 1
+      end else begin
+      New(R); R^.Typ:=T;
+      Case T of 
+         VT_NIL: R^.Ptr := NIL;
+         VT_INT .. VT_BIN:
+                 begin New(I);            R^.Ptr:=I   end;
+         VT_FLO: begin New(D);            R^.Ptr:=D   end;
+         VT_STR: begin New(S);            R^.Ptr:=S   end;
+         VT_BOO: begin New(B);            R^.Ptr:=B   end;
+         VT_ARR: begin New(Arr,Create()); R^.Ptr:=Arr end;
+         VT_DIC: begin New(Dic,Create()); R^.Ptr:=Dic end;
+         VT_FIL: begin New(Fil);          R^.Ptr:=Fil end;
+                  else R^.Ptr:=NIL
+      end end;
+   Exit(R)
+   end;
+
+Function ValAsInt(V:PValue):QInt;
+   begin
    Case V^.Typ of
-      VT_INT .. VT_BIN: P^:=PQInt(V^.Ptr)^;
-      VT_FLO: P^:=Trunc(PFloat(V^.Ptr)^);
-      VT_BOO: If (PBoolean(V^.Ptr)^ = TRUE) then P^:=1 else P^:=0;
-      VT_STR: P^:=StrToInt(PStr(V^.Ptr)^);
-      VT_ARR: P^:=PArray(V^.Ptr)^.Count;
-      VT_DIC: P^:=PDict(V^.Ptr)^.Count;
-      else P^:=0;
-      end;
+      VT_INT .. VT_BIN: Exit(PQInt(V^.Ptr)^);
+      VT_FLO: Exit(Trunc(PFloat(V^.Ptr)^));
+      VT_BOO: Exit(BoolToInt(PBool(V^.Ptr)^));
+      VT_STR: Exit(StrToInt(PStr(V^.Ptr)^));
+      VT_ARR: Exit(PArray(V^.Ptr)^.Count);
+      VT_DIC: Exit(PDict(V^.Ptr)^.Count);
+      else Exit(0)
+   end end;
+
+Function ValAsHex(V:PValue):QInt;
+   begin
+   Case V^.Typ of
+      VT_INT .. VT_BIN: Exit(PQInt(V^.Ptr)^);
+      VT_FLO: Exit(Trunc(PFloat(V^.Ptr)^));
+      VT_BOO: Exit(BoolToInt(PBool(V^.Ptr)^));
+      VT_STR: Exit(StrToHex(PStr(V^.Ptr)^));
+      VT_ARR: Exit(PArray(V^.Ptr)^.Count);
+      VT_DIC: Exit(PDict(V^.Ptr)^.Count);
+      else Exit(0)
+   end end;
+
+Function ValAsOct(V:PValue):QInt;
+   begin
+   Case V^.Typ of
+      VT_INT .. VT_BIN: Exit(PQInt(V^.Ptr)^);
+      VT_FLO: Exit(Trunc(PFloat(V^.Ptr)^));
+      VT_BOO: Exit(BoolToInt(PBool(V^.Ptr)^));
+      VT_STR: Exit(StrToOct(PStr(V^.Ptr)^));
+      VT_ARR: Exit(PArray(V^.Ptr)^.Count);
+      VT_DIC: Exit(PDict(V^.Ptr)^.Count);
+      else Exit(0)
+   end end;
+
+Function ValAsBin(V:PValue):QInt;
+   begin
+   Case V^.Typ of
+      VT_INT .. VT_BIN: Exit(PQInt(V^.Ptr)^);
+      VT_FLO: Exit(Trunc(PFloat(V^.Ptr)^));
+      VT_BOO: Exit(BoolToInt(PBool(V^.Ptr)^));
+      VT_STR: Exit(StrToBin(PStr(V^.Ptr)^));
+      VT_ARR: Exit(PArray(V^.Ptr)^.Count);
+      VT_DIC: Exit(PDict(V^.Ptr)^.Count);
+      else Exit(0)
+   end end;
+
+Function ValAsFlo(V:PValue):TFloat;
+   begin
+   Case V^.Typ of
+      VT_INT .. VT_BIN: Exit(PQInt(V^.Ptr)^);
+      VT_FLO: Exit(PFloat(V^.Ptr)^);
+      VT_BOO: Exit(BoolToInt(PBool(V^.Ptr)^));
+      VT_STR: Exit(StrToReal(PStr(V^.Ptr)^));
+      VT_ARR: Exit(PArray(V^.Ptr)^.Count);
+      VT_DIC: Exit(PDict(V^.Ptr)^.Count);
+      else Exit(0.0)
+   end end;
+
+Function ValAsBoo(V:PValue):TBool;
+   begin
+   Case V^.Typ of
+      VT_INT .. VT_BIN: Exit((PQInt(V^.Ptr)^)<>0);
+      VT_FLO: Exit(Abs(PFloat(V^.Ptr)^)>=1.0);
+      VT_BOO: Exit(PBoolean(V^.Ptr)^);
+      VT_STR: Exit(StrToBoolDef(PStr(V^.Ptr)^,FALSE));
+      VT_ARR: Exit(Not PArray(V^.Ptr)^.Empty());
+      VT_DIC: Exit(Not PDict(V^.Ptr)^.Empty());
+      else Exit(False)
+   end end;
+
+Function ValAsStr(V:PValue):TStr;
+   begin
+   Case V^.Typ of
+      VT_INT: Exit(IntToStr(PQInt(V^.Ptr)^));
+      VT_HEX: Exit(HexToStr(PQInt(V^.Ptr)^));
+      VT_OCT: Exit(OctToStr(PQInt(V^.Ptr)^));
+      VT_BIN: Exit(BinToStr(PQInt(V^.Ptr)^));
+      VT_FLO: Exit(FloatToStr(PFloat(V^.Ptr)^));
+      VT_BOO: If (PBoolean(V^.Ptr)^ = TRUE)
+                 then Exit('TRUE') else Exit('FALSE');
+      VT_STR: Exit(PStr(V^.Ptr)^);
+      VT_ARR: Exit('array('+IntToStr(PArray(V^.Ptr)^.Count)+')');
+      VT_DIC: Exit('dict('+IntToStr(PDict(V^.Ptr)^.Count)+')');
+      else Exit('')
+   end end;
+
+Function ValToInt(V:PValue):PValue;
+   Var R:PValue;
+   begin
+   R:=CreateVal(VT_INT); R^.Lev:=CurLev;
+   PQInt(R^.Ptr)^:=ValAsInt(V); 
    Exit(R)
    end;
 
 Function ValToHex(V:PValue):PValue;
-   Var R:PValue; P:PQInt;
+   Var R:PValue;
    begin
-   New(R); R^.Typ:=VT_HEX; R^.Lev:=CurLev; New(P); R^.Ptr:=P;
-   Case V^.Typ of
-      VT_INT .. VT_BIN: P^:=PQInt(V^.Ptr)^;
-      VT_FLO: P^:=Trunc(PFloat(V^.Ptr)^);
-      VT_BOO: If (PBoolean(V^.Ptr)^ = TRUE) then P^:=1 else P^:=0;
-      VT_STR: P^:=StrToHex(PStr(V^.Ptr)^);
-      VT_ARR: P^:=PArray(V^.Ptr)^.Count;
-      VT_DIC: P^:=PDict(V^.Ptr)^.Count;
-      else P^:=0;
-      end;
+   R:=CreateVal(VT_HEX); R^.Lev:=CurLev;
+   PQInt(R^.Ptr)^:=ValAsHex(V);
    Exit(R)
    end;
 
 Function ValToOct(V:PValue):PValue;
-   Var R:PValue; P:PQInt;
+   Var R:PValue;
    begin
-   New(R); R^.Typ:=VT_OCT; R^.Lev:=CurLev; New(P); R^.Ptr:=P;
-   Case V^.Typ of
-      VT_INT .. VT_BIN: P^:=PQInt(V^.Ptr)^;
-      VT_FLO: P^:=Trunc(PFloat(V^.Ptr)^);
-      VT_BOO: If (PBoolean(V^.Ptr)^ = TRUE) then P^:=1 else P^:=0;
-      VT_STR: P^:=StrToOct(PStr(V^.Ptr)^);
-      VT_ARR: P^:=PArray(V^.Ptr)^.Count;
-      VT_DIC: P^:=PDict(V^.Ptr)^.Count;
-      else P^:=0;
-      end;
+   R:=CreateVal(VT_OCT); R^.Lev:=CurLev;
+   PQInt(R^.Ptr)^:=ValAsOct(V); 
    Exit(R)
    end;
 
 Function ValToBin(V:PValue):PValue;
-   Var R:PValue; P:PQInt;
+   Var R:PValue;
    begin
-   New(R); R^.Typ:=VT_BIN; R^.Lev:=CurLev; New(P); R^.Ptr:=P;
-   Case V^.Typ of
-      VT_INT .. VT_BIN: P^:=PQInt(V^.Ptr)^;
-      VT_FLO: P^:=Trunc(PFloat(V^.Ptr)^);
-      VT_BOO: If (PBoolean(V^.Ptr)^ = TRUE) then P^:=1 else P^:=0;
-      VT_STR: P^:=StrToBin(PStr(V^.Ptr)^);
-      VT_ARR: P^:=PArray(V^.Ptr)^.Count;
-      VT_DIC: P^:=PDict(V^.Ptr)^.Count;
-      else P^:=0;
-      end;
+   R:=CreateVal(VT_BIN); R^.Lev:=CurLev;
+   PQInt(R^.Ptr)^:=ValAsBin(V);
    Exit(R)
    end;
 
 Function ValToFlo(V:PValue):PValue;
-   Var R:PValue; P:PFloat;
+   Var R:PValue;
    begin
-   New(R); R^.Typ:=VT_FLO; R^.Lev:=CurLev; New(P); R^.Ptr:=P;
-   Case V^.Typ of
-      VT_INT .. VT_BIN: P^:=PQInt(V^.Ptr)^;
-      VT_FLO: P^:=PFloat(V^.Ptr)^;
-      VT_BOO: If (PBoolean(V^.Ptr)^ = TRUE) then P^:=1 else P^:=0;
-      VT_STR: P^:=StrToReal(PStr(V^.Ptr)^);
-      VT_ARR: P^:=PArray(V^.Ptr)^.Count;
-      VT_DIC: P^:=PDict(V^.Ptr)^.Count;
-      else P^:=0;
-      end;
+   R:=CreateVal(VT_FLO); R^.Lev:=CurLev;
+   PFloat(R^.Ptr)^:=ValAsFlo(V);
    Exit(R)
    end;
 
 Function ValToBoo(V:PValue):PValue;
-   Var R:PValue; P:PBoolean;
+   Var R:PValue;
    begin
-   New(R); R^.Typ:=VT_BOO; R^.Lev:=CurLev; New(P); R^.Ptr:=P;
-   Case V^.Typ of
-      VT_INT .. VT_BIN: P^:=(PQInt(V^.Ptr)^)<>0;
-      VT_FLO: P^:=Abs(PFloat(V^.Ptr)^)>=1.0;
-      VT_BOO: P^:=PBoolean(V^.Ptr)^;
-      VT_STR: P^:=StrToBoolDef(PStr(V^.Ptr)^,FALSE);
-      VT_ARR: P^:=Not PArray(V^.Ptr)^.Empty();
-      VT_DIC: P^:=Not PDict(V^.Ptr)^.Empty();
-      else P^:=False;
-      end;
+   R:=CreateVal(VT_BOO); R^.Lev:=CurLev;
+   PBool(R^.Ptr)^:=ValAsBoo(V);
    Exit(R)
    end;
 
 Function ValToStr(V:PValue):PValue;
-   Var R:PValue; P:PStr;
+   Var R:PValue;
    begin
-   New(R); R^.Typ:=VT_STR; R^.Lev:=CurLev; New(P); R^.Ptr:=P;
-   Case V^.Typ of
-      VT_INT: P^:=IntToStr(PQInt(V^.Ptr)^);
-      VT_HEX: P^:=HexToStr(PQInt(V^.Ptr)^);
-      VT_OCT: P^:=OctToStr(PQInt(V^.Ptr)^);
-      VT_BIN: P^:=BinToStr(PQInt(V^.Ptr)^);
-      VT_FLO: P^:=FloatToStr(PFloat(V^.Ptr)^);
-      VT_BOO: If (PBoolean(V^.Ptr)^ = TRUE)
-                 then P^:='TRUE' else P^:='FALSE';
-      VT_STR: P^:=PStr(V^.Ptr)^;
-      VT_ARR: P^:='array('+IntToStr(PArray(V^.Ptr)^.Count)+')';
-      VT_DIC: P^:='dict('+IntToStr(PDict(V^.Ptr)^.Count)+')';
-      else P^:='';
-      end;
+   R:=CreateVal(VT_STR); R^.Lev:=CurLev;
+   PStr(R^.Ptr)^:=ValAsStr(V);
    Exit(R)
    end;
 
 Function NilVal():PValue;
    Var R:PValue;
    begin
-   New(R); R^.Typ:=VT_NIL; R^.Ptr:=NIL; R^.Lev:=CurLev;
+   R:=CreateVal(VT_NIL); R^.Ptr:=NIL; R^.Lev:=CurLev;
    Exit(R)
    end;
 
-Procedure FreeVal_Arr(Val:PValue);
+Type TValProc = Procedure(V:PValue);
+
+Procedure INLINE_FreeArr(Val:PValue;Proc:TValProc); Inline;
    Var Arr:PArray; AEA:TArray.TEntryArr;
        C:LongWord;
    begin
    Arr:=PArray(Val^.Ptr);
    If (Not Arr^.Empty()) then begin
-      AEA := Arr^.ToArray();
+      AEA := Arr^.ToArray(); Arr^.Flush();
       For C:=Low(AEA) to High(AEA) do
-          If (AEA[C].Val^.Lev >= CurLev) then FreeVal(AEA[C].Val)
-      end;
-   Dispose(Arr, Destroy())
+          If (AEA[C].Val^.Lev >= CurLev) then Proc(AEA[C].Val)
+      end
    end;
 
-Procedure FreeVal_Dict(Val:PValue);
+Procedure INLINE_FreeDict(Val:PValue;Proc:TValProc); Inline;
    Var Dic:PDict; DEA:TDict.TEntryArr;
        C:LongWord;
    begin
    Dic:=PDict(Val^.Ptr);
    If (Not Dic^.Empty()) then begin
-      DEA := Dic^.ToArray();
+      DEA := Dic^.ToArray(); Dic^.Flush();
       For C:=Low(DEA) to High(DEA) do
-          If (DEA[C].Val^.Lev >= CurLev) then FreeVal(DEA[C].Val)
-      end;
-   Dispose(Dic, Destroy())
+          If (DEA[C].Val^.Lev >= CurLev) then Proc(DEA[C].Val)
+      end
    end;
 
+Procedure FreeVal_Arr(Val:PValue);
+   begin INLINE_FreeArr(Val,@FreeVal) end;
+
+Procedure FreeVal_Dict(Val:PValue);
+   begin INLINE_FreeDict(Val,@FreeVal) end;
+
+Procedure DestroyVal_Arr(Val:PValue);
+   begin
+   INLINE_FreeArr(Val,@FreeVal); 
+   Dispose(PArr(Val^.Ptr), Destroy())
+   end;
+
+Procedure DestroyVal_Dict(Val:PValue);
+   begin
+   INLINE_FreeDict(Val,@FreeVal); 
+   Dispose(PDict(Val^.Ptr), Destroy())
+   end;
+
+Procedure AnnihilateVal_Arr(Val:PValue);
+   begin
+   INLINE_FreeArr(Val,@AnnihilateVal); 
+   Dispose(PArr(Val^.Ptr), Destroy())
+   end;
+
+Procedure AnnihilateVal_Dict(Val:PValue);
+   begin
+   INLINE_FreeDict(Val,@AnnihilateVal); 
+   Dispose(PDict(Val^.Ptr), Destroy())
+   end;
+
+Procedure DestroyVal_INLINE(Val:PValue); Inline;
+   begin
+   Case Val^.Typ of
+      VT_NIL: ;
+      VT_INT .. VT_BIN: 
+              Dispose(PQInt(Val^.Ptr));
+      VT_FLO: Dispose(PFloat(Val^.Ptr));
+      VT_BOO: Dispose(PBoolean(Val^.Ptr));
+      VT_STR: Dispose(PAnsiString(Val^.Ptr));
+      VT_ARR: begin FreeVal_Arr(Val);  Dispose(PArr(Val^.Ptr), Destroy())  end;
+      VT_DIC: begin FreeVal_Dict(Val); Dispose(PDict(Val^.Ptr), Destroy()) end;
+      end;
+   Dispose(Val)
+   end;
+
+Procedure DestroyVal(Val:PValue);
+   begin DestroyVal_INLINE(Val) end;
+
 Procedure FreeVal(Val:PValue);
+   begin
+   If (SpareVars[Val^.Typ].Num < SpareVarsPerType) then begin
+      If (Val^.Typ = VT_ARR) then FreeVal_Arr(Val) else
+      If (Val^.Typ = VT_DIC) then FreeVal_Dict(Val);
+      
+      SpareVars[Val^.Typ].Num += 1;
+      SpareVars[Val^.Typ].Arr[SpareVars[Val^.Typ].Num] := Val
+      end else DestroyVal_INLINE(Val)
+   end;
+
+Procedure AnnihilateVal(Val:PValue);
    begin
    Case Val^.Typ of
       VT_NIL: ;
@@ -404,28 +538,25 @@ Procedure FreeVal(Val:PValue);
       VT_FLO: Dispose(PFloat(Val^.Ptr));
       VT_BOO: Dispose(PBoolean(Val^.Ptr));
       VT_STR: Dispose(PAnsiString(Val^.Ptr));
-      VT_ARR: FreeVal_Arr(Val);
-      VT_DIC: FreeVal_Dict(Val);
+      VT_ARR: AnnihilateVal_Arr(Val); 
+      VT_DIC: AnnihilateVal_Dict(Val);
       end;
    Dispose(Val)
    end;
-
-Function  EmptyVal(T:TValueType):PValue;
-   Var R:PValue; I:PQInt; S:PStr; D:PFloat; B:PBoolean; Arr:PArray; Dic:PDict; Fil:PFileVal;
+   
+Function EmptyVal(T:TValueType):PValue;
+   Var R:PValue;
    begin
-   New(R); R^.Lev:=CurLev; R^.Typ:=T;
+   R:=CreateVal(T); R^.Lev := CurLev;
    Case T of 
-      VT_NIL: R^.Ptr := NIL;
       VT_INT .. VT_BIN:
-              begin New(I); (I^):=0;          R^.Ptr:=I end;
-      VT_FLO: begin New(D); (D^):=0.0;        R^.Ptr:=D end;
-      VT_STR: begin New(S); (S^):='';         R^.Ptr:=S end;
-      VT_BOO: begin New(B); (B^):=False;      R^.Ptr:=B end;
-      VT_ARR: begin New(Arr,Create());        R^.Ptr:=Arr end;
-      VT_DIC: begin New(Dic,Create('!','~')); R^.Ptr:=Dic end;
-      VT_FIL: begin New(Fil); Fil^.arw:='u';
-                    Fil^.Pth:=''; Fil^.Buf:=''; R^.Ptr:=Fil end;
-      else R^.Ptr:=NIL
+              PQInt(R^.Ptr)^:=0;
+      VT_FLO: PFloat(R^.Ptr)^:=0.0; 
+      VT_STR: PStr(R^.Ptr)^:='';
+      VT_BOO: PBool(R^.Ptr)^:=False;
+      VT_FIL: begin PFileVal(R^.Ptr)^.arw:='u';
+                    PFileVal(R^.Ptr)^.Pth:='';
+                    PFileVal(R^.Ptr)^.Buf:=''   end;
       end;
    Exit(R)
    end;
@@ -440,7 +571,7 @@ Procedure CopyVal_Arr(V,R:PValue;Lv:LongWord);
    Var NArr, OArr : PArray; AEA : TArray.TEntryArr; 
        C:LongWord;
    begin
-   New(NArr,Create()); R^.Ptr:=NArr; OArr:=PArray(V^.Ptr);
+   NArr:=PArray(R^.Ptr); OArr:=PArray(V^.Ptr);
    If (Not OArr^.Empty()) then begin
        AEA := OArr^.ToArray();
        For C:=Low(AEA) to High(AEA) do
@@ -453,7 +584,7 @@ Procedure CopyVal_Dict(V,R:PValue;Lv:LongWord);
    Var NDic, ODic : PDict; DEA : TDict.TEntryArr;
        C:LongWord;
    begin
-   New(NDic,Create('!','~')); R^.Ptr:=NDic; ODic:=PDict(V^.Ptr);
+   NDic:=PDict(R^.Ptr); ODic:=PDict(V^.Ptr);
    If (Not ODic^.Empty()) then begin
        DEA := ODic^.ToArray();
        For C:=Low(DEA) to High(DEA) do
@@ -463,17 +594,17 @@ Procedure CopyVal_Dict(V,R:PValue;Lv:LongWord);
    end end;
 
 Function  CopyVal(V:PValue;Lv:LongWord):PValue;
-   Var R:PValue; I:PQInt; S:PStr; D:PFloat; B:PBoolean;
+   Var R:PValue;
    begin
-   New(R); R^.Lev:=Lv; R^.Typ:=V^.Typ;
+   R:=CreateVal(V^.Typ); R^.Lev:=Lv;
    Case V^.Typ of 
-      VT_INT .. VT_BIN: begin New(I); (I^):=PQInt(V^.Ptr)^; R^.Ptr:=I end;
-      VT_FLO: begin New(D); (D^):=PFloat(V^.Ptr)^; R^.Ptr:=D end;
-      VT_STR: begin New(S); (S^):=PStr(V^.Ptr)^; R^.Ptr:=S end;
-      VT_BOO: begin New(B); (B^):=PBool(V^.Ptr)^; R^.Ptr:=B end;
+      VT_INT .. VT_BIN: 
+              PQInt(R^.Ptr)^:=PQInt(V^.Ptr)^;
+      VT_FLO: PFloat(R^.Ptr)^:=PFloat(V^.Ptr)^;
+      VT_STR: PStr(R^.Ptr)^:=PStr(V^.Ptr)^;
+      VT_BOO: PBool(R^.Ptr)^:=PBool(V^.Ptr)^;
       VT_ARR: CopyVal_Arr(V,R,Lv);
       VT_DIC: CopyVal_Dict(V,R,Lv);
-      else R^.Ptr:=NIL
       end;
    Exit(R)
    end;
@@ -529,47 +660,51 @@ Procedure SwapPtrs(A,B:PValue);
    end;
 
 Function NewVal(T:TValueType;V:TFloat):PValue;
-   Var R:PValue; P:PFloat;
+   Var R:PValue; 
    begin
-   New(R); R^.Typ:=VT_FLO; New(P); R^.Ptr:=P; R^.Lev:=CurLev;
-   P^:=V; Exit(R)
+   R:=CreateVal(T); R^.Lev:=CurLev; PFloat(R^.Ptr)^:=V; Exit(R)
    end;
 
 Function NewVal(T:TValueType;V:Int64):PValue;
-   Var R:PValue; P:PQInt;
+   Var R:PValue; 
    begin
-   New(R); R^.Typ:=T; New(P); R^.Ptr:=P; R^.Lev:=CurLev;
-   P^:=V; Exit(R)
+   R:=CreateVal(T); R^.Lev:=CurLev; PQInt(R^.Ptr)^:=V; Exit(R)
    end;
 
 Function NewVal(T:TValueType;V:TBool):PValue;
-   Var R:PValue; P:PBool;
+   Var R:PValue; 
    begin
-   New(R); R^.Typ:=VT_BOO; New(P); R^.Ptr:=P; R^.Lev:=CurLev;
-   P^:=V; Exit(R)
+   R:=CreateVal(T); R^.Lev:=CurLev; PBool(R^.Ptr)^:=V; Exit(R)
    end;
 
 Function NewVal(T:TValueType;V:TStr):PValue;
-   Var R:PValue; P:PStr;
+   Var R:PValue; 
    begin
-   New(R); R^.Typ:=VT_STR; New(P); R^.Ptr:=P; R^.Lev:=CurLev;
-   P^:=V; Exit(R)
+   R:=CreateVal(T); R^.Lev:=CurLev; PStr(R^.Ptr)^:=V; Exit(R)
    end;
 
 Function NewVal(T:TValueType):PValue;
-   Var R:PValue; Arr : PArray; Dic : PDict;
-   begin
-   New(R); R^.Typ := T; R^.Lev := CurLev;
-   Case T of
-      VT_ARR: begin New(Arr,Create()); R^.Ptr := Arr end;
-      VT_DIC: begin New(Dic,Create('!','~')); R^.Ptr := Dic end;
-         else begin R^.Typ := VT_NIL; R^.Ptr := NIL end
-      end;
-   Exit(R)
+   Var R:PValue;
+   begin 
+   R:=CreateVal(T); R^.Lev:=CurLev; Exit(R)
    end;
-
 
 Function Exv(DoReturn:Boolean):PValue; Inline;
    begin If (DoReturn) then Exit(NilVal()) else Exit(NIL) end;
+
+Procedure SpareVars_Prepare();
+   Var T:TValueType;
+   begin
+   For T:=Low(TValueType) to High(TValueType) do
+       SpareVars[T].Num := 0
+   end;
+
+Procedure SpareVars_Destroy();
+   Var T:TValueType; i:LongInt;
+   begin
+   For T:=Low(TValueType) to High(TValueType) do
+       For i:=1 to SpareVars[T].Num do
+           AnnihilateVal(SpareVars[T].Arr[i])
+   end;
 
 end.

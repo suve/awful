@@ -152,34 +152,31 @@ Function DecodeURL(Str:AnsiString):AnsiString;
    end;
 
 Function EncodeURL(Str:AnsiString):AnsiString;
-   Var Res:AnsiString; P{,R}:LongWord;
+   Var Res:AnsiString; P:LongWord;
    begin
-   Res:=''; //SetLength(Res,Length(Str));
-   {R:=1;} P:=1;
-   While (P<=Length(Str)) do
-      If (((Str[P]>=#48) and (Str[P]<= #57)) or //0-9
-          ((Str[P]>=#65) and (Str[P]<= #90)) or //A-Z
-          ((Str[P]>=#97) and (Str[P]<=#122)) or //a-z
-          (Pos(Str[P],'-_.~')>0))
-         then Res+=Str[P]
-         else Res+='%'+HexToStr(Ord(Str[P]),2);
+   Res:=''; 
+   For P:=1 to Length(Str) do
+       If (((Str[P]>=#48) and (Str[P]<= #57)) or //0-9
+           ((Str[P]>=#65) and (Str[P]<= #90)) or //A-Z
+           ((Str[P]>=#97) and (Str[P]<=#122)) or //a-z
+           (Pos(Str[P],'-_.~')>0))
+          then Res+=Str[P]
+          else Res+='%'+HexToStr(Ord(Str[P]),2);
    Exit(Res)
    end;
 
 Function EncodeHTML(Str:AnsiString):AnsiString;
-   Var Res:AnsiString; P{,R}:LongWord;
+   Var Res:AnsiString; P:LongWord;
    begin
-   Res:=''; //SetLength(Res,Length(Str));
-   {R:=1;} P:=1;
-   While (P<=Length(Str)) do
+   Res:=''; 
+   For P:=1 to Length(Str) do
       Case Str[P] of
-         '"': begin Res+='&quot;'; {R+=6;} P+=1 end;
-         '&': begin Res+='&amp;';  {R+=5;} P+=1 end;
-         '<': begin Res+='&lt;';   {R+=4;} P+=1 end;
-         '>': begin Res+='&gt;';   {R+=4;} P+=1 end;
-         else begin Res+=Str[P];   {R+=1;} P+=1 end
+         '"': begin Res+='&quot;'; {R+=6; P+=1} end;
+         '&': begin Res+='&amp;';  {R+=5; P+=1} end;
+         '<': begin Res+='&lt;';   {R+=4; P+=1} end;
+         '>': begin Res+='&gt;';   {R+=4; P+=1} end;
+         else begin Res+=Str[P];   {R+=1; P+=1} end
       end;
-   //SetLength(Res, R);
    Exit(Res)
    end;
 
@@ -484,7 +481,7 @@ Function DecodeHTML(Str:AnsiString):AnsiString;
 
 
 Function F_ParseString(Func:TStrFunc; DoReturn:Boolean; Arg:PArrPVal):PValue;
-   Var C:LongWord; V:PValue; S:AnsiString;
+   Var C:LongWord; S:AnsiString;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg^) = 0) then Exit(NewVal(VT_STR, ''));
@@ -492,11 +489,7 @@ Function F_ParseString(Func:TStrFunc; DoReturn:Boolean; Arg:PArrPVal):PValue;
        If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
    If (Arg^[0]^.Typ = VT_STR)
       then S:=PStr(Arg^[0]^.Ptr)^
-      else begin
-      V:=ValToStr(Arg^[0]);
-      S:=PStr(V^.Ptr)^;
-      FreeVal(V)
-      end;
+      else S:=ValAsStr(Arg^[0]);
    If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
    Exit(NewVal(VT_STR,Func(S)))
    end;
@@ -519,14 +512,14 @@ Function F_HTTPheader(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var T:PValue; K,V:AnsiString; C:LongWord; Match:Boolean;
    begin
    If (Length(Arg^)=0) then If (DoReturn) then Exit(NilVal()) else Exit(NIL);
-   If (Arg^[0]^.Typ <> VT_STR) then begin
-      T:=ValToStr(Arg^[0]); K:=PStr(T^.Ptr)^; FreeVal(T)
-      end else K:=PStr(Arg^[0]^.Ptr)^;
+   If (Arg^[0]^.Typ = VT_STR)
+      then K:=PStr(Arg^[0]^.Ptr)^
+      else K:=ValAsStr(Arg^[0]);
    K:=LowerCase(Trim(K));
    If (Length(Arg^)>=2) then begin
-      If (Arg^[1]^.Typ <> VT_STR) then begin
-         T:=ValToStr(Arg^[1]); V:=PStr(T^.Ptr)^; FreeVal(T)
-         end else V:=PStr(Arg^[1]^.Ptr)^;
+      If (Arg^[1]^.Typ <> VT_STR) 
+         then V:=PStr(Arg^[1]^.Ptr)^
+         else V:=ValAsStr(Arg^[1]);
       Match := False;
       If (Length(Headers)>0) then
          For C:=Low(Headers) to High(Headers) do
@@ -553,12 +546,12 @@ Function F_HTTPcookie(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var T:PValue; K,V:AnsiString;
    begin
    If (Length(Arg^) < 2) then If (DoReturn) then Exit(NilVal()) else Exit(NIL);
-   If (Arg^[0]^.Typ <> VT_STR) then begin
-      T:=ValToStr(Arg^[0]); K:=PStr(T^.Ptr)^; FreeVal(T)
-      end else K:=PStr(Arg^[0]^.Ptr)^;
-   If (Arg^[1]^.Typ <> VT_STR) then begin
-      T:=ValToStr(Arg^[1]); V:=PStr(T^.Ptr)^; FreeVal(T)
-      end else V:=PStr(Arg^[1]^.Ptr)^;
+   If (Arg^[0]^.Typ = VT_STR)
+      then K:=PStr(Arg^[0]^.Ptr)^
+      else K:=ValAsStr(Arg^[0]);
+   If (Arg^[1]^.Typ = VT_STR) 
+      then V:=PStr(Arg^[1]^.Ptr)^
+      else V:=ValAsStr(Arg^[1]);
    SetLength(Cookies, Length(Cookies)+1);
    Cookies[High(Cookies)].Name := Trim(K);
    Cookies[High(Cookies)].Value := V;
@@ -759,25 +752,19 @@ Function F_CakeProcess(DoReturn:Boolean; Arg:PArrPVal):PValue;
 {$ENDIF}
 
 Function F_ArrIs_(Var Arr:TKeyValArr; DoReturn:Boolean; Var Arg:PArrPVal):PValue;
-   Var B:Boolean; C:LongWord; V:PValue;
+   Var B:Boolean; C:LongWord; 
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg^)=0) then Exit(NewVal(VT_BOO,True));
    B:=True; For C:=High(Arg^) downto Low(Arg^) do begin
-      If (Arg^[C]^.Typ<>VT_STR)
-         then begin
-            V:=ValToStr(Arg^[C]);
-            If (Not ArrSet(Arr, PStr(V^.Ptr)^)) then B:=False;
-            FreeVal(V);
-         end else
-         If (Not ArrSet(Arr, PStr(Arg^[C]^.Ptr)^)) then B:=False;
+      If (Not ArrSet(Arr, ValAsStr(Arg^[C]))) then B:=False;
       If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
       end;
    Exit(NewVal(VT_BOO,B))
    end;
 
 Function F_ArrVal(Var Arr:TKeyValArr; DoReturn:Boolean; Var Arg:PArrPVal):PValue;
-   Var C:LongWord; V:PValue; S:AnsiString;
+   Var C:LongWord; S:AnsiString;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg^)=0) then Exit(NewVal(VT_STR,''));
@@ -787,17 +774,13 @@ Function F_ArrVal(Var Arr:TKeyValArr; DoReturn:Boolean; Var Arg:PArrPVal):PValue
       then S:=ArrStr(Arr, PQInt(Arg^[0]^.Ptr)^) else
    If (Arg^[0]^.Typ = VT_STR)
       then S:=ArrStr(Arr, PStr(Arg^[0]^.Ptr)^)
-      else begin
-      V:=ValToStr(Arg^[0]);
-      S:=ArrStr(Arr, PStr(V^.Ptr)^);
-      FreeVal(V)
-      end;
+      else S:=ArrStr(Arr, ValAsStr(Arg^[0]));
    If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
    Exit(NewVal(VT_STR,S))
    end;
 
 Function F_ArrKey(Var Arr:TKeyValArr; DoReturn:Boolean; Var Arg:PArrPVal):PValue;
-   Var C:LongWord; V:PValue; S:AnsiString;
+   Var C:LongWord; S:AnsiString;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg^)=0) then Exit(NewVal(VT_STR,''));
@@ -805,11 +788,7 @@ Function F_ArrKey(Var Arr:TKeyValArr; DoReturn:Boolean; Var Arg:PArrPVal):PValue
       If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
    If (Arg^[0]^.Typ >= VT_INT) and (Arg^[0]^.Typ <= VT_BIN)
       then S:=ArrKey(Arr, PQInt(Arg^[0]^.Ptr)^)
-      else begin
-      V:=ValToInt(Arg^[0]);
-      S:=ArrKey(Arr, PQInt(V^.Ptr)^);
-      FreeVal(V)
-      end;
+      else S:=ArrKey(Arr, ValAsInt(Arg^[0]));
    If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
    Exit(NewVal(VT_STR,S))
    end;
@@ -887,7 +866,7 @@ Function F_Doctype(DoReturn:Boolean; Arg:PArrPVal):PValue;
          HTML4_LOOSE = '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">';
          XHTML1_1 = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">';
          DEFAULT = HTML5;
-   Var C:LongWord; V:PValue; S,R:AnsiString; I:Int64;
+   Var C:LongWord; S,R:AnsiString; I:Int64;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg^)=0) then Exit(NewVal(VT_STR, DEFAULT));
@@ -914,7 +893,7 @@ Function F_Doctype(DoReturn:Boolean; Arg:PArrPVal):PValue;
          R:=(XHTML1_1) else
          {else} R:=DEFAULT
       end else begin
-      V:=ValToInt(Arg^[0]); I:=(PQInt(V^.Ptr)^); FreeVal(V);
+      I:=ValAsInt(Arg^[0]);
       If (I = 5) then 
          R := (HTML5) else
       If (I = 4) then 

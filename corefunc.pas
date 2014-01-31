@@ -90,7 +90,7 @@ Function Eval(Ret:Boolean; E:PExpr):PValue;
             end;
          If (A^.Typ = VT_ARR) then begin
             If (V^.Typ >= VT_INT) and (V^.Typ <= VT_BIN) then KeyInt:=PQInt(V^.Ptr)^
-               else begin H:=ValToInt(V); KeyInt:=PQInt(H^.Ptr)^; FreeVal(H) end;
+               else KeyInt:=ValAsInt(V); //begin H:=ValToInt(V); KeyInt:=PQInt(H^.Ptr)^; FreeVal(H) end;
             If (Index^.Typ = TK_EXPR) then FreeVal(V);
             Arr:=PArray(A^.Ptr); 
             Try    V:=Arr^.GetVal(KeyInt)
@@ -98,7 +98,7 @@ Function Eval(Ret:Boolean; E:PExpr):PValue;
                    Arr^.SetVal(KeyInt, V)
             end end else begin
             If (V^.Typ = VT_STR) then KeyStr:=PStr(V^.Ptr)^
-               else begin H:=ValToStr(V); KeyStr:=PStr(H^.Ptr)^; FreeVal(H) end;
+               else KeyStr:=ValAsStr(V); //begin H:=ValToStr(V); KeyStr:=PStr(H^.Ptr)^; FreeVal(H) end;
             If (Index^.Typ = TK_EXPR) then FreeVal(V);
             Dic:=PDict(A^.Ptr);
             Try    V:=Dic^.GetVal(KeyStr)
@@ -168,18 +168,14 @@ Function RunFunc(P:LongWord):PValue;
    end;
 
 Function F_If(DoReturn:Boolean; Arg:PArrPVal):PValue;
-   Var C:LongWord; IfNum:QInt; R:Boolean; V:PValue;
+   Var C:LongWord; IfNum:QInt; R:Boolean; 
    begin
    If (Length(Arg^)>1) then begin
       R:=True;
       For C:=High(Arg^) downto 1 do begin
-          If (Arg^[C]^.Typ = VT_BOO) then begin
-             If (Not PBool(Arg^[C]^.Ptr)^) then R:=False
-             end else begin
-             V:=ValToBoo(Arg^[C]);
-             If (Not PBool(V^.Ptr)^) then R:=False;
-             FreeVal(V)
-             end;
+          If (Arg^[C]^.Typ = VT_BOO)
+             then R := (R) and (PBool(Arg^[C]^.Ptr)^)
+             else R := (R) and (ValAsBoo(Arg^[C]));
           If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
           end
       end else R:=False;
@@ -200,18 +196,14 @@ Function F_Else(DoReturn:Boolean; Arg:PArrPVal):PValue;
    end;
 
 Function F_While(DoReturn:Boolean; Arg:PArrPVal):PValue;
-   Var C:LongWord; WhiNum:QInt; R:Boolean; V:PValue;
+   Var C:LongWord; WhiNum:QInt; R:Boolean; 
    begin
    If (Length(Arg^)>1) then begin
       R:=True;
       For C:=High(Arg^) downto 1 do begin
-          If (Arg^[C]^.Typ = VT_BOO) then begin
-             If (Not PBool(Arg^[C]^.Ptr)^) then R:=False
-             end else begin
-             V:=ValToBoo(Arg^[C]);
-             If (Not PBool(V^.Ptr)^) then R:=False;
-             FreeVal(V)
-             end;
+          If (Arg^[C]^.Typ = VT_BOO)
+             then R := (R) and (PBool(Arg^[C]^.Ptr)^)
+             else R := (R) and (ValAsBoo(Arg^[C]));
           If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
           end
       end else R:=False;
@@ -232,18 +224,14 @@ Function F_Done(DoReturn:Boolean; Arg:PArrPVal):PValue;
    end;
 
 Function F_Until(DoReturn:Boolean; Arg:PArrPVal):PValue;
-   Var C:LongWord; RepNum:QInt; R:Boolean; V:PValue;
+   Var C:LongWord; RepNum:QInt; R:Boolean;
    begin
    If (Length(Arg^)>1) then begin
       R:=True;
       For C:=High(Arg^) downto 1 do begin
-          If (Arg^[C]^.Typ = VT_BOO) then begin
-             If (Not PBool(Arg^[C]^.Ptr)^) then R:=False
-             end else begin
-             V:=ValToBoo(Arg^[C]);
-             If (Not PBool(V^.Ptr)^) then R:=False;
-             FreeVal(V)
-             end;
+          If (Arg^[C]^.Typ = VT_BOO)
+             then R := (R) and (PBool(Arg^[C]^.Ptr)^)
+             else R := (R) and (ValAsBoo(Arg^[C]));
           If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
           end
       end else R:=False;
@@ -322,7 +310,7 @@ Function F_AutoCall(DoReturn:Boolean; Arg:PArrPVal):PValue;
    
    Proc:=P; ExLn:=E; 
    If (DoReturn) then begin If (R<>NIL) then Exit(R) else Exit(NilVal()) end
-                 else begin If (R<>NIL) then FreeVal(R) else Exit(NIL) end
+                 else begin If (R<>NIL) then FreeVal(R); Exit(NIL) end
    end;
 
 
@@ -366,24 +354,22 @@ Function F_FileIncludes(DoReturn:Boolean; Arg:PArrPVal):PValue;
    F_(False, Arg); If (Not DoReturn) then Exit(NIL);
    AV:=NewVal(VT_ARR); Arr:=PArray(AV^.Ptr);
    For C:=Low(FileIncludes) to High(FileIncludes) do
-       Arr^.SetVal(C, NewVal(VT_STR, FileIncludes[C]));
+       Arr^.SetVal(C, NewVal(VT_STR, FileIncludes[C].Name));
    Exit(AV)
    end;
 
 Function F_FileIncluded(DoReturn:Boolean; Arg:PArrPVal):PValue;
-   Var V:PValue; A,F:LongWord; Return,ThisFile:Boolean; FName:AnsiString;
+   Var A,F:LongWord; Return,ThisFile:Boolean; FName:AnsiString;
    begin
    If (Length(Arg^) = 0) then Exit(F_(DoReturn, Arg));
    If (Not DoReturn) then Exit(F_(False, Arg));
    Return := True;
    For A:=High(Arg^) downto Low(Arg^) do begin
        If (Arg^[A]^.Typ = VT_STR) then FName := PStr(Arg^[A]^.Ptr)^
-          else begin
-          V:=ValToStr(Arg^[A]); FName:=PStr(V^.Ptr)^; FreeVal(V)
-          end;
+          else FName := ValAsStr(Arg^[A]);
        ThisFile := False;
        For F:=Low(FileIncludes) to High(FileIncludes) do
-           If (FileIncludes[F] = FName) then begin
+           If (FileIncludes[F].Name = FName) then begin
               ThisFile:=True; Break
               end;
        Return := Return and ThisFile;

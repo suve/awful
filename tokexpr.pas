@@ -48,7 +48,7 @@ Procedure FreeToken(T:PToken);
       TK_CONS: 
          ; // Pointer to a value in const trie. Value will be freed when flushing consts
       TK_LITE:
-         FreeVal(PValue(T^.Ptr));
+         AnnihilateVal(PValue(T^.Ptr));
       TK_VARI, TK_REFE:
          Dispose(PStr(T^.Ptr));
       TK_AVAL, TK_AREF: begin

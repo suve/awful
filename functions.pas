@@ -7,12 +7,9 @@ interface
 
 Procedure Register(FT:PFunTrie);
 
-Function F_FilePath(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_FileName(DoReturn:Boolean; Arg:PArrPVal):PValue;
-
 Function F_Sleep(DoReturn:Boolean; Arg:PArrPVal):PValue;
 Function F_Ticks(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_FileTicks(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_RunTicks(DoReturn:Boolean; Arg:PArrPVal):PValue;
 
 Function F_random(DoReturn:Boolean; Arg:PArrPVal):PValue;
 Function F_fork(DoReturn:Boolean; Arg:PArrPVal):PValue;
@@ -31,7 +28,7 @@ Procedure Register(FT:PFunTrie);
    // Timekeeping
    FT^.SetVal('sleep',@F_Sleep);
    FT^.SetVal('ticks',@F_Ticks);
-   FT^.SetVal('fileticks',@F_FileTicks);
+   FT^.SetVal('runticks',@F_RunTicks);
    // Vartype info
    FT^.SetVal('sizeof',@F_sizeof);
    FT^.SetVal('typeof',@F_typeof);
@@ -40,29 +37,7 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('float-precision',@F_SetPrecision);
    // Stuff
    FT^.SetVal('fork',@F_fork);
-   FT^.SetVal('getenv',@F_getenv);
-   // Legacy
-   FT^.SetVal('floatprec',@F_SetPrecision);
-   FT^.SetVal('filename',@F_FileName);
-   FT^.SetVal('filepath',@F_FilePath);
-   end;
-
-Function F_FilePath(DoReturn:Boolean; Arg:PArrPVal):PValue;
-   Var C:LongWord;
-   begin
-   If (Length(Arg^)>0) then
-      For C:=Low(Arg^) to High(Arg^) do
-          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
-   If (DoReturn) then Exit(NewVal(VT_STR,YukPath)) else Exit(NIL)
-   end;
-
-Function F_FileName(DoReturn:Boolean; Arg:PArrPVal):PValue;
-   Var C:LongWord;
-   begin
-   If (Length(Arg^)>0) then
-      For C:=Low(Arg^) to High(Arg^) do
-          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
-   If (DoReturn) then Exit(NewVal(VT_STR,ExtractFileName(YukPath))) else Exit(NIL)
+   FT^.SetVal('getenv',@F_getenv)
    end;
    
 Function F_Ticks(DoReturn:Boolean; Arg:PArrPVal):PValue;
@@ -76,7 +51,7 @@ Function F_Ticks(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(NewVal(VT_INT,Trunc(TS-GLOB_ms)))
    end;
 
-Function F_FileTicks(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_RunTicks(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var C:LongWord; TS:Comp;
    begin
    If (Length(Arg^)>0) then
@@ -88,7 +63,7 @@ Function F_FileTicks(DoReturn:Boolean; Arg:PArrPVal):PValue;
    end;
 
 Function F_Sleep(DoReturn:Boolean; Arg:PArrPVal):PValue;
-   Var C:LongWord; V:PValue; Dur:LongWord;
+   Var C:LongWord; Dur:LongWord;
        ms_st, ms_en : Comp;
    begin
    ms_st:=TimeStampToMSecs(DateTimeToTimeStamp(Now()));
@@ -101,11 +76,7 @@ Function F_Sleep(DoReturn:Boolean; Arg:PArrPVal):PValue;
          then Dur:=PQInt(Arg^[0]^.Ptr)^ else
       If (Arg^[0]^.Typ = VT_FLO)
          then Dur:=Trunc(1000*PFloat(Arg^[0]^.Ptr)^)
-         else begin
-         V:=ValToInt(Arg^[0]);
-         Dur:=PQInt(V^.Ptr)^;
-         FreeVal(V)
-         end;
+         else Dur:=ValAsInt(Arg^[0]);
       If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0])
       end;
    SysUtils.Sleep(Dur);
@@ -115,7 +86,7 @@ Function F_Sleep(DoReturn:Boolean; Arg:PArrPVal):PValue;
    end;
 
 Function F_SetPrecision(DoReturn:Boolean; Arg:PArrPVal):PValue;
-   Var C:LongWord; V:PValue;
+   Var C:LongWord;
    begin
    If (Length(Arg^)>1) then
       For C:=High(Arg^) downto 1 do
@@ -124,31 +95,23 @@ Function F_SetPrecision(DoReturn:Boolean; Arg:PArrPVal):PValue;
       Values.RealForm := ffFixed;
       If (Arg^[0]^.Typ >= VT_INT) and (Arg^[0]^.Typ <= VT_BIN)
          then Values.RealPrec:=PQInt(Arg^[0]^.Ptr)^
-         else begin
-         V:=ValToInt(Arg^[0]);
-         Values.RealPrec:=PQInt(V^.Ptr)^;
-         FreeVal(V)
-         end;
+         else Values.RealPrec:=ValAsInt(Arg^[0]);
       If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0])
       end;
    If (DoReturn) then Exit(NewVal(VT_INT,Values.RealPrec)) else Exit(NIL)
    end;
 
 Function F_fork(DoReturn:Boolean; Arg:PArrPVal):PValue;
-   Var C:LongWord; V:PValue; R:Boolean;
+   Var C:LongWord; R:Boolean;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg^)=0) then Exit(NewVal(VT_BOO,False));
    If (Length(Arg^)>3) then For C:=High(Arg^) downto 3 do
       If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
-   If (Arg^[0]^.Typ = VT_BOO) then begin
-      R:=PBool(Arg^[0]^.Ptr)^;
-      If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0])
-      end else begin
-      V:=ValToBoo(Arg^[0]); R:=PBool(V^.Ptr)^;
-      If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
-      FreeVal(V)
-      end;
+   If (Arg^[0]^.Typ = VT_BOO)
+      then R:=PBool(Arg^[0]^.Ptr)^
+      else R:=ValAsBoo(Arg^[0]);
+   If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
    If (R) then begin
       If (Length(Arg^)=1) then Exit(NewVal(VT_BOO,True));
       If (Length(Arg^)>2) then If (Arg^[2]^.Lev >= CurLev) then FreeVal(Arg^[2]);
@@ -217,7 +180,7 @@ Function F_random(DoReturn:Boolean; Arg:PArrPVal):PValue;
    end;
 
 Function F_getenv(DoReturn:Boolean; Arg:PArrPVal):PValue;
-   Var C:LongWord; V:PValue; Namae:AnsiString;
+   Var C:LongWord;  Namae:AnsiString;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg^) = 0) then Exit(EmptyVal(VT_STR));
@@ -226,7 +189,7 @@ Function F_getenv(DoReturn:Boolean; Arg:PArrPVal):PValue;
           If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
    If (Arg^[0]^.Typ = VT_STR)
       then Namae:=PStr(Arg^[0]^.Ptr)^
-      else begin V:=ValToStr(Arg^[0]); Namae:=PStr(V^.Ptr)^; FreeVal(V) end;
+      else Namae:=ValAsStr(Arg^[0]);
    If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
    Exit(NewVal(VT_STR, GetEnvironmentVariable(Namae)))
    end;
@@ -282,6 +245,7 @@ Function F_typeof(DoReturn:Boolean; Arg:PArrPVal):PValue;
       VT_STR: V:=NewVal(VT_STR, 'string');
       VT_ARR: V:=NewVal(VT_STR, 'array' );
       VT_DIC: V:=NewVal(VT_STR, 'dict'  );
+      VT_FIL: V:=NewVal(VT_STR, 'file'  );
       else V:=NewVal(VT_STR, '???')
       end;
    If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);

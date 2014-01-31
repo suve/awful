@@ -67,9 +67,9 @@ Function F_dict(DoReturn:Boolean; Arg:PArrPVal):PValue;
    If (Length(Arg^)>0) then
       For C:=Low(Arg^) to High(Arg^) do
           If ((C mod 2)=0) then begin
-             If (Arg^[C]^.Typ <> VT_STR) then begin
-                V:=ValToStr(Arg^[C]); Key:=PStr(V^.Ptr)^; FreeVal(V)
-                end else Key:=PStr(Arg^[C]^.Ptr)^;
+             If (Arg^[C]^.Typ = VT_STR)
+                then Key:=PStr(Arg^[C]^.Ptr)^
+                else Key:=ValAsStr(Arg^[C]);
              If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
              end else begin
              If (Arg^[C]^.Lev >= CurLev)
@@ -112,17 +112,16 @@ Function F_array_empty(DoReturn:Boolean; Arg:PArrPVal):PValue;
    end;
 
 Function F_dict_nextkey(DoReturn:Boolean; Arg:PArrPVal):PValue;
-   Var C:LongWord; T:PDict; K:AnsiString; V:PValue;
+   Var C:LongWord; T:PDict; K:AnsiString;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg^)>=3) then
       For C:=High(Arg^) downto 2 do
           If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
    If (Length(Arg^)>=2) then begin
-      If (Arg^[1]^.Typ = VT_STR) then K:=PStr(Arg^[1]^.Ptr)^
-         else begin
-         V:=ValToStr(Arg^[1]); K:=PStr(V^.Ptr)^;
-         FreeVal(V) end;
+      If (Arg^[1]^.Typ = VT_STR)
+         then K:=PStr(Arg^[1]^.Ptr)^
+         else K:=ValAsStr(Arg^[1]);
       If (Arg^[1]^.Lev >= CurLev) then FreeVal(Arg^[1])
       end else K:='';
    If (Length(Arg^)>=1) then begin
@@ -239,16 +238,16 @@ Function F_array_contains_seq(DoReturn:Boolean; Arg:PArrPVal):PValue;
    begin Exit(F_array_contains(DoReturn, Arg, @Values_Compare.ValSeq)) end;
 
 Function F_array_print(DoReturn:Boolean; Arg:PArrPVal):PValue;
-   Var C,I:LongWord; R:Boolean; V:PValue; S:AnsiString;
+   Var C,I:LongWord; R:Boolean; S:AnsiString;
        Arr:PArray; AEA:TArray.TEntryArr;
        Dic:PDict; DEA:TDict.TEntryArr;
    begin R:=False;
    If (Length(Arg^) >= 2) then begin
       For C:=High(Arg^) downto 2 do
           If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
-      If (Arg^[1]^.Typ <> VT_BOO) then begin
-         V:=ValToBoo(Arg^[1]); R:=PBool(V^.Ptr)^; FreeVal(V)
-         end else R:=PBool(Arg^[1]^.Ptr)^;
+      If (Arg^[1]^.Typ = VT_BOO)
+         then R:=PBool(Arg^[1]^.Ptr)^
+         else R:=ValAsBoo(Arg^[1]);
       If (Arg^[1]^.Lev >= CurLev) then FreeVal(Arg^[1])
       end;
    If (Length(Arg^) > 0) then begin
@@ -259,9 +258,9 @@ Function F_array_print(DoReturn:Boolean; Arg:PArrPVal):PValue;
              AEA:=Arr^.ToArray(); 
              For I:=Low(AEA) to High(AEA) do begin
                  S += '[' + IntToStr(AEA[I].Key) + ']: ';
-                 If (AEA[I].Val^.Typ <> VT_STR) then begin
-                    V:=ValToStr(AEA[I].Val); S += PStr(V^.Ptr)^; FreeVal(V)
-                    end else S += PStr(AEA[I].Val^.Ptr)^;
+                 If (AEA[I].Val^.Typ = VT_STR)
+                    then S += PStr(AEA[I].Val^.Ptr)^
+                    else S += ValAsStr(AEA[I].Val);
                  If (I < High(AEA)) then S += ', '
                  end;
           S += ')'
@@ -273,9 +272,9 @@ Function F_array_print(DoReturn:Boolean; Arg:PArrPVal):PValue;
              DEA:=Dic^.ToArray(); 
              For I:=Low(DEA) to High(DEA) do begin
                  S += '[' + DEA[I].Key +']: ';
-                 If (DEA[I].Val^.Typ <> VT_STR) then begin
-                    V:=ValToStr(DEA[I].Val); S += PStr(V^.Ptr)^; FreeVal(V)
-                    end else S += PStr(DEA[I].Val^.Ptr)^;
+                 If (DEA[I].Val^.Typ <> VT_STR)
+                    then S += PStr(DEA[I].Val^.Ptr)^
+                    else S += ValAsStr(DEA[I].Val);
                  If (I < High(DEA)) then S += ', '
                  end;
           S += ')'
@@ -285,7 +284,7 @@ Function F_array_print(DoReturn:Boolean; Arg:PArrPVal):PValue;
    If (R) then begin 
       If (DoReturn) then Exit(NewVal(VT_STR, S)) else Exit(NIL)
       end else begin
-      Writeln(YukStdOut^, S); If DoReturn then Exit(NilVal()) else Exit(NIL)
+      Writeln(StdOut, S); If DoReturn then Exit(NilVal()) else Exit(NIL)
       end
    end;
 

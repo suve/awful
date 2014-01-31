@@ -1,4 +1,4 @@
-program awful; {$INCLUDE defines.inc} {$LONGSTRINGS ON} {$INLINE ON}            
+program awful; {$INCLUDE defines.inc} {$LONGSTRINGS ON} {$INLINE ON}
 
 uses SysUtils, Math,
 
@@ -23,15 +23,17 @@ Type TParamMode = (PAR_INPUT, PAR_OUTPUT, PAR_ERR);
 
 Var ParMod:TParamMode;
     Switch_NoRun : Boolean = FALSE;
-    CustomStdIn : System.Text;
-    CustomStdErr, CustomStdOut : ^System.Text;
+    CustomStdIn : ^System.Text;
+    CustomStdErr, CustomStdOut : System.Text;
     OrigDir : AnsiString;
-    ParamNum:LongWord;
+    ParamNum,ParamLim:LongWord;
+    ParamNow:AnsiString;
 
 Procedure Run();
    Var R:PValue;
    begin
    DoExit:=False;
+   
    GLOB_sdt:=Now();
    GLOB_sms:=TimeStampToMSecs(DateTimeToTimeStamp(GLOB_sdt));
    
@@ -60,19 +62,28 @@ Procedure Cleanup();
       For C:=High(FCal) downto Low(FCal) do begin
           If (Not FCal[C].Vars^.Empty) then begin
              VEA := FCal[C].Vars^.ToArray(); FCal[C].Vars^.Flush();
-             For I:=Low(VEA) to High(VEA) do FreeVal(VEA[I].Val)
+             For I:=Low(VEA) to High(VEA) do AnnihilateVal(VEA[I].Val)
              end;
           Dispose(FCal[C].Vars,Destroy());
           end;
    // Set dynarr length to 0
    {$IFDEF CGI} Functions_CGI.FreeArrays(); {$ENDIF}
    SetLength(Pr, 0); SetLength(FCal, 0);
+   // Free the name/path consts of included files
+   If (Length(FileIncludes)>0) then
+      For C:=Low(FileIncludes) to High(FileIncludes) do begin
+          AnnihilateVal(FileIncludes[C].Cons[0]);
+          AnnihilateVal(FileIncludes[C].Cons[1])
+          end;
+   SetLength(FileIncludes, 0);
    // Free the constants trie
    If (Not Cons^.Empty) then begin
       VEA := Cons^.ToArray(); Cons^.Flush();
-      For I:=Low(VEA) to High(VEA) do FreeVal(VEA[I].Val)
+      For I:=Low(VEA) to High(VEA) do AnnihilateVal(VEA[I].Val)
       end;
-   Dispose(Cons,Destroy())
+   Dispose(Cons,Destroy());
+   // At the very end, free the spare variables
+   SpareVars_Destroy()
    end;
 
 begin //MAIN
@@ -97,64 +108,68 @@ Functions_SysInfo  . Register(Func);
 Functions_TypeCast . Register(Func);
 //YukSDL.Register(Func);
 
+GetDir(0, OrigDir);
+YukPath:='(stdin)';
+YukName:=YukPath;
+ParamLim := ParamCount();
+CustomStdIn := NIL;
+
 If (ParamCount()>0) then begin
    ParMod:=PAR_INPUT;
-   CustomStdErr := NIL;
-   CustomStdOut := NIL;
-   GetDir(0, OrigDir);
-   YukStdOut := @StdOut;
-   YukStdErr := @StdErr;
-   For ParamNum:=1 to ParamCount() do begin
-      If (ParamStr(ParamNum)='-o') then begin
+   For ParamNum:=1 to ParamLim do begin
+      ParamNow := ParamStr(ParamNum);
+      If (ParamNow = '-o') then begin
          ParMod:=PAR_OUTPUT; Continue
          end else
-      If (ParamStr(ParamNum)='-e') then begin
+      If (ParamNow = '-e') then begin
          ParMod:=PAR_ERR; Continue
          end else
-      If (ParamStr(ParamNum)='--norun') then begin
+      If (ParamNow = '--norun') then begin
          Switch_NoRun := True; Continue
-         end;
+         end else
+      If (ParamNow = '--version') then begin
+         Writeln('awful v.',VERSION,' (rev. ',VREVISION,')');
+         Halt(0)
+         end else
       If (ParMod = PAR_INPUT) then begin
-         Assign(CustomStdIn, ParamStr(ParamNum));
-         {$I-} Reset(CustomStdIn); {$I+}
-         If (IOResult=0) then begin
+         New(CustomStdIn);
+         Assign(CustomStdIn^, ParamStr(ParamNum));
+         {$I-} Reset(CustomStdIn^); {$I+}
+         If (IOResult() = 0) then begin
             YukPath:=ExpandFileName(ParamStr(ParamNum));
             YukName:=ExtractFileName(YukPath);
+            
             {$I-} ChDir(ExtractFilePath(YukPath)); {$I+}
-            
-            If (CustomStdErr <> NIL) then begin YukStdErr := CustomStdErr end;
-            If (CustomStdOut <> NIL) then begin YukStdOut := CustomStdOut end;
-            
-            ReadFile(CustomStdIn); Close(CustomStdIn);
-            If (Not Switch_NoRun) then Run()
-                                  else Writeln(YukStdOut^, 'No syntax errors detected in "',YukName,'" (parsed in ',PQInt(Cons^.GetVal('FILE-PARSETIME')^.Ptr)^,'ms).');
-            {$I-} ChDir(OrigDir); {$I+}
-            
-            If (CustomStdErr <> NIL) then begin YukStdErr := @StdErr; Close(CustomStdErr^); Dispose(CustomStdErr); CustomStdErr := NIL end;
-            If (CustomStdOut <> NIL) then begin YukStdOut := @StdOut; Close(CustomStdOut^); Dispose(CustomStdOut); CustomStdOut := NIL end;
-            
-            Cleanup()
-            end
+            ParamLim := 0
+            end else Dispose(CustomStdIn);
          end else
       If (ParMod = PAR_OUTPUT) then begin
-         New(CustomStdOut);
-         Assign(CustomStdOut^, ParamStr(ParamNum));
-         {$I-} Rewrite(CustomStdOut^); {$I+}
-         If (IOResult <> 0) then begin Dispose(CustomStdOut); CustomStdOut := NIL end;
+         Assign(CustomStdOut, ParamStr(ParamNum));
+         {$I-} Rewrite(CustomStdOut); {$I+}
+         If (IOResult() = 0) then begin Output := CustomStdOut; StdOut := CustomStdOut end;
             ParMod:=PAR_INPUT
          end else
       If (ParMod = PAR_ERR) then begin
-         New(CustomStdErr);
-         Assign(CustomStdErr^, ParamStr(ParamNum));
-         {$I-} Rewrite(CustomStdErr^); {$I+}
-         If (IOResult <> 0) then begin Dispose(CustomStdErr); CustomStdErr := NIL end;
+         Assign(CustomStdErr, ParamStr(ParamNum));
+         {$I-} Rewrite(CustomStdErr); {$I+}
+         If (IOResult() = 0) then StdErr := CustomStdErr;
             ParMod:=PAR_INPUT
-         end else
-   end end else begin
-   YukPath:='(stdin)'; YukName:=YukPath;
-   ReadFile(Input);
-   Run(); Cleanup()
+         end
+      end
    end;
+
+If (CustomStdIn <> NIL) then begin
+   ReadFile(CustomStdIn^);
+   Close(CustomStdIn^);
+   Dispose(CustomStdIn)
+   end else ReadFile(Input);
+
+If (Not Switch_NoRun)
+    then Run()
+    else Writeln('No syntax errors detected in "',YukName,'" (parsed in ',PQInt(Cons^.GetVal('FILE-PARSETIME')^.Ptr)^,'ms).');
+
+{$I-} ChDir(OrigDir); {$I+}
+Cleanup();
 
 // At the very end, destroy the trie of built-in functions.
 Dispose(Func,Destroy())

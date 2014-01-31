@@ -118,7 +118,7 @@ Function F_SysInfo_Uptime(DoReturn:Boolean; Arg:PArrPVal):PValue;
    end;
 
 Function F_SysInfo_Load(DoReturn:Boolean; Arg:PArrPVal):PValue;
-   Var C:LongWord; V:PValue; L:Int64;
+   Var C:LongWord; L:Int64;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg^)=0) then Exit(NewVal(VT_FLO,SI^.Loads[0]/65535));
@@ -126,11 +126,7 @@ Function F_SysInfo_Load(DoReturn:Boolean; Arg:PArrPVal):PValue;
        If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
    If (Arg^[0]^.Typ >= VT_INT) and (Arg^[0]^.Typ <= VT_BIN)
       then L:=PQInt(Arg^[0]^.Ptr)^
-      else begin
-      V:=ValToInt(Arg^[0]);
-      L:=PQInt(V^.Ptr)^;
-      FreeVal(V)
-      end;
+      else L:=ValAsInt(Arg^[0]);
    If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
    If (L < 0) or (L > 2) then L:=0;
    If (SI = NIL) then If (Not GetSysInfo()) then Exit(NilVal());
@@ -226,28 +222,24 @@ Function F_SysInfo_Procnum(DoReturn:Boolean; Arg:PArrPVal):PValue;
    end;
 
 Function F_SysInfo_Thermal(DoReturn:Boolean; Arg:PArrPVal):PValue;
-   Var C:LongWord; V:PValue; Z,T:Int64; F:Text;
+   Var C:LongWord; Zone:Int64; F:Text;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
-   If (Length(Arg^)=0) then Z:=0 else begin
+   If (Length(Arg^)=0) then Zone:=0 else begin
       For C:=High(Arg^) downto 1 do
           If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
       If (Arg^[0]^.Typ >= VT_INT) and (Arg^[0]^.Typ <= VT_BIN)
-         then Z:=PQInt(Arg^[0]^.Ptr)^
-         else begin
-         V:=ValToInt(Arg^[0]);
-         Z:=PQInt(V^.Ptr)^;
-         FreeVal(V)
-         end;
+         then Zone:=PQInt(Arg^[0]^.Ptr)^
+         else Zone:=ValAsInt(Arg^[0]);
       If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0])
       end;
-   If (Z < 0) then Z:=0;
-   Assign(F,'/sys/class/thermal/thermal_zone'+IntToStr(Z)+'/temp');
+   If (Zone < 0) then Zone:=0;
+   Assign(F,'/sys/class/thermal/thermal_zone'+IntToStr(Zone)+'/temp');
    {$I-} Reset(F); {$I+};
    If (IOResult = 0) then begin
-      Readln(F,T); Close(F)
-      end else T:=0;
-   Exit(NewVal(VT_FLO,T/1000))
+      Readln(F,Zone); Close(F)
+      end else Zone:=0;
+   Exit(NewVal(VT_FLO,Zone/1000))
    end;
 
 Function F_SysInfo_DomainName(DoReturn:Boolean; Arg:PArrPVal):PValue;
@@ -319,7 +311,7 @@ Type TDiskFunc = Function(Disk:Byte):Int64;
 
 {$IFDEF LINUX} // Functions present on both Lin&Win; Linux implementations
 Function F_SysInfo_Disk(DiskFunc:TDiskFunc; DoReturn:Boolean; Arg:PArrPVal):PValue;
-   Var C, Disk:LongWord; V:PValue; DiskName : TStr;
+   Var C, Disk:LongWord; DiskName : TStr;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg^)>1) then
@@ -328,9 +320,7 @@ Function F_SysInfo_Disk(DiskFunc:TDiskFunc; DoReturn:Boolean; Arg:PArrPVal):PVal
    If (Length(Arg^) >= 1) then begin
       If (Arg^[0]^.Typ = VT_STR)
          then DiskName := PStr(Arg^[0]^.Ptr)^
-         else begin
-         V:=ValToInt(Arg^[0]); DiskName := PStr(V^.Ptr)^; FreeVal(V);
-         end;
+         else DiskName := ValAsStr(Arg^[0]);
       If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
       Disk := AddDisk(DiskName)
       end else Disk := DISK_DEFAULT;
@@ -358,21 +348,17 @@ Function F_SysInfo_Version(DoReturn:Boolean; Arg:PArrPVal):PValue;
 
 {$IFDEF WINDOWS} // Functions present on both Lin&Win; Winderps implementations
 Function F_SysInfo_Disk(DiskFunc:TDiskFunc; DoReturn:Boolean; Arg:PArrPVal):PValue;
-   Var C, Disk:LongWord; V:PValue;
+   Var C, DiskNum : LongInt; DiskPath : AnsiString;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
-   If (Length(Arg^)>1) then
-      For C:=High(Arg^) downto 1 do
-          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
    If (Length(Arg^) >= 1) then begin
-      If (Arg^[0]^.Typ >= VT_INT) and (Arg^[0]^.Typ <= VT_BIN)
-         then Disk := PQInt(Arg^[0]^.Ptr)^
-         else begin
-         V:=ValToInt(Arg^[0]); Disk := PQInt(V^.Ptr)^; FreeVal(V);
-         end;
-      If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
-      end else Disk := DISK_DEFAULT;
-   Exit(NewVal(VT_INT,DiskFunc(Disk)))
+      DiskPath := ExpandFileName(ValAsStr(Arg^[0]));
+      DiskNum := Ord(DiskPath[1]) - 64;
+      If (DiskNum < 1) or (DiskNum > 26) then DiskNum := DISK_DEFAULT;
+      For C:=Low(Arg^) to High(Arg^) do
+          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
+      end else DiskNum := DISK_DEFAULT;
+   Exit(NewVal(VT_INT,DiskFunc(DiskNum)))
    end;
 
 Function F_SysInfo_Hostname(DoReturn:Boolean; Arg:PArrPVal):PValue;

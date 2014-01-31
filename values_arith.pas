@@ -14,79 +14,155 @@ Procedure ValPow(A,B:PValue);
 implementation
    uses SysUtils, Math;
 
-Procedure ValSet_Arr(A,B:PValue);
-   Var AArr,BArr:PArray; AEnta,BEnta:TArray.TEntryArr;
-       ADict,BDict:PDict;  AEntd,BEntd:TDict.TEntryArr;
+Procedure ValSet_ArrDict(A,B:PValue);
+   Var AArr,BArr:PArray; AEntA,BEntA:TArray.TEntryArr;
+       ADict,BDict:PDict;  AEntD,BEntD:TDict.TEntryArr;
        iA, iB, kI : QInt; kS:TStr;
    begin
    Case (A^.Typ) of
       VT_ARR:
          begin
-         AArr:=PArr(A^.Ptr); AEnta := AArr^.ToArray();
+         AArr:=PArr(A^.Ptr); AEntA := AArr^.ToArray();
          Case (B^.Typ) of
             VT_ARR:
                begin
-               BArr:=PArr(B^.Ptr); BEnta := BArr^.ToArray();
+               BArr:=PArr(B^.Ptr); BEntA := BArr^.ToArray();
                iA := 0; iB := 0;
-               While (iA < Length(AEnta)) and (iB < Length(BEnta)) do
-                  Case CompareValue(AEnta[iA].Key, BEnta[iB].Key) of
+               While (iA < Length(AEntA)) and (iB < Length(BEntA)) do
+                  Case CompareValue(AEntA[iA].Key, BEntA[iB].Key) of
                      -1: iA += 1;
-                      0: begin ValSet(AEnta[iA].Val, BEnta[iB].Val); iA += 1; iB += 1 end;
-                     +1: begin AArr^.SetVal(BEnta[iB].Key, CopyVal(BEnta[iB].Val, A^.Lev)); iB += 1 end
+                      0: begin ValSet(AEntA[iA].Val, BEntA[iB].Val); iA += 1; iB += 1 end;
+                     +1: begin AArr^.SetVal(BEntA[iB].Key, CopyVal(BEntA[iB].Val, A^.Lev)); iB += 1 end
                      end;
-               While (iB < Length(BEnta)) do begin
-                  AArr^.SetVal(BEnta[iB].Key, CopyVal(BEnta[iB].Val, A^.Lev)); iB += 1
+               While (iB < Length(BEntA)) do begin
+                  AArr^.SetVal(BEntA[iB].Key, CopyVal(BEntA[iB].Val, A^.Lev)); iB += 1
                   end
                end;
             VT_DICT:
                begin
-               BDict:=PDict(B^.Ptr); BEntd := BDict^.ToArray();
+               BDict:=PDict(B^.Ptr); BEntD := BDict^.ToArray();
                iA := 0; iB := 0;
-               While (iA < Length(AEnta)) and (iB < Length(BEntd)) do begin
-                  kI:=StrToInt(BEntd[iB].Key);
-                  Case CompareValue(AEnta[iA].Key, kI) of
+               While (iA < Length(AEntA)) and (iB < Length(BEntD)) do begin
+                  kI:=StrToInt(BEntD[iB].Key);
+                  Case CompareValue(AEntA[iA].Key, kI) of
                      -1: iA += 1;
-                      0: begin ValSet(AEnta[iA].Val, BEntd[iB].Val); iA += 1; iB += 1 end;
-                     +1: begin AArr^.SetVal(kI, CopyVal(BEntd[iB].Val, A^.Lev)); iB += 1 end
+                      0: begin ValSet(AEntA[iA].Val, BEntD[iB].Val); iA += 1; iB += 1 end;
+                     +1: begin AArr^.SetVal(kI, CopyVal(BEntD[iB].Val, A^.Lev)); iB += 1 end
                   end end;
-               While (iB < Length(BEntd)) do begin
-                  AArr^.SetVal(StrToInt(BEntd[iB].Key), CopyVal(BEntd[iB].Val, A^.Lev)); iB += 1
+               While (iB < Length(BEntD)) do begin
+                  AArr^.SetVal(StrToInt(BEntD[iB].Key), CopyVal(BEntD[iB].Val, A^.Lev)); iB += 1
                   end
-               end;
+               end
+            else begin
+               iA := 0;
+               While (iA < Length(AEntA)) do begin
+                  ValSet(AEntA[iA].Val, B);
+                  iA += 1
+               end end
          end end;
       VT_DIC:
          begin
-         ADict:=PDict(A^.Ptr); AEntd := ADict^.ToArray();
+         ADict:=PDict(A^.Ptr); AEntD := ADict^.ToArray();
          Case (B^.Typ) of
             VT_ARR:
                begin
-               BArr:=PArr(B^.Ptr); BEnta := BArr^.ToArray();
+               BArr:=PArr(B^.Ptr); BEntA := BArr^.ToArray();
                iA := 0; iB := 0;
-               While (iA < Length(AEntd)) and (iB < Length(BEnta)) do begin
-                  kS:=IntToStr(BEnta[iB].Key);
-                  Case CompareStr(AEntd[iA].Key, kS) of
+               While (iA < Length(AEntD)) and (iB < Length(BEntA)) do begin
+                  kS:=IntToStr(BEntA[iB].Key);
+                  Case CompareStr(AEntD[iA].Key, kS) of
                      -1: iA += 1;
-                      0: begin ValSet(AEntd[iA].Val, BEnta[iB].Val); iA += 1; iB += 1 end;
-                     +1: begin ADict^.SetVal(kS, CopyVal(BEnta[iB].Val, A^.Lev)); iB += 1 end
+                      0: begin ValSet(AEntD[iA].Val, BEntA[iB].Val); iA += 1; iB += 1 end;
+                     +1: begin ADict^.SetVal(kS, CopyVal(BEntA[iB].Val, A^.Lev)); iB += 1 end
                   end end;
-               While (iB < Length(BEnta)) do begin
-                  ADict^.SetVal(IntToStr(BEnta[iB].Key), CopyVal(BEnta[iB].Val, A^.Lev)); iB += 1
+               While (iB < Length(BEntA)) do begin
+                  ADict^.SetVal(IntToStr(BEntA[iB].Key), CopyVal(BEntA[iB].Val, A^.Lev)); iB += 1
                   end
                end;
             VT_DICT:
                begin
-               BDict:=PDict(B^.Ptr); BEntd := BDict^.ToArray();
+               BDict:=PDict(B^.Ptr); BEntD := BDict^.ToArray();
                iA := 0; iB := 0;
-               While (iA < Length(AEntd)) and (iB < Length(BEntd)) do
-                  Case CompareStr(AEntd[iA].Key, BEntd[iB].Key) of
+               While (iA < Length(AEntD)) and (iB < Length(BEntD)) do
+                  Case CompareStr(AEntD[iA].Key, BEntD[iB].Key) of
                      -1: iA += 1;
-                      0: begin ValSet(AEntd[iA].Val, BEntd[iB].Val); iA += 1; iB += 1 end;
-                     +1: begin ADict^.SetVal(BEntd[iB].Key, CopyVal(BEntd[iB].Val, A^.Lev)); iB += 1 end
+                      0: begin ValSet(AEntD[iA].Val, BEntD[iB].Val); iA += 1; iB += 1 end;
+                     +1: begin ADict^.SetVal(BEntD[iB].Key, CopyVal(BEntD[iB].Val, A^.Lev)); iB += 1 end
                      end;
-               While (iB < Length(BEntd)) do begin
-                  ADict^.SetVal(BEntd[iB].Key, CopyVal(BEntd[iB].Val, A^.Lev)); iB += 1
+               While (iB < Length(BEntD)) do begin
+                  ADict^.SetVal(BEntD[iB].Key, CopyVal(BEntD[iB].Val, A^.Lev)); iB += 1
                   end
                end;
+            else begin
+               iA := 0;
+               While (iA < Length(AEntD)) do begin
+                  ValSet(AEntD[iA].Val, B);
+                  iA += 1
+               end end
+         end end
+   end end;
+
+Type TArithProc = Procedure(A,B:PValue);
+
+Procedure ValArith_ArrDict(Proc:TArithProc;A,B:PValue);
+   Var AArr,BArr:PArray;  EntA:TArray.TEntryArr;
+       ADict,BDict:PDict; EntD:TDict.TEntryArr;
+       idx, kI : QInt; kS : AnsiString;
+   begin
+   Case (A^.Typ) of
+      VT_ARR:
+         begin
+         AArr := PArr(A^.Ptr); EntA := AArr^.ToArray(); idx := 0;
+         Case (B^.Typ) of
+            VT_ARR:
+               begin
+               BArr := PArr(B^.Ptr);
+               While (idx < Length(EntA)) do begin
+                  If (BArr^.IsVal(EntA[idx].Key))
+                     then Proc(EntA[idx].Val, BArr^.GetVal(EntA[idx].Key));
+                  idx += 1
+               end end;
+            VT_DIC:
+               begin
+               BDict := PDict(B^.Ptr);
+               While (idx < Length(EntA)) do begin
+                  kS := IntToStr(EntA[idx].Key);
+                  If (BDict^.IsVal(kS))
+                     then Proc(EntA[idx].Val, BDict^.GetVal(kS));
+                  idx += 1
+               end end
+            else begin
+               While (idx < Length(EntA)) do begin
+                  Proc(EntA[idx].Val, B);
+                  idx += 1
+               end end
+         end end;
+      VT_DIC:
+         begin
+         ADict := PDict(A^.Ptr); EntD := ADict^.ToArray();
+         Case (B^.Typ) of
+            VT_ARR:
+               begin
+               BArr := PArr(B^.Ptr);
+               While (idx < Length(EntD)) do begin
+                  kI := StrToInt(EntD[idx].Key);
+                  If (BArr^.IsVal(kI))
+                     then Proc(EntD[idx].Val, BArr^.GetVal(kI));
+                  idx += 1
+               end end;
+            VT_DIC:
+               begin
+               BDict := PDict(B^.Ptr);
+               While (idx < Length(EntD)) do begin
+                  If (BDict^.IsVal(EntD[idx].Key))
+                     then Proc(EntD[idx].Val, BDict^.GetVal(EntD[idx].Key));
+                  idx += 1
+               end end
+            else begin
+               While (idx < Length(EntA)) do begin
+                  Proc(EntA[idx].Val, B);
+                  idx += 1
+               end end
          end end
    end end;
 
@@ -164,7 +240,7 @@ Procedure ValSet(A,B:PValue);
             VT_INT .. VT_BIN: 
                (L^):=(PQInt(B^.Ptr)^<>0);
             VT_FLO:
-               (L^):=(PFloat(B^.Ptr)^<>0);
+               (L^):=(Abs(PFloat(B^.Ptr)^)>=1.0);
             VT_STR:
                (L^):=StrToBoolDef(PStr(B^.Ptr)^,FALSE);
             VT_ARR:
@@ -176,8 +252,8 @@ Procedure ValSet(A,B:PValue);
             else
                (L^):=FALSE
          end end;
-      VT_ARR: ValSet_Arr(A,B);
-      VT_DIC: ValSet_Arr(A,B);
+      VT_ARR: ValSet_ArrDict(A,B);
+      VT_DIC: ValSet_ArrDict(A,B);
    end end;
 
 
@@ -255,6 +331,8 @@ Procedure ValAdd(A,B:PValue);
             VT_DIC:
                (L^):=(L^) or (Not PDict(B^.Ptr)^.Empty);
          end end;
+      VT_ARR: ValArith_ArrDict(@ValAdd,A,B);
+      VT_DIC: ValArith_ArrDict(@ValAdd,A,B);
    end end;
 
 
@@ -313,6 +391,8 @@ Procedure ValSub(A,B:PValue);
             VT_DIC:
                (L^):=(L^) xor (Not PDict(B^.Ptr)^.Empty);
          end end;
+      VT_ARR: ValArith_ArrDict(@ValSub,A,B);
+      VT_DIC: ValArith_ArrDict(@ValSub,A,B);
    end end;
 
 
@@ -398,6 +478,8 @@ Procedure ValMul(A,B:PValue);
             VT_DIC:
                (L^):=(L^) and (Not PDict(B^.Ptr)^.Empty);
          end end;
+      VT_ARR: ValArith_ArrDict(@ValMul,A,B);
+      VT_DIC: ValArith_ArrDict(@ValMul,A,B);
    end end;
 
 
@@ -474,11 +556,13 @@ Procedure ValDiv(A,B:PValue);
             VT_DIC:
                (L^):=(L^) xor (Not PDict(B^.Ptr)^.Empty);
          end end;
+      VT_ARR: ValArith_ArrDict(@ValDiv,A,B);
+      VT_DIC: ValArith_ArrDict(@ValDiv,A,B);
    end end;
 
 
 Procedure ValMod(A,B:PValue);
-   Var  I:PQInt; F:PFloat; tF:TFloat;
+   Var  I:PQInt; F:PFloat; tF:TFloat; tI:QInt;
    begin
    Case (A^.Typ) of
       VT_INT .. VT_BIN:
@@ -486,18 +570,26 @@ Procedure ValMod(A,B:PValue);
          I:=PQInt(A^.Ptr);
          Case (B^.Typ) of
             VT_INT .. VT_BIN: 
-               (I^):=I^ mod (PQInt(B^.Ptr)^);
+               If (PQInt(B^.Ptr)^ <> 0)
+                  then (I^):=I^ mod (PQInt(B^.Ptr)^)
+                  else (I^):=0;
             VT_FLO:
-               begin
-               tF:=I^; While (tF > PFloat(B^.Ptr)^) do tF -= PFloat(B^.Ptr)^;
-               (I^):=Trunc(tF)
+               If (PFloat(B^.Ptr)^ <> 0.0)
+                  then (I^):=I^ - Trunc(Trunc(I^ / PFloat(B^.Ptr)^) * PFloat(B^.Ptr)^)
+                  else (I^):=0;
+            VT_STR: begin
+               tI:=StrToNum(PStr(B^.Ptr)^,A^.Typ);
+               If (tI <> 0) then (I^):=I^ mod tI
+                            else (I^):=0
                end;
-            VT_STR:
-               (I^):=I^ mod StrToNum(PStr(B^.Ptr)^,A^.Typ);
             VT_ARR:
-               (I^):=I^ mod PArr(B^.Ptr)^.Count;
+               If (Not PArr(B^.Ptr)^.Empty)
+                  then (I^):=I^ mod PArr(B^.Ptr)^.Count
+                  else (I^):=0;
             VT_DIC:
-               (I^):=I^ mod PDict(B^.Ptr)^.Count;
+               If (Not PDict(B^.Ptr)^.Empty)
+                  then (I^):=I^ mod PDict(B^.Ptr)^.Count
+                  else (I^):=0
             else
                (I^):=0
          end end;
@@ -506,21 +598,32 @@ Procedure ValMod(A,B:PValue);
          F:=PFloat(A^.Ptr);
          Case (B^.Typ) of
             VT_INT .. VT_BIN: 
-               While (F^ > PQInt(B^.Ptr)^) do (F^)-=PQInt(B^.Ptr)^;
+               If (PQInt(B^.Ptr)^ <> 0) 
+                  then (F^):=(F^) - (Trunc(F^ / PQInt(B^.Ptr)^)*PQInt(B^.Ptr)^)
+                  else (F^):=0.0;
             VT_FLO:
-               While (F^ > PFloat(B^.Ptr)^) do (F^)-=PFloat(B^.Ptr)^;
+               If (PFloat(B^.Ptr)^ <> 0.0)
+                  then (F^):=(F^) - (Trunc(F^ / PFloat(B^.Ptr)^)*PFloat(B^.Ptr)^)
+                  else (F^):=0.0;
             VT_STR:
                begin
                tF:=StrToReal(PStr(B^.Ptr)^);
-               While (F^ > tF) do (F^)-=tF
+               If (tF <> 0.0) then (F^):=(F^) - (Trunc(F^ / tF) * tF)
+                              else (F^):=0.0
                end;
             VT_ARR:
-               While (F^ > PArr(B^.Ptr)^.Count) do (F^)-=PArr(B^.Ptr)^.Count;
+               If (Not PArr(B^.Ptr)^.Empty)
+                  then (F^):=(F^) - (Trunc(F^ / PArr(B^.Ptr)^.Count)*PArr(B^.Ptr)^.Count)
+                  else (F^):=0.0;
             VT_DIC:
-               While (F^ > PDict(B^.Ptr)^.Count) do (F^)-=PDict(B^.Ptr)^.Count;
+               If (Not PDict(B^.Ptr)^.Empty)
+                  then (F^):=(F^) - (Trunc(F^ / PDict(B^.Ptr)^.Count)*PDict(B^.Ptr)^.Count)
+                  else (F^):=0.0
             else
                (F^):=0.0
          end end;
+      VT_ARR: ValArith_ArrDict(@ValMod,A,B);
+      VT_DIC: ValArith_ArrDict(@ValMod,A,B);
    end end;
 
 
@@ -566,6 +669,8 @@ Procedure ValPow(A,B:PValue);
             else
                (F^):=1.0
          end end;
+      VT_ARR: ValArith_ArrDict(@ValPow,A,B);
+      VT_DIC: ValArith_ArrDict(@ValPow,A,B);
    end end;
 
 end.

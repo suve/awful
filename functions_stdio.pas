@@ -61,11 +61,11 @@ Function F_Write(DoReturn:Boolean; Arg:PArrPVal):PValue;
       If (Length(Headers)>0) or (Length(Cookies)>0) then begin
          If (Length(Headers)>0) then
             For C:=Low(Headers) to High(Headers) do
-                Writeln(YukStdOut^, CapitalizeHeader(Headers[C].Key),': ',Headers[C].Val);
+                Writeln(StdOut, CapitalizeHeader(Headers[C].Key),': ',Headers[C].Val);
          If (Length(Cookies)>0) then
             For C:=Low(Cookies) to High(Cookies) do
-                Writeln(YukStdOut^, 'Set-Cookie: ',EncodeURL(Cookies[C].Name),'=',EncodeURL(Cookies[C].Value));
-         Writeln(YukStdOut^)
+                Writeln(StdOut, 'Set-Cookie: ',EncodeURL(Cookies[C].Name),'=',EncodeURL(Cookies[C].Value));
+         Writeln(StdOut)
          end;
       WasOutput := True
       end;
@@ -73,21 +73,21 @@ Function F_Write(DoReturn:Boolean; Arg:PArrPVal):PValue;
    If (Length(Arg^) > 0) then
       For C:=Low(Arg^) to High(Arg^) do begin
           Case Arg^[C]^.Typ of
-             VT_NIL: Write(YukStdOut^, '{NIL}');
-             VT_NEW: Write(YukStdOut^, '{NEW}');
-             VT_PTR: Write(YukStdOut^, '{PTR}');
-             VT_INT: Write(YukStdOut^, PQInt(Arg^[C]^.Ptr)^);
-             VT_HEX: Write(YukStdOut^, Values.HexToStr(PQInt(Arg^[C]^.Ptr)^));
-             VT_OCT: Write(YukStdOut^, Values.OctToStr(PQInt(Arg^[C]^.Ptr)^));
-             VT_BIN: Write(YukStdOut^, Values.BinToStr(PQInt(Arg^[C]^.Ptr)^));
-             VT_FLO: Write(YukStdOut^, Values.FloatToStr(PFloat(Arg^[C]^.Ptr)^));
-             VT_BOO: Write(YukStdOut^, PBoolean(Arg^[C]^.Ptr)^);
-             VT_STR: Write(YukStdOut^, PAnsiString(Arg^[C]^.Ptr)^);
-             VT_UTF: Write(YukStdOut^, '{UTF8}');
-             VT_ARR: Write(YukStdOut^, 'array(',PArray(Arg^[C]^.Ptr)^.Count,')');
-             VT_DIC: Write(YukStdOut^, 'dict(',PDict(Arg^[C]^.Ptr)^.Count,')');
-             VT_FIL: Write(YukStdOut^, 'file(',PFileVal(Arg^[C]^.Ptr)^.Pth,')');
-             else Write(YukStdOut^, '(',Arg^[C]^.Typ,')')
+             VT_NIL: Write(StdOut, '{NIL}');
+             VT_NEW: Write(StdOut, '{NEW}');
+             VT_PTR: Write(StdOut, '{PTR}');
+             VT_INT: Write(StdOut, PQInt(Arg^[C]^.Ptr)^);
+             VT_HEX: Write(StdOut, Values.HexToStr(PQInt(Arg^[C]^.Ptr)^));
+             VT_OCT: Write(StdOut, Values.OctToStr(PQInt(Arg^[C]^.Ptr)^));
+             VT_BIN: Write(StdOut, Values.BinToStr(PQInt(Arg^[C]^.Ptr)^));
+             VT_FLO: Write(StdOut, Values.FloatToStr(PFloat(Arg^[C]^.Ptr)^));
+             VT_BOO: Write(StdOut, PBoolean(Arg^[C]^.Ptr)^);
+             VT_STR: Write(StdOut, PAnsiString(Arg^[C]^.Ptr)^);
+             VT_UTF: Write(StdOut, '{UTF8}');
+             VT_ARR: Write(StdOut, 'array(',PArray(Arg^[C]^.Ptr)^.Count,')');
+             VT_DIC: Write(StdOut, 'dict(',PDict(Arg^[C]^.Ptr)^.Count,')');
+             VT_FIL: Write(StdOut, 'file(',PFileVal(Arg^[C]^.Ptr)^.Pth,')');
+             else Write(StdOut, '(',Arg^[C]^.Typ,')')
              end;
           If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
           end;
@@ -98,7 +98,7 @@ Function F_Writeln(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Var R:PValue;
    begin
    R:=F_Write(DoReturn, Arg);
-   Writeln(YukStdOut^);
+   Writeln(StdOut);
    Exit(R)
    end;
 
