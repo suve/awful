@@ -3,35 +3,35 @@ unit functions_math;
 interface
    uses Values;
 
-Procedure Register(FT:PFunTrie);
+Procedure Register(Const FT:PFunTrie);
 
-Function F_abs(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_sgn(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_abs(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_sgn(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
-Function F_ceil(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_floor(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_round(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_trunc(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_frac(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_ceil(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_floor(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_round(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_trunc(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_frac(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
-Function F_cos(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_sin(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_tan(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_ctg(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_cos(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_sin(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_tan(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_ctg(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
-Function F_sqrt(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_log(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_sqrt(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_log(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
-Function F_gcd(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_lcm(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_newt(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_hypotenuse(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_gcd(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_lcm(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_newt(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_hypotenuse(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 
 implementation
    uses EmptyFunc, Math;
 
-Procedure Register(FT:PFunTrie);
+Procedure Register(Const FT:PFunTrie);
    begin
    // Trigonometry
    FT^.SetVal('cos', @F_cos);
@@ -71,7 +71,7 @@ Function myFloor(V:TFloat):QInt; begin Exit(Floor(V)) end;
 Function myRound(V:TFloat):QInt; begin Exit(Round(V)) end;
 Function myTrunc(V:TFloat):QInt; begin Exit(Trunc(V)) end;
 
-Function F_sqrt(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_sqrt(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; F:TFLoat;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -89,7 +89,7 @@ Function F_sqrt(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(NewVal(VT_FLO,F))
    end;
 
-Function F_log(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_log(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; Base,Number:TFloat;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -120,7 +120,7 @@ Function F_log(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(NewVal(VT_FLO, LogN(Base, Number)))
    end;
 
-Function F_abs(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_abs(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; R:PValue;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -139,7 +139,7 @@ Function F_abs(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(R)   
    end;
 
-Function F_sgn(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_sgn(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; R:PValue;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -156,7 +156,7 @@ Function F_sgn(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(R)   
    end;
 
-Function F_trigonometric(Func:TFloatToFloatFunc; DoReturn:Boolean; Arg:PArrPVal):PValue; Inline;
+Function F_trigonometric(Func:TFloatToFloatFunc; Const DoReturn:Boolean; Const Arg:PArrPVal):PValue; Inline;
    Var C:LongWord; R:PValue;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -175,19 +175,19 @@ Function F_trigonometric(Func:TFloatToFloatFunc; DoReturn:Boolean; Arg:PArrPVal)
    Exit(R)   
    end;
 
-Function F_cos(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_cos(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_trigonometric(@myCos, DoReturn, Arg)) end;
 
-Function F_sin(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_sin(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_trigonometric(@mySin, DoReturn, Arg)) end;
    
-Function F_tan(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_tan(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_trigonometric(@myTan, DoReturn, Arg)) end;
    
-Function F_ctg(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_ctg(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_trigonometric(@myCtg, DoReturn, Arg)) end;
 
-Function F_rounding(Func:TFloatToIntFunc; DoReturn:Boolean; Arg:PArrPVal):PValue; Inline;
+Function F_rounding(Func:TFloatToIntFunc; Const DoReturn:Boolean; Const Arg:PArrPVal):PValue; Inline;
    Var C:LongWord; R:PValue;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -204,19 +204,19 @@ Function F_rounding(Func:TFloatToIntFunc; DoReturn:Boolean; Arg:PArrPVal):PValue
    Exit(R)   
    end;
 
-Function F_ceil(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_ceil(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_rounding(@myCeil, DoReturn, Arg)) end;
 
-Function F_floor(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_floor(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_rounding(@myFloor, DoReturn, Arg)) end;
 
-Function F_round(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_round(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_rounding(@myRound, DoReturn, Arg)) end;
 
-Function F_trunc(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_trunc(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_rounding(@myTrunc, DoReturn, Arg)) end;
 
-Function F_frac(DoReturn:Boolean; Arg:PArrPVal):PValue; Inline;
+Function F_frac(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue; Inline;
    Var C:LongWord; R:PValue;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -264,7 +264,7 @@ Function NewtonsSymbol(A,B:QInt):QInt;
    Exit((A+1) * Product)
    end;
 
-Function F_commons(Func:TIntIntToIntFunc; DoReturn:Boolean; Arg:PArrPVal):PValue; Inline;
+Function F_commons(Func:TIntIntToIntFunc; Const DoReturn:Boolean; Const Arg:PArrPVal):PValue; Inline;
    Var C:LongWord; Int:Array[0..1] of QInt;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -287,16 +287,16 @@ Function F_commons(Func:TIntIntToIntFunc; DoReturn:Boolean; Arg:PArrPVal):PValue
    Exit(NewVal(VT_INT, Func(Int[0],Int[1])))
    end;
 
-Function F_gcd(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_gcd(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_commons(@GreatestCommonDivisor, DoReturn, Arg)) end;
 
-Function F_lcm(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_lcm(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_commons(@LeastCommonMultiple, DoReturn, Arg)) end;
 
-Function F_newt(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_newt(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_commons(@NewtonsSymbol, DoReturn, Arg)) end;
 
-Function F_hypotenuse(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_hypotenuse(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; Flt:Array[0..1] of TFloat;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));

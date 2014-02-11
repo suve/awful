@@ -5,22 +5,22 @@ unit functions_compare;
 interface
    uses Values;
 
-Procedure Register(FT:PFunTrie);
+Procedure Register(Const FT:PFunTrie);
 
-Function F_Eq(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_Seq(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_Neq(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_SNeq(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_Gt(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_Ge(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_Lt(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_Le(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Eq(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_Seq(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_Neq(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_SNeq(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_Gt(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_Ge(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_Lt(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_Le(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 
 implementation
    uses Values_Compare, EmptyFunc;
 
-Procedure Register(FT:PFunTrie);
+Procedure Register(Const FT:PFunTrie);
    begin
    // Comparisons
    FT^.SetVal('eq',@F_Eq);     FT^.SetVal('==',@F_Eq);
@@ -33,9 +33,9 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('le',@F_le);     FT^.SetVal('<=',@F_Le);
    end;
 
-Type TCompareFunc = Function(A,B:PValue):Boolean;
+Type TCompareFunc = Function(Const A,B:PValue):Boolean;
 
-Function F_Compare(CompareVals:TCompareFunc; DoReturn:Boolean; Arg:PArrPVal):PValue; Inline;
+Function F_Compare(CompareVals:TCompareFunc; Const DoReturn:Boolean; Const Arg:PArrPVal):PValue; Inline;
    Var C, F :LongWord; R:Boolean;
    begin R:=True;
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -54,28 +54,28 @@ Function F_Compare(CompareVals:TCompareFunc; DoReturn:Boolean; Arg:PArrPVal):PVa
    If (DoReturn) then Exit(NewVal(VT_BOO, R)) else Exit(NilVal)
    end;
 
-Function F_Eq(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Eq(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_Compare(@ValEq, DoReturn, Arg)) end;
 
-Function F_Neq(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Neq(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_Compare(@ValNeq, DoReturn, Arg)) end;
 
-Function F_SEq(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SEq(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_Compare(@ValSeq, DoReturn, Arg)) end;
 
-Function F_SNEq(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SNEq(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_Compare(@ValSneq, DoReturn, Arg)) end;
 
-Function F_Gt(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Gt(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_Compare(@ValGt, DoReturn, Arg)) end;
 
-Function F_Ge(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Ge(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_Compare(@ValGe, DoReturn, Arg)) end;
 
-Function F_Lt(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Lt(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_Compare(@ValLt, DoReturn, Arg)) end;
 
-Function F_Le(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Le(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_Compare(@ValLe, DoReturn, Arg)) end;
 
 end.

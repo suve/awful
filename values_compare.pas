@@ -3,19 +3,19 @@ unit values_compare;
 interface
    uses Values;
 
-Function ValSeq(A,B:PValue):Boolean;
-Function ValSNeq(A,B:PValue):Boolean;
-Function ValEq(A,B:PValue):Boolean;
-Function ValNeq(A,B:PValue):Boolean;
-Function ValGt(A,B:PValue):Boolean;
-Function ValGe(A,B:PValue):Boolean;
-Function ValLt(A,B:PValue):Boolean;
-Function ValLe(A,B:PValue):Boolean;
+Function ValSeq(Const A,B:PValue):Boolean;
+Function ValSNeq(Const A,B:PValue):Boolean;
+Function ValEq(Const A,B:PValue):Boolean;
+Function ValNeq(Const A,B:PValue):Boolean;
+Function ValGt(Const A,B:PValue):Boolean;
+Function ValGe(Const A,B:PValue):Boolean;
+Function ValLt(Const A,B:PValue):Boolean;
+Function ValLe(Const A,B:PValue):Boolean;
 
 implementation
    uses SysUtils;
 
-Function ValSeq(A,B:PValue):Boolean;
+Function ValSeq(Const A,B:PValue):Boolean;
    begin
    If (A^.Typ <> B^.Typ) then Exit(False);
    Case (A^.Typ) of
@@ -32,10 +32,10 @@ Function ValSeq(A,B:PValue):Boolean;
       else Exit(False)
    end end;
 
-Function ValSNeq(A,B:PValue):Boolean;
+Function ValSNeq(Const A,B:PValue):Boolean;
    begin Exit(Not ValSeq(A,B)) end;
 
-Function ValEq(A,B:PValue):Boolean;
+Function ValEq(Const A,B:PValue):Boolean;
    begin
    If (A^.Typ >= VT_INT) and (A^.Typ <= VT_BIN) then begin
       If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
@@ -86,10 +86,10 @@ Function ValEq(A,B:PValue):Boolean;
       Exit(False)
    end;
 
-Function ValNeq(A,B:PValue):Boolean;
+Function ValNeq(Const A,B:PValue):Boolean;
    begin Exit(Not ValEq(A,B)) end;
 
-Function ValGt(A,B:PValue):Boolean;
+Function ValGt(Const A,B:PValue):Boolean;
    begin
    If (A^.Typ >= VT_INT) and (A^.Typ <= VT_BIN) then begin
       If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
@@ -140,7 +140,7 @@ Function ValGt(A,B:PValue):Boolean;
       Exit(False)
    end;
 
-Function ValGe(A,B:PValue):Boolean;
+Function ValGe(Const A,B:PValue):Boolean;
    begin
    If (A^.Typ >= VT_INT) and (A^.Typ <= VT_BIN) then begin
       If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
@@ -191,7 +191,7 @@ Function ValGe(A,B:PValue):Boolean;
       Exit(False)
    end;
 
-Function ValLt(A,B:PValue):Boolean;
+Function ValLt(Const A,B:PValue):Boolean;
    begin
    If (A^.Typ >= VT_INT) and (A^.Typ <= VT_BIN) then begin
       If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then
@@ -242,7 +242,7 @@ Function ValLt(A,B:PValue):Boolean;
       Exit(False)
    end;
 
-Function ValLe(A,B:PValue):Boolean;
+Function ValLe(Const A,B:PValue):Boolean;
    begin
    If (A^.Typ >= VT_INT) and (A^.Typ <= VT_BIN) then begin
       If (B^.Typ >= VT_INT) and (B^.Typ <= VT_BIN) then

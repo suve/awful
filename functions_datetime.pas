@@ -7,27 +7,27 @@ interface
 
 Const dtf_def = 'yyyy"-"mm"-"dd" "hh":"nn';
 
-Procedure Register(FT:PFunTrie);
+Procedure Register(Const FT:PFunTrie);
 
-Function F_DateTime_Start(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_DateTime_FileStart(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_DateTime_Start(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_DateTime_FileStart(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
-Function F_DateTime_Now(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_DateTime_Date(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_DateTime_Time(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_DateTime_Now(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_DateTime_Date(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_DateTime_Time(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
-Function F_DateTime_Encode(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_DateTime_Decode(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_DateTime_Encode(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_DateTime_Decode(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
-Function F_DateTime_Make(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_DateTime_Break(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_DateTime_Make(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_DateTime_Break(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
-Function F_DateTime_String(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_DateTime_String(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 implementation
    uses Values_Arith, SysUtils, EmptyFunc, CoreFunc, Globals;
 
-Procedure Register(FT:PFunTrie);
+Procedure Register(Const FT:PFunTrie);
    begin
    FT^.SetVal('dt-start',@F_DateTime_Start);
    FT^.SetVal('dt-runstart',@F_DateTime_FileStart);
@@ -41,7 +41,7 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('dt-str',@F_DateTime_String);
    end;
 
-Function F_DateTime_Start(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_DateTime_Start(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord;
    begin
    If (Length(Arg^)>0) then
@@ -50,7 +50,7 @@ Function F_DateTime_Start(DoReturn:Boolean; Arg:PArrPVal):PValue;
    If (DoReturn) then Exit(NewVal(VT_FLO,GLOB_dt)) else Exit(NIL)
    end;
 
-Function F_DateTime_FileStart(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_DateTime_FileStart(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord;
    begin
    If (Length(Arg^)>0) then
@@ -59,7 +59,7 @@ Function F_DateTime_FileStart(DoReturn:Boolean; Arg:PArrPVal):PValue;
    If (DoReturn) then Exit(NewVal(VT_FLO,GLOB_sdt)) else Exit(NIL)
    end;
 
-Function F_DateTime_Now(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_DateTime_Now(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord;
    begin
    If (Length(Arg^)>0) then
@@ -68,7 +68,7 @@ Function F_DateTime_Now(DoReturn:Boolean; Arg:PArrPVal):PValue;
    If (DoReturn) then Exit(NewVal(VT_FLO,SysUtils.Now())) else Exit(NIL)
    end;
 
-Function F_DateTime_Date(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_DateTime_Date(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord;
    begin
    If (Length(Arg^)>0) then
@@ -77,7 +77,7 @@ Function F_DateTime_Date(DoReturn:Boolean; Arg:PArrPVal):PValue;
    If (DoReturn) then Exit(NewVal(VT_FLO,SysUtils.Date())) else Exit(NIL)
    end;
 
-Function F_DateTime_Time(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_DateTime_Time(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord;
    begin
    If (Length(Arg^)>0) then
@@ -86,7 +86,7 @@ Function F_DateTime_Time(DoReturn:Boolean; Arg:PArrPVal):PValue;
    If (DoReturn) then Exit(NewVal(VT_FLO,SysUtils.Time())) else Exit(NIL)
    end;
 
-Function F_DateTime_Encode(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_DateTime_Encode(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Const ARRLEN = 7; ARRHI = 6;
    Var C,H:LongWord; DT:Array[0..ARRHI] of LongInt; R:TDateTime;
    begin
@@ -110,7 +110,7 @@ Function F_DateTime_Encode(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(NewVal(VT_FLO,R))
    end;
 
-Function F_DateTime_Make(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_DateTime_Make(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Const ARRLEN = 5; ARRHI = 4;
    Var C,H:LongWord; V:PValue;
        dt:Array[0..ARRHI] of LongInt; R:TDateTime;
@@ -139,7 +139,7 @@ Function F_DateTime_Make(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(NewVal(VT_FLO,R))
    end;
 
-Function F_DateTime_Decode(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_DateTime_Decode(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; V:PValue; D:PDict; dt:TDateTime; dec:Array[1..8] of Word;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -165,7 +165,7 @@ Function F_DateTime_Decode(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(V)
    end;
 
-Function F_DateTime_Break(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_DateTime_Break(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; V:PValue; D:PDict; dt:TDateTime; brk:Array[1..5] of QInt;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -264,7 +264,7 @@ Function dtf(S:AnsiString):AnsiString;
    If (Q) then Exit(R+'"') else Exit(R)
    end;
 
-Function F_DateTime_String(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_DateTime_String(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; dt:TDateTime; Str,Format:AnsiString;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));

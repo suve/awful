@@ -5,56 +5,40 @@ unit functions_cgi;
 interface
    uses Values;
 
+Procedure Register(Const FT:PFunTrie);
 
-Type TKeyVal = record
-     Key, Val : AnsiString
-     end;
-     
-     TKeyValArr = Array of TKeyVal;
-     
-     TCookie = record
-     Name, Value : AnsiString
-     end;
+Function F_Doctype(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_EncodeURL(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_DecodeURL(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_EncodeHTML(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_DecodeHTML(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 {$IFDEF CGI}
-Var Headers:TKeyValArr;
-    Cookies:Array of TCookie;
-{$ENDIF}
-
-Procedure Register(FT:PFunTrie);
-
-Function F_Doctype(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_EncodeURL(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_DecodeURL(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_EncodeHTML(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_DecodeHTML(DoReturn:Boolean; Arg:PArrPVal):PValue;
-
-{$IFDEF CGI}
-Function F_HTTPheader(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_HTTPcookie(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_HTTPheader(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_HTTPcookie(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 {$ELSE}
-Function F_GetProcess(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_PostProcess(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_CakeProcess(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_GetProcess(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_PostProcess(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_CakeProcess(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 {$ENDIF}
 
-Function F_GetIs_(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_GetVal(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_GetKey(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_GetNum(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_GetDict(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_GetIs_(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_GetVal(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_GetKey(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_GetNum(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_GetDict(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
-Function F_PostIs_(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_PostVal(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_PostKey(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_PostNum(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_PostDict(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_PostIs_(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_PostVal(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_PostKey(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_PostNum(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_PostDict(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
-Function F_CakeIs_(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_CakeVal(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_CakeKey(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_CakeNum(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_CakeDict(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_CakeIs_(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_CakeVal(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_CakeKey(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_CakeNum(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_CakeDict(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 Function EncodeURL(Str:AnsiString):AnsiString;
 Function DecodeURL(Str:AnsiString):AnsiString;
@@ -67,9 +51,9 @@ Procedure ProcessCake();
 Procedure FreeArrays();
 
 implementation
-   uses Functions_Strings, SysUtils, Math, EmptyFunc;
+   uses Functions_Strings, SysUtils, Math, EmptyFunc, Globals;
 
-Procedure Register(FT:PFunTrie);
+Procedure Register(Const FT:PFunTrie);
    begin
    // String thingies
    FT^.SetVal('doctype',@F_Doctype);
@@ -480,7 +464,7 @@ Function DecodeHTML(Str:AnsiString):AnsiString;
    end;
 
 
-Function F_ParseString(Func:TStrFunc; DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_ParseString(Func:TStrFunc; Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; S:AnsiString;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -494,22 +478,22 @@ Function F_ParseString(Func:TStrFunc; DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(NewVal(VT_STR,Func(S)))
    end;
 
-Function F_DecodeURL(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_DecodeURL(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_ParseString(@DecodeURL, DoReturn, Arg)) end;
 
-Function F_EncodeURL(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_EncodeURL(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_ParseString(@EncodeURL, DoReturn, Arg)) end;
    
-Function F_EncodeHTML(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_EncodeHTML(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_ParseString(@EncodeHTML, DoReturn, Arg)) end;
    
-Function F_DecodeHTML(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_DecodeHTML(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_ParseString(@DecodeHTML, DoReturn, Arg)) end;
    
    
 {$IFDEF CGI}
-Function F_HTTPheader(DoReturn:Boolean; Arg:PArrPVal):PValue;
-   Var T:PValue; K,V:AnsiString; C:LongWord; Match:Boolean;
+Function F_HTTPheader(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   Var K,V:AnsiString; C:LongWord; Match:Boolean;
    begin
    If (Length(Arg^)=0) then If (DoReturn) then Exit(NilVal()) else Exit(NIL);
    If (Arg^[0]^.Typ = VT_STR)
@@ -542,8 +526,8 @@ Function F_HTTPheader(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(F_(DoReturn, Arg))
    end;
 
-Function F_HTTPcookie(DoReturn:Boolean; Arg:PArrPVal):PValue;
-   Var T:PValue; K,V:AnsiString;
+Function F_HTTPcookie(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   Var K,V:AnsiString;
    begin
    If (Length(Arg^) < 2) then If (DoReturn) then Exit(NilVal()) else Exit(NIL);
    If (Arg^[0]^.Typ = VT_STR)
@@ -720,7 +704,7 @@ Function ArrNum(Var Arr:TKeyValArr):LongWord;
    begin Exit(Length(Arr)) end;
 
 {$IFNDEF CGI}
-Function F_GetProcess(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_GetProcess(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord;
    begin
    If (Length(Arg^)>0) then
@@ -730,7 +714,7 @@ Function F_GetProcess(DoReturn:Boolean; Arg:PArrPVal):PValue;
    If (DoReturn) then Exit(NilVal()) else Exit(Nil)
    end;
 
-Function F_PostProcess(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_PostProcess(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord;
    begin
    If (Length(Arg^)>0) then
@@ -740,7 +724,7 @@ Function F_PostProcess(DoReturn:Boolean; Arg:PArrPVal):PValue;
    If (DoReturn) then Exit(NilVal()) else Exit(Nil)
    end;
 
-Function F_CakeProcess(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_CakeProcess(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord;
    begin
    If (Length(Arg^)>0) then
@@ -751,7 +735,7 @@ Function F_CakeProcess(DoReturn:Boolean; Arg:PArrPVal):PValue;
    end;
 {$ENDIF}
 
-Function F_ArrIs_(Var Arr:TKeyValArr; DoReturn:Boolean; Var Arg:PArrPVal):PValue;
+Function F_ArrIs_(Var Arr:TKeyValArr; Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var B:Boolean; C:LongWord; 
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -763,7 +747,7 @@ Function F_ArrIs_(Var Arr:TKeyValArr; DoReturn:Boolean; Var Arg:PArrPVal):PValue
    Exit(NewVal(VT_BOO,B))
    end;
 
-Function F_ArrVal(Var Arr:TKeyValArr; DoReturn:Boolean; Var Arg:PArrPVal):PValue;
+Function F_ArrVal(Var Arr:TKeyValArr; Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; S:AnsiString;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -779,7 +763,7 @@ Function F_ArrVal(Var Arr:TKeyValArr; DoReturn:Boolean; Var Arg:PArrPVal):PValue
    Exit(NewVal(VT_STR,S))
    end;
 
-Function F_ArrKey(Var Arr:TKeyValArr; DoReturn:Boolean; Var Arg:PArrPVal):PValue;
+Function F_ArrKey(Var Arr:TKeyValArr; Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; S:AnsiString;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -793,7 +777,7 @@ Function F_ArrKey(Var Arr:TKeyValArr; DoReturn:Boolean; Var Arg:PArrPVal):PValue
    Exit(NewVal(VT_STR,S))
    end;
 
-Function F_ArrNum(Var Arr:TKeyValArr; DoReturn:Boolean; Var Arg:PArrPVal):PValue;
+Function F_ArrNum(Var Arr:TKeyValArr; Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord;
    begin
    If (Length(Arg^)>0) then
@@ -802,7 +786,7 @@ Function F_ArrNum(Var Arr:TKeyValArr; DoReturn:Boolean; Var Arg:PArrPVal):PValue
    If (DoReturn) then Exit(NewVal(VT_INT,ArrNum(Arr))) else Exit(NIL)
    end;
 
-Function F_ArrDict(Var Arr:TKeyValArr; DoReturn:Boolean; Var Arg:PArrPVal):PValue;
+Function F_ArrDict(Var Arr:TKeyValArr; Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; V:PValue; Dic:PDict;
    begin
    If (Length(Arg^)>0) then
@@ -816,52 +800,52 @@ Function F_ArrDict(Var Arr:TKeyValArr; DoReturn:Boolean; Var Arg:PArrPVal):PValu
    Exit(V)
    end;
 
-Function F_GetIs_(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_GetIs_(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_ArrIs_(GetArr, DoReturn, Arg)) end;
    
-Function F_GetVal(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_GetVal(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_ArrVal(GetArr, DoReturn, Arg)) end;
    
-Function F_GetKey(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_GetKey(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_ArrKey(GetArr, DoReturn, Arg)) end;
    
-Function F_GetNum(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_GetNum(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_ArrNum(GetArr, DoReturn, Arg)) end;
    
-Function F_GetDict(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_GetDict(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_ArrDict(GetArr, DoReturn, Arg)) end;
 
-Function F_PostIs_(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_PostIs_(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_ArrIs_(PostArr, DoReturn, Arg)) end;
    
-Function F_PostVal(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_PostVal(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_ArrVal(PostArr, DoReturn, Arg)) end;
    
-Function F_PostKey(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_PostKey(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_ArrKey(PostArr, DoReturn, Arg)) end;
    
-Function F_PostNum(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_PostNum(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_ArrNum(PostArr, DoReturn, Arg)) end;
    
-Function F_PostDict(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_PostDict(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_ArrDict(PostArr, DoReturn, Arg)) end;
    
-Function F_CakeIs_(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_CakeIs_(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_ArrIs_(CakeArr, DoReturn, Arg)) end;
    
-Function F_CakeVal(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_CakeVal(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_ArrVal(CakeArr, DoReturn, Arg)) end;
    
-Function F_CakeKey(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_CakeKey(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_ArrKey(CakeArr, DoReturn, Arg)) end;
    
-Function F_CakeNum(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_CakeNum(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_ArrNum(CakeArr, DoReturn, Arg)) end;
    
-Function F_CakeDict(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_CakeDict(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_ArrDict(CakeArr, DoReturn, Arg)) end;
 
-Function F_Doctype(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Doctype(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Const HTML5 = '<!DOCTYPE html>';
          HTML4_LOOSE = '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">';
          XHTML1_1 = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">';

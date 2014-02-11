@@ -5,18 +5,18 @@ unit functions_bitwise;
 interface
    uses Values;
 
-Procedure Register(FT:PFunTrie);
+Procedure Register(Const FT:PFunTrie);
 
-Function F_Not(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_And(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_Xor(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_Or(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Not(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_And(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_Xor(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_Or(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 
 implementation
    uses Values_Bitwise, EmptyFunc;
 
-Procedure Register(FT:PFunTrie);
+Procedure Register(Const FT:PFunTrie);
    begin
    FT^.SetVal('bwnot',@F_not);    FT^.SetVal('b!',@F_Not);
    FT^.SetVal('bwand',@F_and);    FT^.SetVal('b&',@F_and);
@@ -24,7 +24,7 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('bwor' ,@F_or);     FT^.SetVal('b?',@F_or);
    end;
 
-Function F_Not(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Not(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; V:PValue;
    begin
    If (Length(Arg^)=0) then begin
@@ -42,9 +42,9 @@ Function F_Not(DoReturn:Boolean; Arg:PArrPVal):PValue;
       end
    end;
 
-Type TBitwiseFunc = Function(A,B:PValue):PValue;
+Type TBitwiseFunc = Function(Const A,B:PValue):PValue;
 
-Function F_Bitwise(Bitwise:TBitwiseFunc; DoReturn:Boolean; Arg:PArrPVal):PValue; Inline;
+Function F_Bitwise(Bitwise:TBitwiseFunc; Const DoReturn:Boolean; Const Arg:PArrPVal):PValue; Inline;
    Var C:LongWord; V:PValue;
    begin
    If (Not DoReturn) or (Length(Arg^)<2)
@@ -58,13 +58,13 @@ Function F_Bitwise(Bitwise:TBitwiseFunc; DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(V)
    end;
 
-Function F_And(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_And(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_Bitwise(@ValAnd, DoReturn, Arg)) end;
 
-Function F_Xor(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Xor(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_Bitwise(@ValXor, DoReturn, Arg)) end;
 
-Function F_Or(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Or(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_Bitwise(@ValOr, DoReturn, Arg)) end;
 
 end.

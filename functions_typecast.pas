@@ -5,20 +5,20 @@ unit functions_typecast;
 interface
    uses Values;
 
-Procedure Register(FT:PFunTrie);
+Procedure Register(Const FT:PFunTrie);
 
-Function F_mkint(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_mkhex(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_mkoct(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_mkbin(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_mkflo(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_mkstr(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_mklog(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_mkint(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_mkhex(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_mkoct(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_mkbin(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_mkflo(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_mkstr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_mklog(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 implementation
    //uses EmptyFunc;
 
-Procedure Register(FT:PFunTrie);
+Procedure Register(Const FT:PFunTrie);
    begin
    FT^.SetVal('mkint',@F_mkint);
    FT^.SetVal('mkhex',@F_mkhex);
@@ -29,7 +29,7 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('mklog',@F_mklog); FT^.SetVal('mkbool',@F_mklog);
    end;
 
-Function F_mkint(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_mkint(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; V:PValue;
    begin
    If (Length(Arg^)=0) then begin
@@ -54,7 +54,7 @@ Function F_mkint(DoReturn:Boolean; Arg:PArrPVal):PValue;
       end
    end;
 
-Function F_mkhex(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_mkhex(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; V:PValue;
    begin
    If (Length(Arg^)=0) then begin
@@ -79,7 +79,7 @@ Function F_mkhex(DoReturn:Boolean; Arg:PArrPVal):PValue;
       end
    end;
 
-Function F_mkoct(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_mkoct(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; V:PValue;
    begin
    If (Length(Arg^)=0) then begin
@@ -104,7 +104,7 @@ Function F_mkoct(DoReturn:Boolean; Arg:PArrPVal):PValue;
       end
    end;
 
-Function F_mkbin(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_mkbin(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; V:PValue;
    begin
    If (Length(Arg^)=0) then begin
@@ -129,7 +129,7 @@ Function F_mkbin(DoReturn:Boolean; Arg:PArrPVal):PValue;
       end
    end;
 
-Function F_mkflo(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_mkflo(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; V:PValue;
    begin
    If (Length(Arg^)=0) then begin
@@ -154,7 +154,7 @@ Function F_mkflo(DoReturn:Boolean; Arg:PArrPVal):PValue;
       end
    end;
 
-Function F_mkstr(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_mkstr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; V:PValue;
    begin
    If (Length(Arg^)=0) then begin
@@ -179,7 +179,7 @@ Function F_mkstr(DoReturn:Boolean; Arg:PArrPVal):PValue;
       end
    end;
 
-Function F_mklog(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_mklog(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; V:PValue;
    begin
    If (Length(Arg^)=0) then begin

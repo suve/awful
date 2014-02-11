@@ -14,32 +14,39 @@ Var FCal : Array of TCallState;
     FLev : LongWord;
     DoExit : Boolean;
 
-Procedure Register(FT:PFunTrie);
+Procedure Register(Const FT:PFunTrie);
 
-Function Eval(Ret:Boolean; E:PExpr):PValue;
-Function RunFunc(P:LongWord):PValue;
+Function Eval(Const Ret:Boolean; Const E:PExpr):PValue;
+Function RunFunc(Const P:LongWord):PValue;
 
-Function F_If(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_Else(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_If(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_Else(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
-Function F_While(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_Done(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_Until(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_Return(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_While(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_Done(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_Until(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
-Function F_Exit(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Break(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_Continue(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
-Function F_AutoCall(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_FuncArgs(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_Call(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Return(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_Exit(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
-Function F_FileIncluded(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_FileIncludes(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_AutoCall(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_FuncArgs(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_Call(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+
+Function F_FileIncluded(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_FileIncludes(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+
+Function F_ParamArr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_ParamCnt(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_ParamStr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 implementation
    uses Globals, Parser, EmptyFunc;
 
-Procedure Register(FT:PFunTrie);
+Procedure Register(Const FT:PFunTrie);
    begin
    FT^.SetVal('call',@F_Call);
    FT^.SetVal('return',@F_Return);
@@ -47,20 +54,23 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('func-args',@F_FuncArgs);
    FT^.SetVal('file-included',@F_FileIncluded);
    FT^.SetVal('file-includes',@F_FileIncludes);
+   FT^.SetVal('param-arr',@F_ParamArr);
+   FT^.SetVal('param-cnt',@F_ParamCnt);
+   FT^.SetVal('param-str',@F_ParamStr);
    end;
 
-Function Eval(Ret:Boolean; E:PExpr):PValue;
+Function Eval(Const Ret:Boolean; Const E:PExpr):PValue;
    
-   Function GetVar(Name:AnsiString;Typ:TValueType):PValue;
+   Function GetVar(Name:PStr;Typ:TValueType):PValue;
       Var R:PValue;
       begin
-      Try R:=FCal[FLev].Vars^.GetVal(Name);
+      Try R:=FCal[FLev].Vars^.GetVal(Name^);
           Exit(R)
-      Except Try R:=FCal[0].Vars^.GetVal(Name);
+      Except Try R:=FCal[0].Vars^.GetVal(Name^);
                  Exit(R);
              Except end end;
       R:=EmptyVal(Typ); R^.Lev -= 1;
-      FCal[FLev].Vars^.SetVal(Name,R);
+      FCal[FLev].Vars^.SetVal(Name^,R);
       Exit(R)
       end;
    
@@ -75,10 +85,10 @@ Function Eval(Ret:Boolean; E:PExpr):PValue;
             TK_CONS: V:=PValue(Index^.Ptr);
             TK_LITE: V:=PValue(Index^.Ptr);
             TK_VARI, TK_REFE:
-               V:=GetVar(PStr(Index^.Ptr)^, VT_INT);
+               V:=GetVar(PStr(Index^.Ptr), VT_INT);
             TK_AREF, TK_AVAL: begin
                atk := PArrTk(Index^.Ptr);
-               V:=GetVar(PStr(atk^.Ptr)^, VT_INT);
+               V:=GetVar(PStr(atk^.Ptr), VT_INT);
                For C:=Low(atk^.Ind) to High(atk^.Ind) do
                    V:=GetArr(V, atk^.Ind[C], VT_INT)
                end;
@@ -111,11 +121,11 @@ Function Eval(Ret:Boolean; E:PExpr):PValue;
       Exit(V)
       end;
    
-   Var Arg:TArrPVal; T:LongWord; V:PValue; I:LongWord; atk:PArrTk; Tp:TValueType;
+   Var Arg:TArrPVal; T:LongWord; V:PValue; I,L:LongWord; atk:PArrTk; Tp:TValueType;
    begin
-   SetLength(Arg,Length(E^.Tok));
-   If (Length(E^.Tok)=0) then Exit(E^.Fun(Ret, @Arg));
-   For T:=High(E^.Tok) downto Low(E^.Tok) do
+   L := Length(E^.Tok); SetLength(Arg, L);
+   If (L = 0) then Exit(E^.Fun(Ret, @Arg)); L -= 1;
+   For T:=L downto 0 do
        Case (E^.Tok[T]^.Typ) of 
           TK_CONS: begin
              Arg[T]:=CopyVal(PValue(E^.Tok[T]^.Ptr))
@@ -124,19 +134,19 @@ Function Eval(Ret:Boolean; E:PExpr):PValue;
              Arg[T]:=CopyVal(PValue(E^.Tok[T]^.Ptr))
              end;
           TK_VARI: begin
-             If (T<High(E^.Tok)) 
-                then V:=GetVar(PStr(E^.Tok[T]^.Ptr)^,Arg[T+1]^.Typ)
-                else V:=GetVar(PStr(E^.Tok[T]^.Ptr)^,VT_NIL);
+             If (T < L) 
+                then V:=GetVar(PStr(E^.Tok[T]^.Ptr),Arg[T+1]^.Typ)
+                else V:=GetVar(PStr(E^.Tok[T]^.Ptr),VT_NIL);
              Arg[T]:=CopyVal(V)
              end;
           TK_REFE: begin
-             If (T<High(E^.Tok)) 
-                then Arg[T]:=GetVar(PStr(E^.Tok[T]^.Ptr)^,Arg[T+1]^.Typ)
-                else Arg[T]:=GetVar(PStr(E^.Tok[T]^.Ptr)^,VT_NIL);
+             If (T < L) 
+                then Arg[T]:=GetVar(PStr(E^.Tok[T]^.Ptr),Arg[T+1]^.Typ)
+                else Arg[T]:=GetVar(PStr(E^.Tok[T]^.Ptr),VT_NIL);
              end;
           TK_AVAL, TK_AREF: begin
-             If (T<High(E^.Tok)) then Tp:=Arg[T+1]^.Typ else Tp:=VT_NIL;
-             atk := PArrTk(E^.Tok[T]^.Ptr); V:=GetVar(PStr(atk^.Ptr)^, VT_DIC);
+             If (T < L) then Tp:=Arg[T+1]^.Typ else Tp:=VT_NIL;
+             atk := PArrTk(E^.Tok[T]^.Ptr); V:=GetVar(PStr(atk^.Ptr), VT_DIC);
              For I:=Low(atk^.Ind) to High(atk^.Ind) do V:=GetArr(V, atk^.Ind[I], Tp);
              If (E^.Tok[T]^.Typ = TK_AVAL) then Arg[T]:=CopyVal(V) else Arg[T]:=V
              end;
@@ -152,7 +162,7 @@ Function Eval(Ret:Boolean; E:PExpr):PValue;
    Exit(E^.Fun(Ret, @Arg))
    end;
 
-Function RunFunc(P:LongWord):PValue;
+Function RunFunc(Const P:LongWord):PValue;
    Var R:PValue;
    begin
    If (Pr[P].Num = 0) then Exit(NilVal);
@@ -167,8 +177,8 @@ Function RunFunc(P:LongWord):PValue;
    Exit(NIL)
    end;
 
-Function F_If(DoReturn:Boolean; Arg:PArrPVal):PValue;
-   Var C:LongWord; IfNum:QInt; R:Boolean; 
+Function F_If(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   Var C:LongWord; R:Boolean; 
    begin
    If (Length(Arg^)>1) then begin
       R:=True;
@@ -179,24 +189,24 @@ Function F_If(DoReturn:Boolean; Arg:PArrPVal):PValue;
           If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
           end
       end else R:=False;
-   IfNum:=PQInt(Arg^[0]^.Ptr)^; FreeVal(Arg^[0]);
-   If (Not R) then ExLn:=IfArr[IfNum][1];
+   If (Not R) then ExLn:=IfArr[PQInt(Arg^[0]^.Ptr)^][1];
+   FreeVal(Arg^[0]);
    Exit(NIL)
    end;
 
-Function F_Else(DoReturn:Boolean; Arg:PArrPVal):PValue;
-   Var C:LongWord; IfNum:QInt;
+Function F_Else(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   Var C:LongWord; 
    begin
    If (Length(Arg^)>1) then
       For C:=High(Arg^) downto 1 do
           If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
-   IfNum:=PQInt(Arg^[0]^.Ptr)^; FreeVal(Arg^[0]);
-   ExLn:=IfArr[IfNum][2];
+   ExLn:=IfArr[PQInt(Arg^[0]^.Ptr)^][2];
+   FreeVal(Arg^[0]);
    Exit(NIL)
    end;
 
-Function F_While(DoReturn:Boolean; Arg:PArrPVal):PValue;
-   Var C:LongWord; WhiNum:QInt; R:Boolean; 
+Function F_While(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   Var C:LongWord; R:Boolean; 
    begin
    If (Length(Arg^)>1) then begin
       R:=True;
@@ -207,24 +217,24 @@ Function F_While(DoReturn:Boolean; Arg:PArrPVal):PValue;
           If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
           end
       end else R:=False;
-   WhiNum:=PQInt(Arg^[0]^.Ptr)^; FreeVal(Arg^[0]);
-   If (Not R) then ExLn:=WhiArr[WhiNum][2];
+   If (Not R) then ExLn:=WhiArr[PQInt(Arg^[0]^.Ptr)^][2];
+   FreeVal(Arg^[0]);
    Exit(NIL)
    end;
 
-Function F_Done(DoReturn:Boolean; Arg:PArrPVal):PValue;
-   Var C:LongWord; WhiNum:QInt;
+Function F_Done(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   Var C:LongWord; 
    begin
    If (Length(Arg^)>1) then
       For C:=High(Arg^) downto 1 do
-          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
-   WhiNum:=PQInt(Arg^[0]^.Ptr)^; FreeVal(Arg^[0]);
-   ExLn:=WhiArr[WhiNum][1];
+          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]); 
+   ExLn:=WhiArr[PQInt(Arg^[0]^.Ptr)^][1];
+   FreeVal(Arg^[0]);
    Exit(NIL)
    end;
 
-Function F_Until(DoReturn:Boolean; Arg:PArrPVal):PValue;
-   Var C:LongWord; RepNum:QInt; R:Boolean;
+Function F_Until(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   Var C:LongWord; R:Boolean;
    begin
    If (Length(Arg^)>1) then begin
       R:=True;
@@ -235,12 +245,34 @@ Function F_Until(DoReturn:Boolean; Arg:PArrPVal):PValue;
           If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
           end
       end else R:=False;
-   RepNum:=PQInt(Arg^[0]^.Ptr)^; FreeVal(Arg^[0]);
-   If (Not R) then ExLn:=RepArr[RepNum][1];
+   If (Not R) then ExLn:=RepArr[PQInt(Arg^[0]^.Ptr)^][1];
+   FreeVal(Arg^[0]);
    Exit(NIL)
    end;
 
-Function F_Return(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Break(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   begin
+   Case PQInt(Arg^[0]^.Ptr)^ of
+       Ord(CT_WHILE): ExLn := WhiArr[PQInt(Arg^[1]^.Ptr)^][2];
+      Ord(CT_REPEAT): ExLn := RepArr[PQInt(Arg^[1]^.Ptr)^][2];
+                 else ;
+      end;
+   F_(False, Arg);
+   Exit(NIL)
+   end;
+
+Function F_Continue(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   begin
+   Case PQInt(Arg^[0]^.Ptr)^ of
+       Ord(CT_WHILE): ExLn := WhiArr[PQInt(Arg^[1]^.Ptr)^][1];
+      Ord(CT_REPEAT): ExLn := RepArr[PQInt(Arg^[1]^.Ptr)^][2]-1;
+                 else ;
+      end;
+   F_(False, Arg);
+   Exit(NIL)
+   end;
+
+Function F_Return(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; R:PValue;
    begin
    If (Length(Arg^)>1) then
@@ -254,7 +286,7 @@ Function F_Return(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(R)
    end;
 
-Function F_Exit(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Exit(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord;
    begin
    If (Length(Arg^)>0) then
@@ -264,8 +296,8 @@ Function F_Exit(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(NIL)
    end;
 
-Function F_AutoCall(DoReturn:Boolean; Arg:PArrPVal):PValue;
-   Var P,E:LongWord; A,H,PA,CA:LongInt; R,TV{,ArrV}:PValue; //Arr:PArray;
+Function F_AutoCall(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   Var P,E:LongWord; A,H,Pass,Want:LongInt; R,TV{,ArrV}:PValue; //Arr:PArray;
    begin
    P:=Proc; E:=ExLn; Proc:=PQInt(Arg^[0]^.Ptr)^;
    
@@ -276,45 +308,44 @@ Function F_AutoCall(DoReturn:Boolean; Arg:PArrPVal):PValue;
       end;
    FCal[FLev].Args := Arg;
 
-   PA:=Length(Pr[Proc].Arg); CA:=Length(Arg^)-1;
-   If (CA>PA) then H:=PA else H:=CA;
+   Want:=Length(Pr[Proc].Arg); Pass:=Length(Arg^)-1; // 1st arg is !fun number
+   If (Pass>Want) then H:=Want else H:=Pass;
    
-   If (H>0) then For A:=0 to (H-1) do begin
+   // Insert passed params into vartrie
+   If (H > 0) then For A:=0 to (H-1) do begin
       FCal[FLev].Vars^.SetVal(Pr[Proc].Arg[A],Arg^[A+1])
       end;
    
-   If (PA>CA) then For A:=H to (PA-1) do begin
+   // Insert missing params into vartie
+   If (Want > Pass) then For A:=H to (Want-1) do begin
       FCal[FLev].Vars^.SetVal(Pr[Proc].Arg[A],NilVal())
       end;
-   {
-   ArrV:=EmptyVal(VT_ARR); Arr:=PArray(ArrV^.Ptr);
-   For A:=0 to (CA-1) do Arr^.SetVal(A, Arg[A+1]);
-   Vars[FLev]^.SetVal('ARG',ArrV);
-   }
-   FCal[FLev].Vars^.SetVal('ARGNUM',NewVal(VT_INT,CA));
-   //Vars[FLev]^.SetVal('ARGWNT',NewVal(VT_INT,PA));
+   
    R:=RunFunc(Proc);
    
+   // Remove params from vartie
    If (Length(Pr[Proc].Arg)>0) then
       For A:=0 to (H-1) do FCal[FLev].Vars^.RemVal(Pr[Proc].Arg[A]);
    
+   // Remove user-defined vars from trie
    While (FCal[FLev].Vars^.Count > 0) do begin
       TV:=FCal[FLev].Vars^.RemVal();
       FreeVal(TV)
       end;
-   //Dispose(Vars[V],Destroy()); SetLength(Vars,Length(Vars)-1); 
    
+   // Decrease runlevel and free vals if needed
    FLev -= 1; CurLev -= 1;
    For A:=Low(Arg^) to High(Arg^) do
        If (Arg^[A]^.Lev >= CurLev) then FreeVal(Arg^[A]);
    
+   // Set procedure and expression number back to original values and return value
    Proc:=P; ExLn:=E; 
    If (DoReturn) then begin If (R<>NIL) then Exit(R) else Exit(NilVal()) end
                  else begin If (R<>NIL) then FreeVal(R); Exit(NIL) end
    end;
 
 
-Function F_FuncArgs(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_FuncArgs(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var AV:PValue; Arr:PArray; C:LongWord;
    begin
    If ((Not DoReturn) or (FLev = 0)) then Exit(F_(DoReturn, Arg));
@@ -324,7 +355,7 @@ Function F_FuncArgs(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(AV)
    end;
 
-Function F_Call(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Call(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; V:PValue; UFN:LongWord; FPtr:PFunc; S:TStr; NArg:TArrPVal;
    begin
    If (Length(Arg^)=0) then Exit(NilVal());
@@ -348,7 +379,7 @@ Function F_Call(DoReturn:Boolean; Arg:PArrPVal):PValue;
          Exit(F_(DoReturn, @NArg))
    end end end;
 
-Function F_FileIncludes(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_FileIncludes(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var AV:PValue; Arr:PArray; C:LongWord;
    begin
    F_(False, Arg); If (Not DoReturn) then Exit(NIL);
@@ -358,11 +389,11 @@ Function F_FileIncludes(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(AV)
    end;
 
-Function F_FileIncluded(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_FileIncluded(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var A,F:LongWord; Return,ThisFile:Boolean; FName:AnsiString;
    begin
-   If (Length(Arg^) = 0) then Exit(F_(DoReturn, Arg));
    If (Not DoReturn) then Exit(F_(False, Arg));
+   If (Length(Arg^) = 0) then Exit(NewVal(VT_BOO, False));
    Return := True;
    For A:=High(Arg^) downto Low(Arg^) do begin
        If (Arg^[A]^.Typ = VT_STR) then FName := PStr(Arg^[A]^.Ptr)^
@@ -377,6 +408,35 @@ Function F_FileIncluded(DoReturn:Boolean; Arg:PArrPVal):PValue;
        end;
    F_(False, Arg);
    Exit(NewVal(VT_BOO, Return))
+   end;
+
+Function F_ParamArr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   Var C:LongWord; V:PValue; Arr:PArray;
+   begin
+   F_(False, Arg); If (Not DoReturn) then Exit(NIL);
+   V := NewVal(VT_ARR); Arr := PArray(V^.Ptr);
+   For C:=0 to (ParamCount() - ParamNum + 1) do
+       Arr^.SetVal(C, NewVal(VT_STR, ParamStr(ParamNum + C)));
+   Exit(V)
+   end;
+
+Function F_ParamCnt(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   begin
+   F_(False, Arg); If (Not DoReturn) then Exit(NIL);
+   Exit(NewVal(VT_INT, ParamCount() - ParamNum + 1))
+   end;
+
+Function F_ParamStr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   Var Idx : QInt; R:PValue;
+   begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
+   If (Length(Arg^) = 0) then Exit(F_(True, Arg));
+   Idx := ParamNum + ValAsInt(Arg^[0]);
+   If (Idx >= ParamNum) and (Idx <= ParamCount())
+      then R := NewVal(VT_STR, ParamStr(Idx))
+      else R := NilVal();
+   F_(False, Arg);
+   Exit(R)
    end;
 
 end.

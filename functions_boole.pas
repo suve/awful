@@ -5,18 +5,18 @@ unit functions_boole;
 interface
    uses Values;
 
-Procedure Register(FT:PFunTrie);
+Procedure Register(Const FT:PFunTrie);
 
-Function F_Not(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_And(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_Or(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_Xor(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_Impl(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Not(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_And(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_Or(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_Xor(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_Impl(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 
 implementation
 
-Procedure Register(FT:PFunTrie);
+Procedure Register(Const FT:PFunTrie);
    begin
    FT^.SetVal('not',@F_not);    FT^.SetVal('!',@F_Not);
    FT^.SetVal('and',@F_and);    FT^.SetVal('&&',@F_and);
@@ -25,7 +25,7 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('impl',@F_impl);  FT^.SetVal('->',@F_impl);
    end;
 
-Function F_Not(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Not(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; B:Boolean;
    begin
    If (Length(Arg^)=0) then begin
@@ -40,7 +40,7 @@ Function F_Not(DoReturn:Boolean; Arg:PArrPVal):PValue;
    If (DoReturn) then Exit(NewVal(VT_BOO,Not B)) else Exit(NIL)
    end;
 
-Function F_And(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_And(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; B:Boolean;
    begin B:=True;
    If (Length(Arg^)=0) then begin
@@ -55,7 +55,7 @@ Function F_And(DoReturn:Boolean; Arg:PArrPVal):PValue;
    If (DoReturn) then Exit(NewVal(VT_BOO,B)) else Exit(NilVal)
    end;
 
-Function F_Xor(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Xor(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; B:Boolean;
    begin B:=False;
    If (Length(Arg^)=0) then begin
@@ -70,7 +70,7 @@ Function F_Xor(DoReturn:Boolean; Arg:PArrPVal):PValue;
    If (DoReturn) then Exit(NewVal(VT_BOO,B)) else Exit(NilVal)
    end;
 
-Function F_Or(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Or(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; B:Boolean;
    begin B:=False;
    If (Length(Arg^)=0) then begin
@@ -85,7 +85,7 @@ Function F_Or(DoReturn:Boolean; Arg:PArrPVal):PValue;
    If (DoReturn) then Exit(NewVal(VT_BOO,B)) else Exit(NilVal)
    end;
 
-Function F_Impl(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Impl(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; p,q:Boolean;
    begin
    If (Length(Arg^)=0) then begin

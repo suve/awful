@@ -59,7 +59,7 @@ Type PValue = ^TValue;
      TArrPVal = Array of PValue;
      PArrPVal = ^TArrPVal;
      
-     PFunc = Function(DoReturn:Boolean; Arg:PArrPVal):PValue;
+     PFunc = Function(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
      
 Const RETURN_VALUE_YES = True; RETURN_VALUE_NO = False;
      
@@ -76,40 +76,40 @@ Function FloatToStr(Val:TFloat):TStr;
 
 Function BoolToInt(B:TBool):LongWord; Inline;
 
-Function StrToInt(Str:TStr):QInt;
-Function StrToHex(Str:TStr):QInt;
-Function StrToOct(Str:TStr):QInt;
-Function StrToBin(Str:TStr):QInt;
-Function StrToNum(Str:TStr;Tp:TValueType):QInt;
+Function StrToInt(Const Str:TStr):QInt;
+Function StrToHex(Const Str:TStr):QInt;
+Function StrToOct(Const Str:TStr):QInt;
+Function StrToBin(Const Str:TStr):QInt;
+Function StrToNum(Const Str:TStr;Tp:TValueType):QInt;
 Function StrToReal(Str:TStr):TFloat;
 
-Function ValAsBin(V:PValue):QInt;
-Function ValAsOct(V:PValue):QInt;
-Function ValAsInt(V:PValue):QInt;
-Function ValAsHex(V:PValue):QInt;
-Function ValAsFlo(V:PValue):TFloat;
-Function ValAsBoo(V:PValue):TBool;
-Function ValAsStr(V:PValue):TStr;
+Function ValAsBin(Const V:PValue):QInt;
+Function ValAsOct(Const V:PValue):QInt;
+Function ValAsInt(Const V:PValue):QInt;
+Function ValAsHex(Const V:PValue):QInt;
+Function ValAsFlo(Const V:PValue):TFloat;
+Function ValAsBoo(Const V:PValue):TBool;
+Function ValAsStr(Const V:PValue):TStr;
 
-Function ValToInt(V:PValue):PValue;
-Function ValToHex(V:PValue):PValue;
-Function ValToOct(V:PValue):PValue;
-Function ValToBin(V:PValue):PValue;
-Function ValToFlo(V:PValue):PValue;
-Function ValToBoo(V:PValue):PValue;
-Function ValToStr(V:PValue):PValue;
+Function ValToInt(Const V:PValue):PValue;
+Function ValToHex(Const V:PValue):PValue;
+Function ValToOct(Const V:PValue):PValue;
+Function ValToBin(Const V:PValue):PValue;
+Function ValToFlo(Const V:PValue):PValue;
+Function ValToBoo(Const V:PValue):PValue;
+Function ValToStr(Const V:PValue):PValue;
 
 Function  NilVal():PValue;
-Procedure FreeVal(Val:PValue);
-Procedure DestroyVal(Val:PValue);
-Procedure AnnihilateVal(Val:PValue);
+Procedure FreeVal(Const Val:PValue);
+Procedure DestroyVal(Const Val:PValue);
+Procedure AnnihilateVal(Const Val:PValue);
 Function  EmptyVal(T:TValueType):PValue;
-Function  CopyTyp(V:PValue):PValue;
-Function  CopyVal(V:PValue):PValue;
-Function  CopyVal(V:PValue;Lv:LongWord):PValue;
-Procedure SwapPtrs(A,B:PValue);
-Procedure SetValLev(V:PValue;Lv:LongWord);
-Procedure SetValMaxLev(V:PValue;Lv:LongWord);
+Function  CopyTyp(Const V:PValue):PValue;
+Function  CopyVal(Const V:PValue):PValue;
+Function  CopyVal(Const V:PValue;Lv:LongWord):PValue;
+Procedure SwapPtrs(Const A,B:PValue);
+Procedure SetValLev(Const V:PValue;Lv:LongWord);
+Procedure SetValMaxLev(Const V:PValue;Lv:LongWord);
 
 Function NewVal(T:TValueType;V:TFloat):PValue;
 Function NewVal(T:TValueType;V:Int64):PValue;
@@ -187,7 +187,7 @@ Function RealToStr(Val:Extended;Prec:LongWord):TStr;
 Function FloatToStr(Val:TFloat):TStr;
    begin Exit(FloatToStrF(Val, RealForm, RealPrec, RealPrec)) end;
 
-Function StrToInt(Str:TStr):QInt;
+Function StrToInt(Const Str:TStr):QInt;
    Var Plus:Boolean; P:LongWord; Res:QInt;
    begin
    If (Length(Str)=0) then Exit(0);
@@ -200,7 +200,7 @@ Function StrToInt(Str:TStr):QInt;
    If Plus then Exit(Res) else Exit(-Res)
    end;
 
-Function StrToHex(Str:TStr):QInt;
+Function StrToHex(Const Str:TStr):QInt;
    Var Plus:Boolean; P:LongWord; Res:QInt;
    begin
    If (Length(Str)=0) then Exit(0);
@@ -217,7 +217,7 @@ Function StrToHex(Str:TStr):QInt;
    If Plus then Exit(Res) else Exit(-Res)
    end;
 
-Function StrToOct(Str:TStr):QInt;
+Function StrToOct(Const Str:TStr):QInt;
    Var Plus:Boolean; P:LongWord; Res:QInt;
    begin
    If (Length(Str)=0) then Exit(0);
@@ -230,7 +230,7 @@ Function StrToOct(Str:TStr):QInt;
    If Plus then Exit(Res) else Exit(-Res)
    end;
 
-Function StrToBin(Str:TStr):QInt;
+Function StrToBin(Const Str:TStr):QInt;
    Var Plus:Boolean; P:LongWord; Res:QInt;
    begin
    If (Length(Str)=0) then Exit(0);
@@ -243,7 +243,7 @@ Function StrToBin(Str:TStr):QInt;
    If Plus then Exit(Res) else Exit(-Res)
    end;
 
-Function StrToNum(Str:TStr;Tp:TValueType):QInt;
+Function StrToNum(Const Str:TStr;Tp:TValueType):QInt;
    begin Case Tp of
       VT_INT: Exit(StrToInt(Str));
       VT_HEX: Exit(StrToHex(Str));
@@ -291,7 +291,7 @@ Function CreateVal(T:TValueType):PValue;
    Exit(R)
    end;
 
-Function ValAsInt(V:PValue):QInt;
+Function ValAsInt(Const V:PValue):QInt;
    begin
    Case V^.Typ of
       VT_INT .. VT_BIN: Exit(PQInt(V^.Ptr)^);
@@ -303,7 +303,7 @@ Function ValAsInt(V:PValue):QInt;
       else Exit(0)
    end end;
 
-Function ValAsHex(V:PValue):QInt;
+Function ValAsHex(Const V:PValue):QInt;
    begin
    Case V^.Typ of
       VT_INT .. VT_BIN: Exit(PQInt(V^.Ptr)^);
@@ -315,7 +315,7 @@ Function ValAsHex(V:PValue):QInt;
       else Exit(0)
    end end;
 
-Function ValAsOct(V:PValue):QInt;
+Function ValAsOct(Const V:PValue):QInt;
    begin
    Case V^.Typ of
       VT_INT .. VT_BIN: Exit(PQInt(V^.Ptr)^);
@@ -327,7 +327,7 @@ Function ValAsOct(V:PValue):QInt;
       else Exit(0)
    end end;
 
-Function ValAsBin(V:PValue):QInt;
+Function ValAsBin(Const V:PValue):QInt;
    begin
    Case V^.Typ of
       VT_INT .. VT_BIN: Exit(PQInt(V^.Ptr)^);
@@ -339,7 +339,7 @@ Function ValAsBin(V:PValue):QInt;
       else Exit(0)
    end end;
 
-Function ValAsFlo(V:PValue):TFloat;
+Function ValAsFlo(Const V:PValue):TFloat;
    begin
    Case V^.Typ of
       VT_INT .. VT_BIN: Exit(PQInt(V^.Ptr)^);
@@ -351,7 +351,7 @@ Function ValAsFlo(V:PValue):TFloat;
       else Exit(0.0)
    end end;
 
-Function ValAsBoo(V:PValue):TBool;
+Function ValAsBoo(Const V:PValue):TBool;
    begin
    Case V^.Typ of
       VT_INT .. VT_BIN: Exit((PQInt(V^.Ptr)^)<>0);
@@ -363,7 +363,7 @@ Function ValAsBoo(V:PValue):TBool;
       else Exit(False)
    end end;
 
-Function ValAsStr(V:PValue):TStr;
+Function ValAsStr(Const V:PValue):TStr;
    begin
    Case V^.Typ of
       VT_INT: Exit(IntToStr(PQInt(V^.Ptr)^));
@@ -379,7 +379,7 @@ Function ValAsStr(V:PValue):TStr;
       else Exit('')
    end end;
 
-Function ValToInt(V:PValue):PValue;
+Function ValToInt(Const V:PValue):PValue;
    Var R:PValue;
    begin
    R:=CreateVal(VT_INT); R^.Lev:=CurLev;
@@ -387,7 +387,7 @@ Function ValToInt(V:PValue):PValue;
    Exit(R)
    end;
 
-Function ValToHex(V:PValue):PValue;
+Function ValToHex(Const V:PValue):PValue;
    Var R:PValue;
    begin
    R:=CreateVal(VT_HEX); R^.Lev:=CurLev;
@@ -395,7 +395,7 @@ Function ValToHex(V:PValue):PValue;
    Exit(R)
    end;
 
-Function ValToOct(V:PValue):PValue;
+Function ValToOct(Const V:PValue):PValue;
    Var R:PValue;
    begin
    R:=CreateVal(VT_OCT); R^.Lev:=CurLev;
@@ -403,7 +403,7 @@ Function ValToOct(V:PValue):PValue;
    Exit(R)
    end;
 
-Function ValToBin(V:PValue):PValue;
+Function ValToBin(Const V:PValue):PValue;
    Var R:PValue;
    begin
    R:=CreateVal(VT_BIN); R^.Lev:=CurLev;
@@ -411,7 +411,7 @@ Function ValToBin(V:PValue):PValue;
    Exit(R)
    end;
 
-Function ValToFlo(V:PValue):PValue;
+Function ValToFlo(Const V:PValue):PValue;
    Var R:PValue;
    begin
    R:=CreateVal(VT_FLO); R^.Lev:=CurLev;
@@ -419,7 +419,7 @@ Function ValToFlo(V:PValue):PValue;
    Exit(R)
    end;
 
-Function ValToBoo(V:PValue):PValue;
+Function ValToBoo(Const V:PValue):PValue;
    Var R:PValue;
    begin
    R:=CreateVal(VT_BOO); R^.Lev:=CurLev;
@@ -427,7 +427,7 @@ Function ValToBoo(V:PValue):PValue;
    Exit(R)
    end;
 
-Function ValToStr(V:PValue):PValue;
+Function ValToStr(Const V:PValue):PValue;
    Var R:PValue;
    begin
    R:=CreateVal(VT_STR); R^.Lev:=CurLev;
@@ -442,9 +442,9 @@ Function NilVal():PValue;
    Exit(R)
    end;
 
-Type TValProc = Procedure(V:PValue);
+Type TValProc = Procedure(Const V:PValue);
 
-Procedure INLINE_FreeArr(Val:PValue;Proc:TValProc); Inline;
+Procedure INLINE_FreeArr(Const Val:PValue;Proc:TValProc); Inline;
    Var Arr:PArray; AEA:TArray.TEntryArr;
        C:LongWord;
    begin
@@ -456,7 +456,7 @@ Procedure INLINE_FreeArr(Val:PValue;Proc:TValProc); Inline;
       end
    end;
 
-Procedure INLINE_FreeDict(Val:PValue;Proc:TValProc); Inline;
+Procedure INLINE_FreeDict(Const Val:PValue;Proc:TValProc); Inline;
    Var Dic:PDict; DEA:TDict.TEntryArr;
        C:LongWord;
    begin
@@ -468,37 +468,37 @@ Procedure INLINE_FreeDict(Val:PValue;Proc:TValProc); Inline;
       end
    end;
 
-Procedure FreeVal_Arr(Val:PValue);
+Procedure FreeVal_Arr(Const Val:PValue);
    begin INLINE_FreeArr(Val,@FreeVal) end;
 
-Procedure FreeVal_Dict(Val:PValue);
+Procedure FreeVal_Dict(Const Val:PValue);
    begin INLINE_FreeDict(Val,@FreeVal) end;
 
-Procedure DestroyVal_Arr(Val:PValue);
+Procedure DestroyVal_Arr(Const Val:PValue);
    begin
    INLINE_FreeArr(Val,@FreeVal); 
    Dispose(PArr(Val^.Ptr), Destroy())
    end;
 
-Procedure DestroyVal_Dict(Val:PValue);
+Procedure DestroyVal_Dict(Const Val:PValue);
    begin
    INLINE_FreeDict(Val,@FreeVal); 
    Dispose(PDict(Val^.Ptr), Destroy())
    end;
 
-Procedure AnnihilateVal_Arr(Val:PValue);
+Procedure AnnihilateVal_Arr(Const Val:PValue);
    begin
    INLINE_FreeArr(Val,@AnnihilateVal); 
    Dispose(PArr(Val^.Ptr), Destroy())
    end;
 
-Procedure AnnihilateVal_Dict(Val:PValue);
+Procedure AnnihilateVal_Dict(Const Val:PValue);
    begin
    INLINE_FreeDict(Val,@AnnihilateVal); 
    Dispose(PDict(Val^.Ptr), Destroy())
    end;
 
-Procedure DestroyVal_INLINE(Val:PValue); Inline;
+Procedure DestroyVal_INLINE(Const Val:PValue); Inline;
    begin
    Case Val^.Typ of
       VT_NIL: ;
@@ -513,10 +513,10 @@ Procedure DestroyVal_INLINE(Val:PValue); Inline;
    Dispose(Val)
    end;
 
-Procedure DestroyVal(Val:PValue);
+Procedure DestroyVal(Const Val:PValue);
    begin DestroyVal_INLINE(Val) end;
 
-Procedure FreeVal(Val:PValue);
+Procedure FreeVal(Const Val:PValue);
    begin
    If (SpareVars[Val^.Typ].Num < SpareVarsPerType) then begin
       If (Val^.Typ = VT_ARR) then FreeVal_Arr(Val) else
@@ -527,7 +527,7 @@ Procedure FreeVal(Val:PValue);
       end else DestroyVal_INLINE(Val)
    end;
 
-Procedure AnnihilateVal(Val:PValue);
+Procedure AnnihilateVal(Const Val:PValue);
    begin
    Case Val^.Typ of
       VT_NIL: ;
@@ -561,10 +561,10 @@ Function EmptyVal(T:TValueType):PValue;
    Exit(R)
    end;
 
-Function  CopyTyp(V:PValue):PValue;
+Function  CopyTyp(Const V:PValue):PValue;
    begin Exit(EmptyVal(V^.Typ)) end;
 
-Function  CopyVal(V:PValue):PValue;
+Function  CopyVal(Const V:PValue):PValue;
    begin Exit(CopyVal(V, CurLev)) end;
 
 Procedure CopyVal_Arr(V,R:PValue;Lv:LongWord);
@@ -593,7 +593,7 @@ Procedure CopyVal_Dict(V,R:PValue;Lv:LongWord);
               else NDic^.SetVal(DEA[C].Key, DEA[C].Val)
    end end;
 
-Function  CopyVal(V:PValue;Lv:LongWord):PValue;
+Function  CopyVal(Const V:PValue;Lv:LongWord):PValue;
    Var R:PValue;
    begin
    R:=CreateVal(V^.Typ); R^.Lev:=Lv;
@@ -609,7 +609,7 @@ Function  CopyVal(V:PValue;Lv:LongWord):PValue;
    Exit(R)
    end;
 
-Procedure SetValLev(V:PValue;Lv:LongWord);
+Procedure SetValLev(Const V:PValue;Lv:LongWord);
    Var C:LongWord;
        Arr:PArray; AEA:TArray.TEntryArr;
        Dic:PDict; DEA:TDict.TEntryArr;
@@ -629,7 +629,7 @@ Procedure SetValLev(V:PValue;Lv:LongWord);
       end
    end;
 
-Procedure SetValMaxLev(V:PValue;Lv:LongWord);
+Procedure SetValMaxLev(Const V:PValue;Lv:LongWord);
    Var C:LongWord;
        Arr:PArray; AEA:TArray.TEntryArr;
        Dic:PDict; DEA:TDict.TEntryArr;
@@ -649,7 +649,7 @@ Procedure SetValMaxLev(V:PValue;Lv:LongWord);
       end
    end;
 
-Procedure SwapPtrs(A,B:PValue);
+Procedure SwapPtrs(Const A,B:PValue);
    Var P:Pointer; T:TValueType; //C:LongWord;
    begin
    P:=A^.Ptr; T:=A^.Typ;

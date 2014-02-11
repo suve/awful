@@ -1,4 +1,4 @@
-program awful; {$INCLUDE defines.inc} {$LONGSTRINGS ON} {$INLINE ON}
+program awful; {$INCLUDE defines.inc} {$LONGSTRINGS ON} {$INLINE ON} {$PASCALMAINNAME AWFUL_MAIN}
 
 uses SysUtils, Math,
 
@@ -6,9 +6,9 @@ uses SysUtils, Math,
      
      Values, TokExpr,
      
-     Parser, CoreFunc, Globals,
+     Globals, Parser,
      
-     EmptyFunc, Functions,
+     EmptyFunc, CoreFunc, Functions,
      
      Functions_Arith,    Functions_ArrDict,
      Functions_Bitwise,  Functions_Boole,
@@ -23,11 +23,68 @@ Type TParamMode = (PAR_INPUT, PAR_OUTPUT, PAR_ERR);
 
 Var ParMod:TParamMode;
     Switch_NoRun : Boolean = FALSE;
+    
     CustomStdIn : ^System.Text;
     CustomStdErr, CustomStdOut : System.Text;
     OrigDir : AnsiString;
-    ParamNum,ParamLim:LongWord;
-    ParamNow:AnsiString;
+
+Procedure AnalyseParams();
+   Var ParamLim : LongWord; ParamNow : AnsiString;
+   begin
+   GetDir(0, OrigDir);
+   YukPath := '(stdin)';
+   YukName := YukPath;
+   ParamNum := 1;
+   CustomStdIn := NIL;
+   
+   ParamLim := ParamCount();
+   If (ParamLim = 0) then Exit();
+   
+   ParMod:=PAR_INPUT; 
+   While (ParamNum <= ParamLim) do begin
+      ParamNow := ParamStr(ParamNum);
+      If (ParamNow = '-o') then begin
+         ParMod:=PAR_OUTPUT; ParamNum += 1; Continue
+         end else
+      If (ParamNow = '-e') then begin
+         ParMod:=PAR_ERR; ParamNum += 1; Continue
+         end else
+      If (ParamNow = '--norun') then begin
+         Switch_NoRun := True; ParamNum += 1; Continue
+         end else
+      If (ParamNow = '--version') then begin
+         Writeln('awful v.',VERSION,' (rev. ',VREVISION,')');
+         Halt(0)
+         end else
+      If (ParMod = PAR_INPUT) then begin
+         ParamNum += 1; New(CustomStdIn);
+         Assign(CustomStdIn^, ParamNow);
+         
+         {$I-} Reset(CustomStdIn^); {$I+}
+         If (IOResult() <> 0) then Fatal(0,'Could not read script file.', 2);
+         
+         YukPath:=ExpandFileName(ParamNow);
+         YukName:=ExtractFileName(YukPath);
+         
+         {$I-} ChDir(ExtractFilePath(YukPath)); {$I+}
+         ParamLim := 0 //; ParamNum := High(ParamNum)
+         end else
+      If (ParMod = PAR_OUTPUT) then begin
+         ParamNum += 1;
+         Assign(CustomStdOut, ParamNow);
+         {$I-} Rewrite(CustomStdOut); {$I+}
+         If (IOResult() = 0) then begin Output := CustomStdOut; StdOut := CustomStdOut end;
+            ParMod:=PAR_INPUT
+         end else
+      If (ParMod = PAR_ERR) then begin
+         ParamNum += 1;
+         Assign(CustomStdErr, ParamNow);
+         {$I-} Rewrite(CustomStdErr); {$I+}
+         If (IOResult() = 0) then StdErr := CustomStdErr;
+            ParMod:=PAR_INPUT
+         end
+      end
+   end;
 
 Procedure Run();
    Var R:PValue;
@@ -88,9 +145,9 @@ Procedure Cleanup();
 
 begin //MAIN
 GLOB_dt:=Now(); GLOB_ms:=TimeStampToMSecs(DateTimeToTimeStamp(GLOB_dt));
-IfSta:=NIL; RepSta:=NIL; WhiSta:=NIL; Randomize();
+Randomize();
 
-New(Func,Create('!','~'));
+New(Func,Create('!','z'));
 CoreFunc           . Register(Func);
 EmptyFunc          . Register(Func);
 Functions          . Register(Func);
@@ -108,55 +165,7 @@ Functions_SysInfo  . Register(Func);
 Functions_TypeCast . Register(Func);
 //YukSDL.Register(Func);
 
-GetDir(0, OrigDir);
-YukPath:='(stdin)';
-YukName:=YukPath;
-ParamLim := ParamCount();
-CustomStdIn := NIL;
-
-If (ParamCount()>0) then begin
-   ParMod:=PAR_INPUT;
-   For ParamNum:=1 to ParamLim do begin
-      ParamNow := ParamStr(ParamNum);
-      If (ParamNow = '-o') then begin
-         ParMod:=PAR_OUTPUT; Continue
-         end else
-      If (ParamNow = '-e') then begin
-         ParMod:=PAR_ERR; Continue
-         end else
-      If (ParamNow = '--norun') then begin
-         Switch_NoRun := True; Continue
-         end else
-      If (ParamNow = '--version') then begin
-         Writeln('awful v.',VERSION,' (rev. ',VREVISION,')');
-         Halt(0)
-         end else
-      If (ParMod = PAR_INPUT) then begin
-         New(CustomStdIn);
-         Assign(CustomStdIn^, ParamStr(ParamNum));
-         {$I-} Reset(CustomStdIn^); {$I+}
-         If (IOResult() = 0) then begin
-            YukPath:=ExpandFileName(ParamStr(ParamNum));
-            YukName:=ExtractFileName(YukPath);
-            
-            {$I-} ChDir(ExtractFilePath(YukPath)); {$I+}
-            ParamLim := 0
-            end else Dispose(CustomStdIn);
-         end else
-      If (ParMod = PAR_OUTPUT) then begin
-         Assign(CustomStdOut, ParamStr(ParamNum));
-         {$I-} Rewrite(CustomStdOut); {$I+}
-         If (IOResult() = 0) then begin Output := CustomStdOut; StdOut := CustomStdOut end;
-            ParMod:=PAR_INPUT
-         end else
-      If (ParMod = PAR_ERR) then begin
-         Assign(CustomStdErr, ParamStr(ParamNum));
-         {$I-} Rewrite(CustomStdErr); {$I+}
-         If (IOResult() = 0) then StdErr := CustomStdErr;
-            ParMod:=PAR_INPUT
-         end
-      end
-   end;
+AnalyseParams();
 
 If (CustomStdIn <> NIL) then begin
    ReadFile(CustomStdIn^);

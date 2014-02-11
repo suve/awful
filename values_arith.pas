@@ -3,18 +3,18 @@ unit values_arith;
 interface
    uses Values;
 
-Procedure ValSet(A,B:PValue);
-Procedure ValAdd(A,B:PValue);
-Procedure ValSub(A,B:PValue);
-Procedure ValMul(A,B:PValue);
-Procedure ValDiv(A,B:PValue);
-Procedure ValMod(A,B:PValue);
-Procedure ValPow(A,B:PValue);
+Procedure ValSet(Const A,B:PValue);
+Procedure ValAdd(Const A,B:PValue);
+Procedure ValSub(Const A,B:PValue);
+Procedure ValMul(Const A,B:PValue);
+Procedure ValDiv(Const A,B:PValue);
+Procedure ValMod(Const A,B:PValue);
+Procedure ValPow(Const A,B:PValue);
 
 implementation
    uses SysUtils, Math;
 
-Procedure ValSet_ArrDict(A,B:PValue);
+Procedure ValSet_ArrDict(Const A,B:PValue);
    Var AArr,BArr:PArray; AEntA,BEntA:TArray.TEntryArr;
        ADict,BDict:PDict;  AEntD,BEntD:TDict.TEntryArr;
        iA, iB, kI : QInt; kS:TStr;
@@ -102,7 +102,7 @@ Procedure ValSet_ArrDict(A,B:PValue);
          end end
    end end;
 
-Type TArithProc = Procedure(A,B:PValue);
+Type TArithProc = Procedure(Const A,B:PValue);
 
 Procedure ValArith_ArrDict(Proc:TArithProc;A,B:PValue);
    Var AArr,BArr:PArray;  EntA:TArray.TEntryArr;
@@ -166,7 +166,7 @@ Procedure ValArith_ArrDict(Proc:TArithProc;A,B:PValue);
          end end
    end end;
 
-Procedure ValSet(A,B:PValue);
+Procedure ValSet(Const A,B:PValue);
    Var I:PQInt; S:PStr; L:PBoolean; F:PFloat;
    begin
    Case (A^.Typ) of
@@ -257,7 +257,7 @@ Procedure ValSet(A,B:PValue);
    end end;
 
 
-Procedure ValAdd(A,B:PValue);
+Procedure ValAdd(Const A,B:PValue);
    Var  I:PQInt; S:PStr; L:PBoolean; F:PFloat;
    begin
    Case (A^.Typ) of
@@ -336,7 +336,7 @@ Procedure ValAdd(A,B:PValue);
    end end;
 
 
-Procedure ValSub(A,B:PValue);
+Procedure ValSub(Const A,B:PValue);
    Var  I:PQInt; L:PBoolean; F:PFloat;
    begin
    Case (A^.Typ) of
@@ -396,7 +396,7 @@ Procedure ValSub(A,B:PValue);
    end end;
 
 
-Procedure ValMul(A,B:PValue);
+Procedure ValMul(Const A,B:PValue);
    Var  I:PQInt; S:PStr; L:PBoolean; F:PFloat; C,T,O:LongInt;
    begin
    Case (A^.Typ) of
@@ -483,7 +483,7 @@ Procedure ValMul(A,B:PValue);
    end end;
 
 
-Procedure ValDiv(A,B:PValue);
+Procedure ValDiv(Const A,B:PValue);
    Var  I:PQInt; L:PBoolean; F:PFloat; tI:QInt; tF:TFloat;
    begin
    Case (A^.Typ) of
@@ -561,7 +561,7 @@ Procedure ValDiv(A,B:PValue);
    end end;
 
 
-Procedure ValMod(A,B:PValue);
+Procedure ValMod(Const A,B:PValue);
    Var  I:PQInt; F:PFloat; tF:TFloat; tI:QInt;
    begin
    Case (A^.Typ) of
@@ -627,7 +627,7 @@ Procedure ValMod(A,B:PValue);
    end end;
 
 
-Procedure ValPow(A,B:PValue);
+Procedure ValPow(Const A,B:PValue);
    Var  I:PQInt; F:PFloat; 
    begin
    Case (A^.Typ) of

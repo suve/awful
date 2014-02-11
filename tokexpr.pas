@@ -40,7 +40,7 @@ Procedure FreeProc(Var P:TProc);
 implementation
 
 Procedure FreeToken(T:PToken);
-   Var atk:PArrTk; S:PStr; C:LongWord;
+   Var atk:PArrTk; C:LongWord;
    begin
    Case (T^.Typ) of
       TK_EXPR: 
@@ -52,8 +52,7 @@ Procedure FreeToken(T:PToken);
       TK_VARI, TK_REFE:
          Dispose(PStr(T^.Ptr));
       TK_AVAL, TK_AREF: begin
-         atk:=PArrTk(T^.Ptr);
-         S:=PStr(atk^.Ptr); Dispose(S); 
+         atk:=PArrTk(T^.Ptr); Dispose(PStr(atk^.Ptr)); 
          For C:=Low(atk^.Ind) to High(atk^.Ind) do FreeToken(atk^.Ind[C]);
          SetLength(atk^.Ind, 0); Dispose(atk)
          end;

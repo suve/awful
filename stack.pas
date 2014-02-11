@@ -31,6 +31,7 @@ Type ExEmptyStack = class(Exception);
         Size : LongWord;
      Public
         Procedure Push(Val:Tp);
+        Function  Peek(Depth:LongInt):Tp;
         Function  Peek():Tp;
         Function  Pop():Tp;
         Procedure Flush();
@@ -49,6 +50,19 @@ Procedure GenericStack.Push(Val:Tp);
    begin
    New(N); N^.Val:=Val; N^.Nxt:=Ptr;
    Ptr:=N; Size+=1
+   end;
+
+Function  GenericStack.Peek(Depth:LongInt):Tp;
+   Var Node : PNode;
+   begin
+   Node := Self.Ptr;
+   While (Depth > 0) and (Node <> NIL) do begin
+      Node := Node^.Nxt;
+      Depth -= 1
+      end;
+   If (Node <> NIL)
+      then Exit(Node^.Val)
+      else Raise ExEmptyStack.Create('Called GenericStack.Peek(Depth) on an empty stack!')
    end;
 
 Function  GenericStack.Peek():Tp;

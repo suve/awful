@@ -5,27 +5,27 @@ unit functions_arrdict;
 interface
    uses Values;
 
-Procedure Register(FT:PFunTrie);
+Procedure Register(Const FT:PFunTrie);
 
-Function F_array(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_array_count(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_array_empty(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_array_flush(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_array_print(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_array_contains_eq(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_array_contains_seq(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_array(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_array_count(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_array_empty(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_array_flush(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_array_print(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_array_contains_eq(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_array_contains_seq(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
-Function F_dict(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_dict_nextkey(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_dict_keys(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_dict_values(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_dict(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_dict_nextkey(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_dict_keys(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_dict_values(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 implementation
    uses Values_Compare, EmptyFunc, Globals;
 
-Type TCompareFunc = Function(A,B:PValue):Boolean;
+Type TCompareFunc = Function(Const A,B:PValue):Boolean;
 
-Procedure Register(FT:PFunTrie);
+Procedure Register(Const FT:PFunTrie);
    begin
    // array functions, bitches!
    FT^.SetVal('arr',@F_array);
@@ -44,7 +44,7 @@ Procedure Register(FT:PFunTrie);
    end;
 
 
-Function F_array(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_array(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; T:PArray; A,V:PValue;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -59,7 +59,7 @@ Function F_array(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(A)
    end;
 
-Function F_dict(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_dict(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; T:PDict; Key:AnsiString; A,V,oV:PValue;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -85,7 +85,7 @@ Function F_dict(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(A)
    end;
 
-Function F_array_count(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_array_count(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C,R:LongWord;
    begin R:=0;
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -98,7 +98,7 @@ Function F_array_count(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(NewVal(VT_INT,R))
    end;
 
-Function F_array_empty(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_array_empty(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C : LongWord; B:Boolean;
    begin B:=False;
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -111,7 +111,7 @@ Function F_array_empty(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(NewVal(VT_BOO,B))
    end;
 
-Function F_dict_nextkey(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_dict_nextkey(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; T:PDict; K:AnsiString;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -135,7 +135,7 @@ Function F_dict_nextkey(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(NilVal())
    end;
 
-Function F_dict_keys(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_dict_keys(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C,D,I:LongWord; R :PValue; Arr:PArray; Dic:PDict; DEA:TDict.TEntryArr;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -153,7 +153,7 @@ Function F_dict_keys(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(R)
    end;
 
-Function F_dict_values(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_dict_values(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C,D,I:LongWord; R :PValue; Arr:PArray; Dic:PDict; DEA:TDict.TEntryArr;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -171,7 +171,7 @@ Function F_dict_values(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(R)
    end;
 
-Function F_array_flush(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_array_flush(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C,I,R:LongWord;
        Arr:PArray; AEA:TArray.TEntryArr;
        Dic:PDict; DEA:TDict.TEntryArr;
@@ -197,7 +197,7 @@ Function F_array_flush(DoReturn:Boolean; Arg:PArrPVal):PValue;
    If (DoReturn) then Exit(NewVal(VT_INT,R)) else Exit(NIL)
    end;
 
-Function F_array_contains(DoReturn:Boolean; Arg:PArrPVal; Cmpr:TCompareFunc):PValue; Inline;
+Function F_array_contains(Const DoReturn:Boolean; Const Arg:PArrPVal; Cmpr:TCompareFunc):PValue; Inline;
    Var C,I,Lo,Hi:LongInt; Cont:Array of TBool; Res:Boolean;
        Arr:PArray; AEA:TArray.TEntryArr;
        Dic:PDict; DEA:TDict.TEntryArr;
@@ -231,13 +231,13 @@ Function F_array_contains(DoReturn:Boolean; Arg:PArrPVal; Cmpr:TCompareFunc):PVa
    Exit(NewVal(VT_BOO, Res))
    end;
 
-Function F_array_contains_eq(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_array_contains_eq(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_array_contains(DoReturn, Arg, @Values_Compare.ValEq)) end;
 
-Function F_array_contains_seq(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_array_contains_seq(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_array_contains(DoReturn, Arg, @Values_Compare.ValSeq)) end;
 
-Function F_array_print(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_array_print(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C,I:LongWord; R:Boolean; S:AnsiString;
        Arr:PArray; AEA:TArray.TEntryArr;
        Dic:PDict; DEA:TDict.TEntryArr;

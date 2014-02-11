@@ -5,25 +5,25 @@ unit functions;
 interface
    uses Values;
 
-Procedure Register(FT:PFunTrie);
+Procedure Register(Const FT:PFunTrie);
 
-Function F_Sleep(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_Ticks(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_RunTicks(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Sleep(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_Ticks(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_RunTicks(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
-Function F_random(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_fork(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_random(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_fork(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
-Function F_SetPrecision(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_getenv(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SetPrecision(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_getenv(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
-Function F_sizeof(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_typeof(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_sizeof(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_typeof(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 implementation
    uses SysUtils, Math, EmptyFunc, CoreFunc, Globals;
 
-Procedure Register(FT:PFunTrie);
+Procedure Register(Const FT:PFunTrie);
    begin
    // Timekeeping
    FT^.SetVal('sleep',@F_Sleep);
@@ -40,7 +40,7 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('getenv',@F_getenv)
    end;
    
-Function F_Ticks(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Ticks(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; TS:Comp;
    begin
    If (Length(Arg^)>0) then
@@ -51,7 +51,7 @@ Function F_Ticks(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(NewVal(VT_INT,Trunc(TS-GLOB_ms)))
    end;
 
-Function F_RunTicks(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_RunTicks(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; TS:Comp;
    begin
    If (Length(Arg^)>0) then
@@ -62,7 +62,7 @@ Function F_RunTicks(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(NewVal(VT_INT,Trunc(TS-GLOB_sms)))
    end;
 
-Function F_Sleep(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Sleep(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; Dur:LongWord;
        ms_st, ms_en : Comp;
    begin
@@ -85,7 +85,7 @@ Function F_Sleep(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(NewVal(VT_INT,Trunc(ms_en - ms_st)))
    end;
 
-Function F_SetPrecision(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SetPrecision(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord;
    begin
    If (Length(Arg^)>1) then
@@ -101,7 +101,7 @@ Function F_SetPrecision(DoReturn:Boolean; Arg:PArrPVal):PValue;
    If (DoReturn) then Exit(NewVal(VT_INT,Values.RealPrec)) else Exit(NIL)
    end;
 
-Function F_fork(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_fork(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; R:Boolean;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -125,7 +125,7 @@ Function F_fork(DoReturn:Boolean; Arg:PArrPVal):PValue;
       end
    end;
 
-Function F_random(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_random(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; V:PValue; FH,FL:TFloat; IH,IL:QInt; Ch:Char;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -179,7 +179,7 @@ Function F_random(DoReturn:Boolean; Arg:PArrPVal):PValue;
       Exit(NewVal(VT_FLO,System.Random()))
    end;
 
-Function F_getenv(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_getenv(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord;  Namae:AnsiString;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -194,7 +194,7 @@ Function F_getenv(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(NewVal(VT_STR, GetEnvironmentVariable(Namae)))
    end;
 
-Function F_sizeof(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_sizeof(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; V:PValue; 
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -225,7 +225,7 @@ Function F_sizeof(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(NewVal(VT_INT,C*8))
    end;
 
-Function F_typeof(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_typeof(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; V:PValue;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));

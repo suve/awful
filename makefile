@@ -1,5 +1,5 @@
 DEFINES = '{$$MODE OBJFPC} {$$COPERATORS ON}'
-FLAGS = '-gl'
+FLAGS = -gl -XX
 
 normal:
 	echo $(DEFINES) > defines.inc
@@ -7,7 +7,7 @@ normal:
 
 cgi:
 	echo $(DEFINES) '{$$DEFINE CGI}' > defines.inc
-	fpc $(FLAGS) awful-cgi.pas   
+	fpc $(FLAGS) awful.pas -o'awful-cgi'
 
 clean:
 	rm *.o

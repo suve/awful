@@ -5,31 +5,31 @@ unit functions_sysinfo;
 interface
    uses Values;
 
-Procedure Register(FT:PFunTrie);
+Procedure Register(Const FT:PFunTrie);
 
 {$IFDEF LINUX}
-Function F_SysInfo_Get(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_SysInfo_Uptime(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_SysInfo_Load(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_SysInfo_RAMtotal(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_SysInfo_RAMfree(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_SysInfo_RAMbuffer(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_SysInfo_RAMused(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_SysInfo_SwapTotal(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_SysInfo_SwapFree(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_SysInfo_SwapUsed(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_SysInfo_Procnum(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_SysInfo_Thermal(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_SysInfo_DomainName(DoReturn:Boolean; Arg:PArrPVal):PValue;
-   Function F_SysInfo_All(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_Get(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_SysInfo_Uptime(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_SysInfo_Load(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_SysInfo_RAMtotal(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_SysInfo_RAMfree(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_SysInfo_RAMbuffer(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_SysInfo_RAMused(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_SysInfo_SwapTotal(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_SysInfo_SwapFree(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_SysInfo_SwapUsed(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_SysInfo_Procnum(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_SysInfo_Thermal(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_SysInfo_DomainName(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   Function F_SysInfo_All(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 {$ENDIF}
 
-Function F_SysInfo_Hostname(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_SysInfo_DiskFree(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_SysInfo_DiskTotal(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_SysInfo_DiskUsed(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_SysInfo_System(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_SysInfo_Version(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_Hostname(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_SysInfo_DiskFree(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_SysInfo_DiskTotal(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_SysInfo_DiskUsed(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_SysInfo_System(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_SysInfo_Version(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 implementation
    uses SysUtils, Process,
@@ -50,7 +50,7 @@ Var     SI : PSysInfo = NIL;
 Var Winderps : AnsiString = '';
 {$ENDIF}
 
-Procedure Register(FT:PFunTrie);
+Procedure Register(Const FT:PFunTrie);
    begin
    FT^.SetVal('sysinfo-get'       ,{$IFDEF LINUX}@F_SysInfo_Get       {$ELSE}@F_{$ENDIF});
    FT^.SetVal('sysinfo-uptime'    ,{$IFDEF LINUX}@F_SysInfo_Uptime    {$ELSE}@F_{$ENDIF});
@@ -96,7 +96,7 @@ Function GetVersion():AnsiString; Inline;
    Exit(unameR)
    end;
 
-Function F_SysInfo_Get(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_Get(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; GSI:Boolean;
    begin
    If (Length(Arg^)>0) then
@@ -106,7 +106,7 @@ Function F_SysInfo_Get(DoReturn:Boolean; Arg:PArrPVal):PValue;
    If (DoReturn) then Exit(NewVal(VT_BOO, GSI)) else Exit(NIL)
    end;
 
-Function F_SysInfo_Uptime(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_Uptime(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; 
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -117,7 +117,7 @@ Function F_SysInfo_Uptime(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(NewVal(VT_INT,SI^.Uptime))
    end;
 
-Function F_SysInfo_Load(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_Load(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; L:Int64;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -133,7 +133,7 @@ Function F_SysInfo_Load(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(NewVal(VT_FLO,SI^.Loads[L]/65535))
    end;
 
-Function F_SysInfo_RAMtotal(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_RAMtotal(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -144,7 +144,7 @@ Function F_SysInfo_RAMtotal(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(NewVal(VT_INT,SI^.TotalRam))
    end;
 
-Function F_SysInfo_RAMfree(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_RAMfree(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -155,7 +155,7 @@ Function F_SysInfo_RAMfree(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(NewVal(VT_INT,SI^.FreeRam))
    end;
 
-Function F_SysInfo_RAMused(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_RAMused(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -166,7 +166,7 @@ Function F_SysInfo_RAMused(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(NewVal(VT_INT,(SI^.TotalRam - SI^.FreeRam - SI^.BufferRam)))
    end;
 
-Function F_SysInfo_RAMbuffer(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_RAMbuffer(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -177,7 +177,7 @@ Function F_SysInfo_RAMbuffer(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(NewVal(VT_INT,SI^.BufferRam))
    end;
 
-Function F_SysInfo_SwapTotal(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_SwapTotal(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -188,7 +188,7 @@ Function F_SysInfo_SwapTotal(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(NewVal(VT_INT,SI^.TotalSwap))
    end;
 
-Function F_SysInfo_SwapFree(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_SwapFree(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -199,7 +199,7 @@ Function F_SysInfo_SwapFree(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(NewVal(VT_INT,SI^.FreeSwap))
    end;
 
-Function F_SysInfo_SwapUsed(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_SwapUsed(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -210,7 +210,7 @@ Function F_SysInfo_SwapUsed(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(NewVal(VT_INT,(SI^.TotalSwap - SI^.FreeSwap)))
    end;
 
-Function F_SysInfo_Procnum(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_Procnum(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -221,7 +221,7 @@ Function F_SysInfo_Procnum(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(NewVal(VT_INT,SI^.Procs))
    end;
 
-Function F_SysInfo_Thermal(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_Thermal(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; Zone:Int64; F:Text;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -242,13 +242,13 @@ Function F_SysInfo_Thermal(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(NewVal(VT_FLO,Zone/1000))
    end;
 
-Function F_SysInfo_DomainName(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_DomainName(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin
    If (Length(Arg^)>0) then F_(False, Arg);
    If (DoReturn) then Exit(NewVal(VT_STR,GetDomainName())) else Exit(NIL)
    end;
 
-Function F_SysInfo_All(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_All(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var SI:PSysInfo; C:LongWord; F:Text; T:Int64;
        Val:PValue; Dict:PDict;
        AV:PValue; Arr:PArray;
@@ -310,7 +310,7 @@ Function DiskUsed(Drive:Byte):Int64;
 Type TDiskFunc = Function(Disk:Byte):Int64;
 
 {$IFDEF LINUX} // Functions present on both Lin&Win; Linux implementations
-Function F_SysInfo_Disk(DiskFunc:TDiskFunc; DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_Disk(DiskFunc:TDiskFunc; Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C, Disk:LongWord; DiskName : TStr;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -327,19 +327,19 @@ Function F_SysInfo_Disk(DiskFunc:TDiskFunc; DoReturn:Boolean; Arg:PArrPVal):PVal
    Exit(NewVal(VT_INT,DiskFunc(Disk)))
    end;
 
-Function F_SysInfo_Hostname(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_Hostname(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin
    If (Length(Arg^)>0) then F_(False, Arg);
    If (DoReturn) then Exit(NewVal(VT_STR,GetHostName())) else Exit(NIL)
    end;
 
-Function F_SysInfo_System(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_System(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin
    If (Length(Arg^)>0) then F_(False, Arg);
    If (DoReturn) then Exit(NewVal(VT_STR,GetSystem())) else Exit(NIL)
    end;
 
-Function F_SysInfo_Version(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_Version(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin
    If (Length(Arg^)>0) then F_(False, Arg);
    If (DoReturn) then Exit(NewVal(VT_STR,GetVersion())) else Exit(NIL)
@@ -347,7 +347,7 @@ Function F_SysInfo_Version(DoReturn:Boolean; Arg:PArrPVal):PValue;
 {$ENDIF}
 
 {$IFDEF WINDOWS} // Functions present on both Lin&Win; Winderps implementations
-Function F_SysInfo_Disk(DiskFunc:TDiskFunc; DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_Disk(DiskFunc:TDiskFunc; Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C, DiskNum : LongInt; DiskPath : AnsiString;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -361,7 +361,7 @@ Function F_SysInfo_Disk(DiskFunc:TDiskFunc; DoReturn:Boolean; Arg:PArrPVal):PVal
    Exit(NewVal(VT_INT,DiskFunc(DiskNum)))
    end;
 
-Function F_SysInfo_Hostname(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_Hostname(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var Buf : Array[0..255] of Char;
    begin
    If (Length(Arg^)>0) then F_(False, Arg);
@@ -371,7 +371,7 @@ Function F_SysInfo_Hostname(DoReturn:Boolean; Arg:PArrPVal):PValue;
       else Exit(EmptyVal(VT_STR))
    end;
 
-Function F_SysInfo_System(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_System(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin
    If (Length(Arg^)>0) then F_(False, Arg);
    If (Not DoReturn) then Exit(NIL);
@@ -412,7 +412,7 @@ Function F_SysInfo_System(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(NewVal(VT_STR,'Windows (Unknown)'))
    end;
 
-Function F_SysInfo_Version(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_Version(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin
    If (Length(Arg^)>0) then F_(False, Arg);
    If (Not DoReturn) then Exit(NIL);
@@ -424,13 +424,13 @@ Function F_SysInfo_Version(DoReturn:Boolean; Arg:PArrPVal):PValue;
 
 // Functions present on both Lin&Win; shared code
 
-Function F_SysInfo_DiskTotal(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_DiskTotal(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_SysInfo_Disk(@DiskSize, DoReturn, Arg)) end;
 
-Function F_SysInfo_DiskFree(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_DiskFree(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_SysInfo_Disk(@DiskFree, DoReturn, Arg)) end;
 
-Function F_SysInfo_DiskUsed(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SysInfo_DiskUsed(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_SysInfo_Disk(@DiskUsed, DoReturn, Arg)) end;
 
 end.

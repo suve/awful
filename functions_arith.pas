@@ -5,21 +5,21 @@ unit functions_arith;
 interface
    uses Values;
 
-Procedure Register(FT:PFunTrie);
+Procedure Register(Const FT:PFunTrie);
 
-Function F_Set(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_Add(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_Sub(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_Mul(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_Div(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_Mod(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_Pow(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Set(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_Add(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_Sub(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_Mul(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_Div(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_Mod(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_Pow(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 
 implementation
    uses Values_Arith;
 
-Procedure Register(FT:PFunTrie);
+Procedure Register(Const FT:PFunTrie);
    begin
    FT^.SetVal('set',@F_Set);   FT^.SetVal('=',@F_Set);
    FT^.SetVal('add',@F_Add);   FT^.SetVal('+',@F_Add);
@@ -30,9 +30,9 @@ Procedure Register(FT:PFunTrie);
    FT^.SetVal('pow',@F_Pow);   FT^.SetVal('^',@F_Pow);
    end;
 
-Type TArithProc = Procedure(A,B:PValue);
+Type TArithProc = Procedure(Const A,B:PValue);
 
-Function F_Arith(Arith:TArithProc; DoReturn:Boolean; Arg:PArrPVal):PValue; Inline;
+Function F_Arith(Arith:TArithProc; Const DoReturn:Boolean; Const Arg:PArrPVal):PValue; Inline;
    Var C:LongWord; 
    begin
    If (Length(Arg^)=0) then begin
@@ -52,25 +52,25 @@ Function F_Arith(Arith:TArithProc; DoReturn:Boolean; Arg:PArrPVal):PValue; Inlin
       end
    end;
 
-Function F_Set(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Set(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_Arith(@ValSet, DoReturn, Arg)) end;
 
-Function F_Add(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Add(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_Arith(@ValAdd, DoReturn, Arg)) end;
 
-Function F_Sub(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Sub(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_Arith(@ValSub, DoReturn, Arg)) end;
 
-Function F_Mul(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Mul(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_Arith(@ValMul, DoReturn, Arg)) end;
 
-Function F_Div(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Div(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_Arith(@ValDiv, DoReturn, Arg)) end;
 
-Function F_Mod(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Mod(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_Arith(@ValMod, DoReturn, Arg)) end;
 
-Function F_Pow(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Pow(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_Arith(@ValPow, DoReturn, Arg)) end;
 
 end.

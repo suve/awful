@@ -5,25 +5,25 @@ unit functions_stdio;
 interface
    uses Values;
 
-Procedure Register(FT:PFunTrie);
+Procedure Register(Const FT:PFunTrie);
 
-Function F_Write(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_Writeln(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Write(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_Writeln(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
-Function F_Read(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_Readln(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_GetChar(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Read(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_Readln(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_GetChar(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
-Function F_stdin_BufferFlush(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_stdin_BufferClear(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_stdin_BufferPush(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_stdin_BufferFlush(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_stdin_BufferClear(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_stdin_BufferPush(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 implementation
-   uses SysUtils, Globals, EmptyFunc, Functions_CGI;
+   uses SysUtils, Globals, Functions_CGI, EmptyFunc;
 
 {$MACRO ON} {$DEFINE TRIM_YES := TRUE} {$DEFINE TRIM_NO := FALSE}
 
-Procedure Register(FT:PFunTrie);
+Procedure Register(Const FT:PFunTrie);
    begin
    // stdout
    FT^.SetVal('write', @F_Write);
@@ -53,7 +53,7 @@ Function CapitalizeHeader(Hdr:TStr):TStr;
    Exit(Hdr)
    end;
 
-Function F_Write(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Write(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord;
    begin
    {$IFDEF CGI}
@@ -94,7 +94,7 @@ Function F_Write(DoReturn:Boolean; Arg:PArrPVal):PValue;
    If (DoReturn) then Exit(NewVal(VT_STR,'')) else Exit(NIL)
    end;
 
-Function F_Writeln(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Writeln(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var R:PValue;
    begin
    R:=F_Write(DoReturn, Arg);
@@ -131,7 +131,7 @@ Procedure FillVar(V:PValue; Buff : PStr; Pos : LongWord);
    Delete(Buff^, 1, Pos+1)
    end;
 
-Function F_stdio(DoTrim, DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_stdio(DoTrim:Boolean; Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C, P : LongWord; 
    begin
    If (Length(Arg^)=0) then If (DoReturn) then Exit(NilVal()) else Exit(NIL);
@@ -143,13 +143,13 @@ Function F_stdio(DoTrim, DoReturn:Boolean; Arg:PArrPVal):PValue;
    If (DoReturn) then Exit(NilVal()) else Exit(NIL)
    end;
 
-Function F_read(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_read(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_stdio(TRIM_YES, DoReturn, Arg)) end;
 
-Function F_readln(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_readln(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_stdio(TRIM_NO, DoReturn, Arg)) end;
 
-Function F_getchar(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_getchar(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var Chr:Char;
    begin
    If (Length(Arg^)>0) then F_(False, Arg);
@@ -158,7 +158,7 @@ Function F_getchar(DoReturn:Boolean; Arg:PArrPVal):PValue;
    If (DoReturn) then Exit(NewVal(VT_STR, Chr)) else Exit(NIL)
    end;
 
-Function F_stdin_BufferFlush(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_stdin_BufferFlush(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var V:PValue;
    begin
    If (Length(Arg^)>0) then F_(False, Arg);
@@ -166,7 +166,7 @@ Function F_stdin_BufferFlush(DoReturn:Boolean; Arg:PArrPVal):PValue;
    stdinBuffer := ''; Exit(V)
    end;
 
-Function F_stdin_BufferClear(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_stdin_BufferClear(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var V:PValue;
    begin
    If (Length(Arg^)>0) then F_(False, Arg);
@@ -174,7 +174,7 @@ Function F_stdin_BufferClear(DoReturn:Boolean; Arg:PArrPVal):PValue;
    stdinBuffer := ''; Exit(V)
    end;
 
-Function F_stdin_BufferPush(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_stdin_BufferPush(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord;
    begin
    If (Length(Arg^)>0) then
@@ -195,7 +195,7 @@ Function F_stdin_BufferPush(DoReturn:Boolean; Arg:PArrPVal):PValue;
    end;
 
 (*
-Function F_fopen(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_fopen(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var Mode:Char; PS:PStr; S:TStr; I:QInt; V:PValue; F:PFileVal;
    begin
    If (Length(Arg^)<2) then Exit(F_(DoReturn, Arg^));

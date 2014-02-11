@@ -5,30 +5,30 @@ unit functions_strings;
 interface
    uses Values;
 
-Procedure Register(FT:PFunTrie);
+Procedure Register(Const FT:PFunTrie);
 
 
-Function F_Trim(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_TrimLeft(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_TrimRight(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_UpperCase(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_LowerCase(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Trim(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_TrimLeft(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_TrimRight(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_UpperCase(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_LowerCase(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
-Function F_StrLen(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_StrPos(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_StrLen(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_StrPos(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
-Function F_SubStr(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_DelStr(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_InsertStr(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SubStr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_DelStr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_InsertStr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
-Function F_WriteStr(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_WriteStr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
-Function F_Chr_UTF8(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_Ord_UTF8(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_Chr(DoReturn:Boolean; Arg:PArrPVal):PValue;
-Function F_Ord(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Chr_UTF8(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_Ord_UTF8(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_Chr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_Ord(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
-Function F_Perc(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Perc(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 Function UTF8_Char(Code:LongWord):ShortString;
 Function UTF8_Ord(Chr:ShortString):LongInt;
@@ -37,7 +37,7 @@ implementation
    uses Values_Arith, SysUtils, EmptyFunc;
 
 
-Procedure Register(FT:PFunTrie);
+Procedure Register(Const FT:PFunTrie);
    begin
    // Char functions
    FT^.SetVal('chr',@F_chr);
@@ -136,7 +136,7 @@ Function ASCII_Char(Code:LongWord):ShortString;
 Function ASCII_Ord(Str:ShortString):LongInt;
    begin If (Length(Str)>0) then Exit(Ord(Str[0])) else Exit(0) end;
 
-Function F_TransformStr(Func:TStringFunc; DoReturn:Boolean; Arg:PArrPVal):PValue; Inline;
+Function F_TransformStr(Func:TStringFunc; Const DoReturn:Boolean; Const Arg:PArrPVal):PValue; Inline;
    Var C:LongWord; S:AnsiString;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -150,22 +150,22 @@ Function F_TransformStr(Func:TStringFunc; DoReturn:Boolean; Arg:PArrPVal):PValue
    Exit(NewVal(VT_STR,S))
    end;
 
-Function F_Trim(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Trim(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_TransformStr(@myTrim, DoReturn, Arg)) end;
 
-Function F_TrimLeft(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_TrimLeft(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_TransformStr(@myTrimLeft, DoReturn, Arg)) end;
 
-Function F_TrimRight(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_TrimRight(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_TransformStr(@myTrimRight, DoReturn, Arg)) end;
 
-Function F_UpperCase(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_UpperCase(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_TransformStr(@myUpperCase, DoReturn, Arg)) end;
 
-Function F_LowerCase(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_LowerCase(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_TransformStr(@myLowerCase, DoReturn, Arg)) end;
 
-Function F_StrLen(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_StrLen(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; L:QInt;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -180,7 +180,7 @@ Function F_StrLen(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(NewVal(VT_INT,L))
    end;
 
-Function F_StrPos(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_StrPos(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; V:PValue; P:QInt;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -197,7 +197,7 @@ Function F_StrPos(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(NewVal(VT_INT,P))
    end;
 
-Function F_SubStr(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_SubStr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; I:Array[1..2] of QInt; R:TStr;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -221,7 +221,7 @@ Function F_SubStr(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(NewVal(VT_STR,R))
    end;
 
-Function F_DelStr(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_DelStr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; V:PValue; I:Array[1..2] of QInt; 
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -246,7 +246,7 @@ Function F_DelStr(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(V)
    end;
 
-Function F_InsertStr(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_InsertStr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; V:PValue; Idx : LongWord;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -263,7 +263,7 @@ Function F_InsertStr(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(V)
    end;
 
-Function F_MakeCharacter(Func:TChrFunc; DoReturn:Boolean; Arg:PArrPVal):PValue; Inline;
+Function F_MakeCharacter(Func:TChrFunc; Const DoReturn:Boolean; Const Arg:PArrPVal):PValue; Inline;
    Var C:LongWord; V:PValue; 
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -275,7 +275,7 @@ Function F_MakeCharacter(Func:TChrFunc; DoReturn:Boolean; Arg:PArrPVal):PValue; 
    Exit(V)
    end;
 
-Function F_MakeOrdinal(Func:TOrdFunc; DoReturn:Boolean; Arg:PArrPVal):PValue; Inline;
+Function F_MakeOrdinal(Func:TOrdFunc; Const DoReturn:Boolean; Const Arg:PArrPVal):PValue; Inline;
    Var C:LongWord; V:PValue;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -287,19 +287,19 @@ Function F_MakeOrdinal(Func:TOrdFunc; DoReturn:Boolean; Arg:PArrPVal):PValue; In
    Exit(V)
    end;
 
-Function F_Chr(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Chr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_MakeCharacter(@ASCII_Char, DoReturn, Arg)) end;
 
-Function F_Chr_UTF8(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Chr_UTF8(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_MakeCharacter(@UTF8_Char, DoReturn, Arg)) end;
 
-Function F_Ord(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Ord(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_MakeOrdinal(@ASCII_Ord, DoReturn, Arg)) end;
 
-Function F_Ord_UTF8(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Ord_UTF8(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_MakeOrdinal(@UTF8_Ord, DoReturn, Arg)) end;
 
-Function F_Perc(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_Perc(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; V:PValue; I:PQInt; S:AnsiString; D:PFloat;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -329,7 +329,7 @@ Function F_Perc(DoReturn:Boolean; Arg:PArrPVal):PValue;
    Exit(NewVal(VT_STR,S))
    end;
 
-Function F_WriteStr(DoReturn:Boolean; Arg:PArrPVal):PValue;
+Function F_WriteStr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var Str,Tmp:TStr; C:LongWord;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));

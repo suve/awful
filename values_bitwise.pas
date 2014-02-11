@@ -4,9 +4,9 @@ interface
    uses Values;
 
 Function ValNot(A:PValue):PValue;
-Function ValAnd(A,B:PValue):PValue;
-Function ValXor(A,B:PValue):PValue;
-Function ValOr(A,B:PValue):PValue;
+Function ValAnd(Const A,B:PValue):PValue;
+Function ValXor(Const A,B:PValue):PValue;
+Function ValOr(Const A,B:PValue):PValue;
 
 implementation
 
@@ -33,7 +33,7 @@ Function ValNot(A:PValue):PValue;
    Exit(R)
    end;
 
-Function ValAnd(A,B:PValue):PValue;
+Function ValAnd(Const A,B:PValue):PValue;
    Var R:PValue; I:PQInt; S:PStr; L:PBoolean; D:PFloat;
    begin
    New(R); R^.Typ:=A^.Typ; R^.Lev:=CurLev;
@@ -74,7 +74,7 @@ Function ValAnd(A,B:PValue):PValue;
    Exit(R)
    end;
 
-Function ValXor(A,B:PValue):PValue;
+Function ValXor(Const A,B:PValue):PValue;
    Var R:PValue; I:PQInt; S:PStr; L:PBoolean; D:PFloat;
    begin
    New(R); R^.Typ:=A^.Typ; R^.Lev:=CurLev;
@@ -115,7 +115,7 @@ Function ValXor(A,B:PValue):PValue;
    Exit(R)
    end;
 
-Function ValOr(A,B:PValue):PValue;
+Function ValOr(Const A,B:PValue):PValue;
    Var R:PValue; I:PQInt; S:PStr; L:PBoolean; D:PFloat;
    begin
    New(R); R^.Typ:=A^.Typ; R^.Lev:=CurLev;

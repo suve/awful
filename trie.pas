@@ -41,7 +41,7 @@ Type ExNotSet = class(Exception);
         Function  IsVal(Const K:AnsiString;P:LongWord;N:PNode):Boolean;
         Function  GetVal(Const K:AnsiString;P:LongWord;N:PNode):Tp;
         
-        Function  NextKey(N:PNode;K:AnsiString;Var R:AnsiString):Boolean;
+        Function  NextKey(N:PNode;C:LongWord;Const K:AnsiString;Var R:AnsiString):Boolean;
         
         Function  GetVal(N:PNode):Tp;
         Function  RemVal(N:PNode):Tp;
@@ -55,16 +55,16 @@ Type ExNotSet = class(Exception);
         TEntryArr = Array of TEntry;
         
         {Method}
-        Procedure SetVal(Key:AnsiString;Val:Tp);
-        Procedure RemVal(Key:AnsiString);
+        Procedure SetVal(Const Key:AnsiString;Const Val:Tp);
+        Procedure RemVal(Const Key:AnsiString);
         
-        Function  IsVal(Key:AnsiString):Boolean;
-        Function  GetVal(Key:AnsiString):Tp;
+        Function  IsVal(Const Key:AnsiString):Boolean;
+        Function  GetVal(Const Key:AnsiString):Tp;
         
         Function  GetVal():Tp;
         Function  RemVal():Tp;
         
-        Function  NextKey(K:AnsiString):AnsiString;
+        Function  NextKey(Const K:AnsiString):AnsiString;
         Function  ToArray():TEntryArr;
         
         Function  Empty() : Boolean;
@@ -97,7 +97,7 @@ Procedure GenericTrie.SetVal(Const K:AnsiString;P:LongWord;N:PNode;Const V:Tp);
       end
    end;
 
-Procedure GenericTrie.SetVal(Key:AnsiString;Val:Tp);
+Procedure GenericTrie.SetVal(Const Key:AnsiString;Const Val:Tp);
    begin SetVal(Key,1,Root,Val) end;
 
 Procedure GenericTrie.RemVal(Const K:AnsiString;P:LongWord;N:PNode);
@@ -118,7 +118,7 @@ Procedure GenericTrie.RemVal(Const K:AnsiString;P:LongWord;N:PNode);
       end
    end;
 
-Procedure GenericTrie.RemVal(Key:AnsiString);
+Procedure GenericTrie.RemVal(Const Key:AnsiString);
    begin RemVal(Key,1,Root) end;
 
 Function GenericTrie.IsVal(Const K:AnsiString;P:LongWord;N:PNode):Boolean;
@@ -133,7 +133,7 @@ Function GenericTrie.IsVal(Const K:AnsiString;P:LongWord;N:PNode):Boolean;
       end;
    end;
 
-Function GenericTrie.IsVal(Key:AnsiString):Boolean;
+Function GenericTrie.IsVal(Const Key:AnsiString):Boolean;
    begin Exit(IsVal(Key,1,Root)) end;
 
 Function GenericTrie.GetVal(Const K:AnsiString;P:LongWord;N:PNode):Tp;
@@ -151,7 +151,7 @@ Function GenericTrie.GetVal(Const K:AnsiString;P:LongWord;N:PNode):Tp;
       end;
    end;
 
-Function GenericTrie.GetVal(Key:AnsiString):Tp;
+Function GenericTrie.GetVal(Const Key:AnsiString):Tp;
    begin Exit(GetVal(Key,1,Root)) end;
 
 Function GenericTrie.Empty():Boolean;
@@ -192,34 +192,35 @@ Function GenericTrie.RemVal(N:PNode):Tp;
 Function GenericTrie.RemVal():Tp;
    begin Exit(RemVal(Root)) end;
 
-Function GenericTrie.NextKey(N:PNode;K:AnsiString;Var R:AnsiString):Boolean;
-   Var C,I,S:LongWord;
+Function GenericTrie.NextKey(N:PNode;C:LongWord;Const K:AnsiString;Var R:AnsiString):Boolean;
+   Var L,I,S:LongWord;
    begin
    If (N^.Chi = 0) then Exit(False);
-   If (Length(K)>0) then begin
-      I:=Ord(K[1])-Self.Min; Delete(K,1,1);
+   L := Length(K);
+   If (L >= C) then begin
+      I:=Ord(K[C])-Self.Min;
       If (N^.Nxt[I]<>NIL) then begin
-         If (NextKey(N^.Nxt[I],K,R)) then begin
+         If (NextKey(N^.Nxt[I],C+1,K,R)) then begin
             R:=Chr(Self.Min+I)+R; Exit(True)
          end end;
       S:=(I+1) 
       end else S:=Low(N^.Nxt);
-   For C:=S to High(N^.Nxt) do
-       If (N^.Nxt[C]<>NIL) then
-          If (N^.Nxt[C]^.Val<>NIL)
+   For I:=S to High(N^.Nxt) do
+       If (N^.Nxt[I]<>NIL) then
+          If (N^.Nxt[I]^.Val<>NIL)
              then begin 
-             R:=Chr(Self.Min+C)+R; Exit(True)
+             R:=Chr(Self.Min+I)+R; Exit(True)
              end else begin
-             If (NextKey(N^.Nxt[C],'',R)) then begin
-                R:=Chr(Self.Min+C)+R; Exit(True)
+             If (NextKey(N^.Nxt[I],C+1,'',R)) then begin
+                R:=Chr(Self.Min+I)+R; Exit(True)
              end end;
    Exit(False)
    end;
 
-Function GenericTrie.NextKey(K:AnsiString):AnsiString;
+Function GenericTrie.NextKey(Const K:AnsiString):AnsiString;
    Var R:AnsiString;
    begin R:='';
-   If NextKey(Root,K,R) then Exit(R) else Exit('') end;
+   If NextKey(Root,1,K,R) then Exit(R) else Exit('') end;
 
 Function GenericTrie.ToArray():TEntryArr;
    Var Res:Array of TEntry; K:AnsiString;
