@@ -21,7 +21,7 @@ Function F_stdin_BufferPush(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 implementation
    uses SysUtils, Globals, Functions_CGI, EmptyFunc;
 
-{$MACRO ON} {$DEFINE TRIM_YES := TRUE} {$DEFINE TRIM_NO := FALSE}
+{$DEFINE TRIM_YES := TRUE} {$DEFINE TRIM_NO := FALSE}
 
 Procedure Register(Const FT:PFunTrie);
    begin
@@ -82,8 +82,8 @@ Function F_Write(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
              VT_BIN: Write(StdOut, Values.BinToStr(PQInt(Arg^[C]^.Ptr)^));
              VT_FLO: Write(StdOut, Values.FloatToStr(PFloat(Arg^[C]^.Ptr)^));
              VT_BOO: Write(StdOut, PBoolean(Arg^[C]^.Ptr)^);
-             VT_STR: Write(StdOut, PAnsiString(Arg^[C]^.Ptr)^);
-             VT_UTF: Write(StdOut, '{UTF8}');
+             VT_STR: Write(StdOut, PStr(Arg^[C]^.Ptr)^);
+             VT_UTF: PUTF(Arg^[C]^.Ptr)^.Print();
              VT_ARR: Write(StdOut, 'array(',PArray(Arg^[C]^.Ptr)^.Count,')');
              VT_DIC: Write(StdOut, 'dict(',PDict(Arg^[C]^.Ptr)^.Count,')');
              VT_FIL: Write(StdOut, 'file(',PFileVal(Arg^[C]^.Ptr)^.Pth,')');
@@ -126,7 +126,8 @@ Procedure FillVar(V:PValue; Buff : PStr; Pos : LongWord);
       VT_INT: PQInt(V^.Ptr)^ := Values.StrToInt(Buff^[1..Pos]);
       VT_HEX: PQInt(V^.Ptr)^ := Values.StrToHex(Buff^[1..Pos]);
       VT_FLO: PFloat(V^.Ptr)^ := Values.StrToReal(Buff^[1..Pos]);
-      VT_STR: PStr(V^.Ptr)^ := Buff^[1..Pos]
+      VT_STR: PStr(V^.Ptr)^ := Buff^[1..Pos];
+      VT_UTF: PUTF(V^.Ptr)^.SetTo(Buff^[1..Pos]);
       end;
    Delete(Buff^, 1, Pos+1)
    end;
@@ -188,6 +189,7 @@ Function F_stdin_BufferPush(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
              VT_HEX: stdinBuffer += Values.HexToStr(PQInt(Arg^[C]^.Ptr)^);
              VT_FLO: stdinBuffer += Values.FloatToStr(PFloat(Arg^[C]^.Ptr)^){RealToStr(PFloat(Arg^[C]^.Ptr)^, 5)};
              VT_STR: stdinBuffer += PStr(Arg^[C]^.Ptr)^;
+             VT_UTF: stdinBuffer += PUTF(Arg^[C]^.Ptr)^.ToAnsiString();
              end;
           If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
           end;

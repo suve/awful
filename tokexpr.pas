@@ -1,5 +1,7 @@
 unit tokexpr;
 
+{$INCLUDE defines.inc}
+
 interface
    uses Values;
 

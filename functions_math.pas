@@ -1,5 +1,7 @@
 unit functions_math;
 
+{$INCLUDE defines.inc}
+
 interface
    uses Values;
 
@@ -68,8 +70,19 @@ Function myCtg(V:TFloat):TFloat; begin Exit(Cot(V)) end;
 
 Function myCeil(V:TFloat):QInt; begin Exit(Ceil(V)) end;
 Function myFloor(V:TFloat):QInt; begin Exit(Floor(V)) end;
-Function myRound(V:TFloat):QInt; begin Exit(Round(V)) end;
 Function myTrunc(V:TFloat):QInt; begin Exit(Trunc(V)) end;
+
+Function myRound(V:TFloat):QInt;
+   begin 
+   Case Sign(V) of
+      -1: If (Frac(V) <= -0.5)
+             then Exit(Floor(V))
+             else Exit(Ceil(V));
+       0: Exit(0);
+      +1: If (Frac(V) >= +0.5)
+             then Exit(Ceil(V))
+             else Exit(Floor(V))
+   end end;
 
 Function F_sqrt(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; F:TFLoat;

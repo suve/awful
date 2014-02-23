@@ -1,5 +1,5 @@
-DEFINES = '{$$MODE OBJFPC} {$$COPERATORS ON}'
-FLAGS = -gl -XX
+DEFINES = '{$$MODE OBJFPC} {$$COPERATORS ON} {$$INLINE ON} {$$MACRO ON}'
+FLAGS = -Xs -XX -OG3
 
 normal:
 	echo $(DEFINES) > defines.inc

@@ -1,6 +1,6 @@
 unit functions_arrdict;
 
-{$INCLUDE defines.inc} {$INLINE ON}
+{$INCLUDE defines.inc}
 
 interface
    uses Values;

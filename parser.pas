@@ -1,6 +1,6 @@
 unit parser;
 
-{$INCLUDE defines.inc} {$LONGSTRINGS ON} {$INLINE ON}
+{$INCLUDE defines.inc} {$LONGSTRINGS ON}
 
 interface
    uses Stack, Trie, TokExpr, Values;
@@ -122,7 +122,7 @@ Procedure AddExpr(Ex:PExpr);
 Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
    
    Function ConstPrefix(C:Char):Boolean; Inline;
-      begin Exit(Pos(C,'sflihob=')<>0) end;
+      begin Exit(Pos(C,'suflihob=')<>0) end;
    
    Function MakeToken(Var Index:LongInt):PToken;
       Var Tok,otk:PToken; atk:PArrTk; TkIn, Nest:LongInt;
@@ -145,6 +145,10 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
          end else
       If (Tk[Index][1]='s') then begin
          V:=NewVal(VT_STR,Copy(Tk[Index],3,Length(Tk[Index])-3));
+         New(Tok); Tok^.Typ:=TK_LITE; Tok^.Ptr:=V; V^.Lev := 0
+         end else
+      If (Tk[Index][1]='u') then begin
+         V:=NewVal(VT_UTF,Copy(Tk[Index],3,Length(Tk[Index])-3));
          New(Tok); Tok^.Typ:=TK_LITE; Tok^.Ptr:=V; V^.Lev := 0
          end else
       If (Tk[Index][1]='i') then begin
@@ -358,6 +362,8 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
          then Fatal(Ln,'Second argument for !const must be either a value literal or another const.');
       If (Tk[T+2][1]='s') then
          V:=NewVal(VT_STR,Copy(Tk[T+2],3,Length(Tk[T+2])-3)) else
+      If (Tk[T+2][1]='u') then
+         V:=NewVal(VT_UTF,Copy(Tk[T+2],3,Length(Tk[T+2])-3)) else
       If (Tk[T+2][1]='f') then
          V:=NewVal(VT_FLO,StrToReal(Copy(Tk[T+2],2,Length(Tk[T+2])))) else
       If (Tk[T+2][1]='l') then
@@ -441,6 +447,7 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
       If (Req) then Construct := '!require' else Construct := '!include';
       FileName := Copy(Tk[T], 2, Length(Tk[T]));
       If (Tk[T][1]='s') then begin Delete(FileName,Length(FileName),1); Delete(FileName,1,1) end else
+      If (Tk[T][1]='u') then begin Delete(FileName,Length(FileName),1); Delete(FileName,1,1) end else
       If (Tk[T][1]='i') then FileName:=IntToStr(Values.StrToInt(FileName)) else
       If (Tk[T][1]='h') then FileName:=HexToStr(Values.StrToHex(FileName)) else
       If (Tk[T][1]='o') then FileName:=OctToStr(Values.StrToOct(FileName)) else
@@ -623,7 +630,7 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
 Procedure ProcessLine(L:AnsiString;N:LongWord);
    Var Tk:Array of AnsiString; P,S,Len:LongWord;
        Str:LongInt; Del:Char; PipeChar:AnsiString;
-       Ex:PExpr; HiTk, Rs :LongWord;
+       Ex:PExpr; HiTk, Rs :LongWord; Utf:Boolean;
    
    Function BreakToken(Ch:Char):Boolean; Inline;
       begin Exit(Pos(Ch,' (|)[#]~')<>0) end;
@@ -745,19 +752,21 @@ Procedure ProcessLine(L:AnsiString;N:LongWord);
             codemode -= 1; S:=P+2; P+=1 //Delete(L, 1, P+1); P:=0;
             end else
          {$ENDIF}
-         If (Str=0) and (L[P]='s')
-            then Str:=+1 else Str:=-1
+         If (Str=0) and ((L[P]='s') or (L[P]='u'))
+            then begin Str:=+1; Utf:=L[P]='u' end
+            else Str:=-1
          end else
-      If (Str=1) then begin
+      If (Str = 1) then begin
          If (P>Len) then begin
             Error(N,'String prefix found at end of line.');
             SetLength(Tk,Length(Tk)+1);
-            Tk[High(Tk)]:='s""';
+            If (Not Utf) then Tk[High(Tk)]:='s""'
+                         else Tk[High(Tk)]:='u""';
             S:=Len+1; Str:=0
             end else begin
             Del:=L[P]; Str:=2
          end end else
-      If (Str=2) and ((P>Len) or (L[P]=Del)) then begin
+      If (Str = 2) and ((P>Len) or (L[P]=Del)) then begin
          SetLength(Tk,Length(Tk)+1);
          Tk[High(Tk)]:=Copy(L,S,P-S+1);
          If (P<=Len)
@@ -811,7 +820,7 @@ Procedure ParseFile(Var I:System.Text);
 
 Procedure ReadFile(Var I:System.Text);
    
-   {$MACRO ON}{$IFDEF CGI}{$DEFINE _ISCGI_:=True}{$ELSE}{$DEFINE _ISCGI_:=False}{$ENDIF}
+   {$IFDEF CGI}{$DEFINE __ISCGI__:=True}{$ELSE}{$DEFINE __ISCGI__:=False}{$ENDIF}
    
    Function BuildNum():AnsiString; Inline;
       Var D,T:AnsiString;
@@ -841,7 +850,7 @@ Procedure ReadFile(Var I:System.Text);
    V:=NewVal(VT_STR,YukPath); V^.Lev := 0; Cons^.SetVal('FILE-PATH',V);
    V:=NewVal(VT_STR,YukName); V^.Lev := 0; Cons^.SetVal('FILE-NAME',V);
    
-   V:=NewVal(VT_BOO,_ISCGI_);     V^.Lev := 0; Cons^.SetVal('AWFUL-CGI',V);
+   V:=NewVal(VT_BOO,__ISCGI__);   V^.Lev := 0; Cons^.SetVal('AWFUL-CGI',V);
    V:=NewVal(VT_STR,ParamStr(0)); V^.Lev := 0; Cons^.SetVal('AWFUL-PATH',V);
    V:=NewVal(VT_STR,BuildNum());  V^.Lev := 0; Cons^.SetVal('AWFUL-BUILD',V);
    V:=NewVal(VT_STR,VERSION);     V^.Lev := 0; Cons^.SetVal('AWFUL-VERSION',V);

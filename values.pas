@@ -1,9 +1,9 @@
 unit values;
 
-{$MODE OBJFPC} {$COPERATORS ON}
+{$INCLUDE defines.inc}
 
 interface
-   uses SysUtils, Trie, NumTrie;
+   uses SysUtils, Trie, NumTrie, UnicodeStrings;
 
 Var RealPrec : LongWord = 3;
     RealForm : TFloatFormat = ffFixed;
@@ -42,6 +42,9 @@ Type PValue = ^TValue;
      PStr = ^TStr;
      TStr = AnsiString;
      
+     PUTF = PUTF8String;
+     TUTF = TUTF8String;
+     
      PBool = ^TBool;
      TBool = Boolean;
      
@@ -74,6 +77,7 @@ Function BinToStr(Int:QInt;Digs:LongWord=0):TStr;
 //Function RealToStr(Val:Extended;Prec:LongWord):TStr;
 Function FloatToStr(Val:TFloat):TStr;
 
+Function IntBase(T:TValueType):LongInt; Inline;
 Function BoolToInt(B:TBool):LongWord; Inline;
 
 Function StrToInt(Const Str:TStr):QInt;
@@ -115,6 +119,7 @@ Function NewVal(T:TValueType;V:TFloat):PValue;
 Function NewVal(T:TValueType;V:Int64):PValue;
 Function NewVal(T:TValueType;V:TBool):PValue;
 Function NewVal(T:TValueType;V:TStr):PValue;
+Function NewVal(T:TValueType;V:PUTF):PValue;
 Function NewVal(T:TValueType):PValue;
 
 Function Exv(DoReturn:Boolean):PValue; Inline;
@@ -265,11 +270,21 @@ Function StrToReal(Str:TStr):TFloat;
       end else Exit(StrToInt(Str))
    end;
 
+Function IntBase(T:TValueType):LongInt; Inline;
+   begin Case T of
+      VT_BIN: IntBase :=  2;
+      VT_OCT: IntBase :=  8;
+      VT_INT: IntBase := 10;
+      VT_HEX: IntBase := 16;
+         else IntBase := 10
+   end end;
+
 Function BoolToInt(B:TBool):LongWord; Inline;
    begin If (B) then Exit(1) else Exit(0) end;
 
 Function CreateVal(T:TValueType):PValue;
-   Var R:PValue; I:PQInt; S:PStr; D:PFloat; B:PBoolean; Arr:PArray; Dic:PDict; Fil:PFileVal;
+   Var R:PValue; I:PQInt; S:PStr; D:PFloat; B:PBoolean;
+       Utf:PUTF; Arr:PArray; Dic:PDict; Fil:PFileVal;
    begin
    If (SpareVars[T].Num > 0) then begin
       R := SpareVars[T].Arr[SpareVars[T].Num];
@@ -281,8 +296,9 @@ Function CreateVal(T:TValueType):PValue;
          VT_INT .. VT_BIN:
                  begin New(I);            R^.Ptr:=I   end;
          VT_FLO: begin New(D);            R^.Ptr:=D   end;
-         VT_STR: begin New(S);            R^.Ptr:=S   end;
          VT_BOO: begin New(B);            R^.Ptr:=B   end;
+         VT_STR: begin New(S);            R^.Ptr:=S   end;
+         VT_UTF: begin New(Utf,Create());   R^.Ptr:=Utf end;
          VT_ARR: begin New(Arr,Create()); R^.Ptr:=Arr end;
          VT_DIC: begin New(Dic,Create()); R^.Ptr:=Dic end;
          VT_FIL: begin New(Fil);          R^.Ptr:=Fil end;
@@ -298,6 +314,7 @@ Function ValAsInt(Const V:PValue):QInt;
       VT_FLO: Exit(Trunc(PFloat(V^.Ptr)^));
       VT_BOO: Exit(BoolToInt(PBool(V^.Ptr)^));
       VT_STR: Exit(StrToInt(PStr(V^.Ptr)^));
+      VT_UTF: Exit(PUTF8String(V^.Ptr)^.ToInt(10));
       VT_ARR: Exit(PArray(V^.Ptr)^.Count);
       VT_DIC: Exit(PDict(V^.Ptr)^.Count);
       else Exit(0)
@@ -310,6 +327,7 @@ Function ValAsHex(Const V:PValue):QInt;
       VT_FLO: Exit(Trunc(PFloat(V^.Ptr)^));
       VT_BOO: Exit(BoolToInt(PBool(V^.Ptr)^));
       VT_STR: Exit(StrToHex(PStr(V^.Ptr)^));
+      VT_UTF: Exit(PUTF8String(V^.Ptr)^.ToInt(16));
       VT_ARR: Exit(PArray(V^.Ptr)^.Count);
       VT_DIC: Exit(PDict(V^.Ptr)^.Count);
       else Exit(0)
@@ -322,6 +340,7 @@ Function ValAsOct(Const V:PValue):QInt;
       VT_FLO: Exit(Trunc(PFloat(V^.Ptr)^));
       VT_BOO: Exit(BoolToInt(PBool(V^.Ptr)^));
       VT_STR: Exit(StrToOct(PStr(V^.Ptr)^));
+      VT_UTF: Exit(PUTF8String(V^.Ptr)^.ToInt(8));
       VT_ARR: Exit(PArray(V^.Ptr)^.Count);
       VT_DIC: Exit(PDict(V^.Ptr)^.Count);
       else Exit(0)
@@ -334,6 +353,7 @@ Function ValAsBin(Const V:PValue):QInt;
       VT_FLO: Exit(Trunc(PFloat(V^.Ptr)^));
       VT_BOO: Exit(BoolToInt(PBool(V^.Ptr)^));
       VT_STR: Exit(StrToBin(PStr(V^.Ptr)^));
+      VT_UTF: Exit(PUTF8String(V^.Ptr)^.ToInt(2));
       VT_ARR: Exit(PArray(V^.Ptr)^.Count);
       VT_DIC: Exit(PDict(V^.Ptr)^.Count);
       else Exit(0)
@@ -346,6 +366,7 @@ Function ValAsFlo(Const V:PValue):TFloat;
       VT_FLO: Exit(PFloat(V^.Ptr)^);
       VT_BOO: Exit(BoolToInt(PBool(V^.Ptr)^));
       VT_STR: Exit(StrToReal(PStr(V^.Ptr)^));
+      VT_UTF: Exit(PUTF8String(V^.Ptr)^.ToFloat());
       VT_ARR: Exit(PArray(V^.Ptr)^.Count);
       VT_DIC: Exit(PDict(V^.Ptr)^.Count);
       else Exit(0.0)
@@ -358,6 +379,7 @@ Function ValAsBoo(Const V:PValue):TBool;
       VT_FLO: Exit(Abs(PFloat(V^.Ptr)^)>=1.0);
       VT_BOO: Exit(PBoolean(V^.Ptr)^);
       VT_STR: Exit(StrToBoolDef(PStr(V^.Ptr)^,FALSE));
+      VT_UTF: Exit(StrToBoolDef(PUTF(V^.Ptr)^.ToAnsiString,FALSE));
       VT_ARR: Exit(Not PArray(V^.Ptr)^.Empty());
       VT_DIC: Exit(Not PDict(V^.Ptr)^.Empty());
       else Exit(False)
@@ -374,6 +396,7 @@ Function ValAsStr(Const V:PValue):TStr;
       VT_BOO: If (PBoolean(V^.Ptr)^ = TRUE)
                  then Exit('TRUE') else Exit('FALSE');
       VT_STR: Exit(PStr(V^.Ptr)^);
+      VT_UTF: Exit(PUTF(V^.Ptr)^.ToAnsiString);
       VT_ARR: Exit('array('+IntToStr(PArray(V^.Ptr)^.Count)+')');
       VT_DIC: Exit('dict('+IntToStr(PDict(V^.Ptr)^.Count)+')');
       else Exit('')
@@ -506,7 +529,8 @@ Procedure DestroyVal_INLINE(Const Val:PValue); Inline;
               Dispose(PQInt(Val^.Ptr));
       VT_FLO: Dispose(PFloat(Val^.Ptr));
       VT_BOO: Dispose(PBoolean(Val^.Ptr));
-      VT_STR: Dispose(PAnsiString(Val^.Ptr));
+      VT_STR: Dispose(PStr(Val^.Ptr));
+      VT_UTF: Dispose(PUTF(Val^.Ptr), Destroy());
       VT_ARR: begin FreeVal_Arr(Val);  Dispose(PArr(Val^.Ptr), Destroy())  end;
       VT_DIC: begin FreeVal_Dict(Val); Dispose(PDict(Val^.Ptr), Destroy()) end;
       end;
@@ -537,7 +561,8 @@ Procedure AnnihilateVal(Const Val:PValue);
       VT_BIN: Dispose(PQInt(Val^.Ptr));
       VT_FLO: Dispose(PFloat(Val^.Ptr));
       VT_BOO: Dispose(PBoolean(Val^.Ptr));
-      VT_STR: Dispose(PAnsiString(Val^.Ptr));
+      VT_STR: Dispose(PStr(Val^.Ptr));
+      VT_UTF: Dispose(PUTF(Val^.Ptr),Destroy());
       VT_ARR: AnnihilateVal_Arr(Val); 
       VT_DIC: AnnihilateVal_Dict(Val);
       end;
@@ -553,6 +578,7 @@ Function EmptyVal(T:TValueType):PValue;
               PQInt(R^.Ptr)^:=0;
       VT_FLO: PFloat(R^.Ptr)^:=0.0; 
       VT_STR: PStr(R^.Ptr)^:='';
+      VT_UTF: PUTF(R^.Ptr)^.Clear();
       VT_BOO: PBool(R^.Ptr)^:=False;
       VT_FIL: begin PFileVal(R^.Ptr)^.arw:='u';
                     PFileVal(R^.Ptr)^.Pth:='';
@@ -602,6 +628,7 @@ Function  CopyVal(Const V:PValue;Lv:LongWord):PValue;
               PQInt(R^.Ptr)^:=PQInt(V^.Ptr)^;
       VT_FLO: PFloat(R^.Ptr)^:=PFloat(V^.Ptr)^;
       VT_STR: PStr(R^.Ptr)^:=PStr(V^.Ptr)^;
+      VT_UTF: PUTF(R^.Ptr)^.SetTo(PUTF(V^.Ptr));
       VT_BOO: PBool(R^.Ptr)^:=PBool(V^.Ptr)^;
       VT_ARR: CopyVal_Arr(V,R,Lv);
       VT_DIC: CopyVal_Dict(V,R,Lv);
@@ -680,7 +707,16 @@ Function NewVal(T:TValueType;V:TBool):PValue;
 Function NewVal(T:TValueType;V:TStr):PValue;
    Var R:PValue; 
    begin
-   R:=CreateVal(T); R^.Lev:=CurLev; PStr(R^.Ptr)^:=V; Exit(R)
+   R:=CreateVal(T); R^.Lev:=CurLev;
+   If (T = VT_STR) then PStr(R^.Ptr)^:=V
+                   else PUTF(R^.Ptr)^.SetTo(V);
+   Exit(R)
+   end;
+
+Function NewVal(T:TValueType;V:PUTF):PValue;
+   Var R:PValue; 
+   begin
+   R:=CreateVal(T); R^.Lev:=CurLev; R^.Ptr:=V; Exit(R)
    end;
 
 Function NewVal(T:TValueType):PValue;

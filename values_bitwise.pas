@@ -1,5 +1,7 @@
 unit values_bitwise;
 
+{$INCLUDE defines.inc}
+
 interface
    uses Values;
 

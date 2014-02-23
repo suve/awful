@@ -1,5 +1,7 @@
 unit values_arith;
 
+{$INCLUDE defines.inc}
+
 interface
    uses Values;
 
@@ -167,7 +169,7 @@ Procedure ValArith_ArrDict(Proc:TArithProc;A,B:PValue);
    end end;
 
 Procedure ValSet(Const A,B:PValue);
-   Var I:PQInt; S:PStr; L:PBoolean; F:PFloat;
+   Var I:PQInt; S:PStr; L:PBoolean; F:PFloat; U:PUTF;
    begin
    Case (A^.Typ) of
       VT_INT .. VT_BIN:
@@ -180,6 +182,8 @@ Procedure ValSet(Const A,B:PValue);
                (I^):=Trunc((PFloat(B^.Ptr)^));
             VT_STR:
                (I^):=StrToNum(PStr(B^.Ptr)^,A^.Typ);
+            VT_UTF:
+               (I^):=PUTF(B^.Ptr)^.ToInt(IntBase(A^.Typ));
             VT_ARR:
                (I^):=PArray(B^.Ptr)^.Count;
             VT_DIC:
@@ -199,6 +203,8 @@ Procedure ValSet(Const A,B:PValue);
                (F^):=(PFloat(B^.Ptr)^);
             VT_STR:
                (F^):=StrToReal(PStr(B^.Ptr)^);
+            VT_UTF:
+               (F^):=PUTF(B^.Ptr)^.ToFloat();
             VT_ARR:
                (F^):=PArray(B^.Ptr)^.Count;
             VT_DIC:
@@ -224,6 +230,8 @@ Procedure ValSet(Const A,B:PValue);
                (S^):=FloatToStr(PFloat(B^.Ptr)^);
             VT_STR:
                (S^):=(PStr(B^.Ptr)^);
+            VT_UTF:
+               (S^):=PUTF(B^.Ptr)^.ToAnsiString();
             VT_ARR:
                (S^):=IntToStr(PArray(B^.Ptr)^.Count);
             VT_DIC:
@@ -232,6 +240,33 @@ Procedure ValSet(Const A,B:PValue);
                If (PBoolean(B^.Ptr)^) then (S^):='TRUE' else (S^):='FALSE';
             else
                (S^):=''
+         end end;
+      VT_UTF:
+         begin
+         U:=PUTF(A^.Ptr);
+         Case (B^.Typ) of
+            VT_INT:
+               U^.SetTo(IntToStr(PQInt(B^.Ptr)^));
+            VT_HEX:
+               U^.SetTo(HexToStr(PQInt(B^.Ptr)^));
+            VT_OCT:
+               U^.SetTo(OctToStr(PQInt(B^.Ptr)^));
+            VT_BIN:
+               U^.SetTo(BinToStr(PQInt(B^.Ptr)^));
+            VT_FLO:
+               U^.SetTo(FloatToStr(PFloat(B^.Ptr)^));
+            VT_STR:
+               U^.SetTo(PStr(B^.Ptr)^);
+            VT_UTF:
+               U^.SetTo(PUTF(B^.Ptr));
+            VT_ARR:
+               U^.SetTo(IntToStr(PArray(B^.Ptr)^.Count));
+            VT_DIC:
+               U^.SetTo(IntToStr(PDict(B^.Ptr)^.Count));
+            VT_BOO:
+               If (PBoolean(B^.Ptr)^) then U^.SetTo('TRUE') else U^.SetTo('FALSE');
+            else
+               U^.Clear()
          end end;
       VT_BOO: 
          begin
@@ -243,6 +278,8 @@ Procedure ValSet(Const A,B:PValue);
                (L^):=(Abs(PFloat(B^.Ptr)^)>=1.0);
             VT_STR:
                (L^):=StrToBoolDef(PStr(B^.Ptr)^,FALSE);
+            VT_UTF:
+               (L^):=StrToBoolDef(PUTF(B^.Ptr)^.ToAnsiString(),FALSE);
             VT_ARR:
                (L^):=(Not PArray(B^.Ptr)^.Empty);
             VT_DIC:
@@ -258,7 +295,7 @@ Procedure ValSet(Const A,B:PValue);
 
 
 Procedure ValAdd(Const A,B:PValue);
-   Var  I:PQInt; S:PStr; L:PBoolean; F:PFloat;
+   Var  I:PQInt; S:PStr; L:PBoolean; F:PFloat; U:PUTF;
    begin
    Case (A^.Typ) of
       VT_INT .. VT_BIN:
@@ -271,6 +308,8 @@ Procedure ValAdd(Const A,B:PValue);
                (I^):=Trunc((I^)+(PFloat(B^.Ptr)^));
             VT_STR:
                (I^)+=StrToNum(PStr(B^.Ptr)^,A^.Typ);
+            VT_UTF:
+               (I^)+=PUTF(B^.Ptr)^.ToInt(IntBase(A^.Typ));
             VT_BOO:
                If (PBool(B^.Ptr)^) then (I^)+=1;
             VT_ARR:
@@ -288,6 +327,8 @@ Procedure ValAdd(Const A,B:PValue);
                (F^)+=(PFloat(B^.Ptr)^);
             VT_STR:
                (F^)+=StrToReal(PStr(B^.Ptr)^);
+            VT_UTF:
+               (F^)+=PUTF(B^.Ptr)^.ToFloat();
             VT_BOO:
                If (PBool(B^.Ptr)^) then (F^)+=1;
             VT_ARR:
@@ -311,8 +352,35 @@ Procedure ValAdd(Const A,B:PValue);
                (S^)+=FloatToStr(PFloat(B^.Ptr)^);
             VT_STR:
                (S^)+=(PStr(B^.Ptr)^);
+            VT_UTF:
+               (S^)+=PUTF(B^.Ptr)^.ToAnsiString();
             VT_BOO:
                If (PBool(B^.Ptr)^) then (S^)+='TRUE' else (S^)+='FALSE'
+         end end;
+      VT_UTF:
+         begin
+         U:=PUTF(A^.Ptr);
+         Case (B^.Typ) of
+            VT_INT:
+               U^.Append(IntToStr(PQInt(B^.Ptr)^));
+            VT_HEX:
+               U^.Append(HexToStr(PQInt(B^.Ptr)^));
+            VT_OCT:
+               U^.Append(OctToStr(PQInt(B^.Ptr)^));
+            VT_BIN:
+               U^.Append(BinToStr(PQInt(B^.Ptr)^));
+            VT_FLO:
+               U^.Append(FloatToStr(PFloat(B^.Ptr)^));
+            VT_STR:
+               U^.Append(PStr(B^.Ptr)^);
+            VT_UTF:
+               U^.Append(PUTF(B^.Ptr));
+            VT_ARR:
+               U^.Append(IntToStr(PArray(B^.Ptr)^.Count));
+            VT_DIC:
+               U^.Append(IntToStr(PDict(B^.Ptr)^.Count));
+            VT_BOO:
+               If (PBoolean(B^.Ptr)^) then U^.Append('TRUE') else U^.Append('FALSE');
          end end;
       VT_BOO:
          begin
@@ -324,6 +392,8 @@ Procedure ValAdd(Const A,B:PValue);
                (L^):=(L^) or (Abs(PFloat(B^.Ptr)^)>=1.0);
             VT_STR:
                (L^):=(L^) or StrToBoolDef(PStr(B^.Ptr)^,FALSE);
+            VT_UTF:
+               (L^):=(L^) or StrToBoolDef(PUTF(B^.Ptr)^.ToAnsiString(),FALSE);
             VT_BOO:
                (L^):=(L^) or (PBool(B^.Ptr)^);
             VT_ARR:
@@ -350,6 +420,8 @@ Procedure ValSub(Const A,B:PValue);
                (I^):=Trunc((I^)-(PFloat(B^.Ptr)^));
             VT_STR:
                (I^)-=StrToNum(PStr(B^.Ptr)^,A^.Typ);
+            VT_UTF:
+               (I^)-=PUTF(B^.Ptr)^.ToInt(IntBase(A^.Typ));
             VT_BOO:
                If (PBool(B^.Ptr)^) then (I^)-=1;
             VT_ARR:
@@ -367,6 +439,8 @@ Procedure ValSub(Const A,B:PValue);
                (F^)-=(PFloat(B^.Ptr)^);
             VT_STR:
                (F^)-=StrToReal(PStr(B^.Ptr)^);
+            VT_UTF:
+               (F^)-=PUTF(B^.Ptr)^.ToFloat();
             VT_BOO:
                If (PBool(B^.Ptr)^) then (F^)-=1;
             VT_ARR:
@@ -384,6 +458,8 @@ Procedure ValSub(Const A,B:PValue);
                (L^):=(L^) xor (Abs(PFloat(B^.Ptr)^)>=1.0);
             VT_STR:
                (L^):=(L^) xor StrToBoolDef(PStr(B^.Ptr)^,FALSE);
+            VT_UTF:
+               (L^):=(L^) xor StrToBoolDef(PUTF(B^.Ptr)^.ToAnsiString,FALSE);
             VT_BOO:
                (L^):=(L^) xor (PBool(B^.Ptr)^);
             VT_ARR:
@@ -397,7 +473,8 @@ Procedure ValSub(Const A,B:PValue);
 
 
 Procedure ValMul(Const A,B:PValue);
-   Var  I:PQInt; S:PStr; L:PBoolean; F:PFloat; C,T,O:LongInt;
+   Var  I:PQInt; S:PStr; L:PBoolean; F:PFloat; U:PUTF;
+        C,T,O:LongInt;
    begin
    Case (A^.Typ) of
       VT_INT .. VT_BIN:
@@ -410,6 +487,8 @@ Procedure ValMul(Const A,B:PValue);
                (I^):=Trunc((I^)*(PFloat(B^.Ptr)^));
             VT_STR:
                (I^)*=StrToNum(PStr(B^.Ptr)^,A^.Typ);
+            VT_UTF:
+               (I^)*=PUTF(B^.Ptr)^.ToInt(IntBase(A^.Typ));
             VT_BOO:
                If (Not PBool(B^.Ptr)^) then (I^):=0;
             VT_ARR:
@@ -429,6 +508,8 @@ Procedure ValMul(Const A,B:PValue);
                (F^)*=(PFloat(B^.Ptr)^);
             VT_STR:
                (F^)*=StrToReal(PStr(B^.Ptr)^);
+            VT_UTF:
+               (F^)*=PUTF(B^.Ptr)^.ToFloat();
             VT_BOO:
                If (Not PBool(B^.Ptr)^) then (F^):=0.0;
             VT_ARR:
@@ -448,6 +529,8 @@ Procedure ValMul(Const A,B:PValue);
                T:=Trunc(PFloat(B^.Ptr)^);
             VT_STR:
                Exit();
+            VT_UTF:
+               Exit();
             VT_BOO:
                T:=BoolToInt(PBool(B^.Ptr)^);
             VT_ARR:
@@ -461,6 +544,30 @@ Procedure ValMul(Const A,B:PValue);
          O := Length(S^); T *= O; SetLength(S^, T);
          For C:=(O+1) to T do S^[C] := S^[C-O]
          end;
+      VT_UTF:
+         begin
+         U:=PUTF(A^.Ptr);
+         Case (B^.Typ) of
+            VT_INT .. VT_BIN:
+               T:=(PQInt(B^.Ptr)^);
+            VT_FLO:
+               T:=Trunc(PFloat(B^.Ptr)^);
+            VT_STR:
+               Exit();
+            VT_UTF:
+               Exit();
+            VT_BOO:
+               T:=BoolToInt(PBool(B^.Ptr)^);
+            VT_ARR:
+               T:=PArr(B^.Ptr)^.Count;
+            VT_DIC:
+               T:=PArr(B^.Ptr)^.Count;
+            else 
+               T:=0
+            end;
+         If (T <= 0) then U^.Clear()
+                     else U^.Multiply(T)
+         end;
       VT_BOO:
          begin
          L:=PBool(A^.Ptr);
@@ -471,6 +578,8 @@ Procedure ValMul(Const A,B:PValue);
                (L^):=(L^) and (Abs(PFloat(B^.Ptr)^)>=1.0);
             VT_STR:
                (L^):=(L^) and StrToBoolDef(PStr(B^.Ptr)^,FALSE);
+            VT_UTF:
+               (L^):=(L^) and StrToBoolDef(PUTF(B^.Ptr)^.ToAnsiString,FALSE);
             VT_BOO:
                (L^):=(L^) and (PBool(B^.Ptr)^);
             VT_ARR:
@@ -502,6 +611,11 @@ Procedure ValDiv(Const A,B:PValue);
                tI:=StrToNum(PStr(B^.Ptr)^,A^.Typ);
                If (tI<>0) then (I^):=(I^ div tI) else (I^):=0
                end;
+            VT_UTF:
+               begin
+               tI:=PUTF(B^.Ptr)^.ToInt(IntBase(A^.Typ));
+               If (tI<>0) then (I^):=(I^ div tI) else (I^):=0
+               end;
             VT_BOO:
                If (Not PBool(B^.Ptr)^) then (I^):=0;
             VT_ARR:
@@ -528,6 +642,11 @@ Procedure ValDiv(Const A,B:PValue);
                tF:=StrToReal(PStr(B^.Ptr)^);
                If (tF<>0.0) then (F^)/=tF else (F^):=0.0
                end;
+            VT_UTF:
+               begin
+               tF:=PUTF(B^.Ptr)^.ToFloat();
+               If (tF<>0.0) then (F^)/=tF else (F^):=0.0
+               end;
             VT_BOO:
                If (Not PBool(B^.Ptr)^) then (F^):=0.0;
             VT_ARR:
@@ -549,6 +668,8 @@ Procedure ValDiv(Const A,B:PValue);
                (L^):=(L^) xor (Abs(PFloat(B^.Ptr)^)>=1.0);
             VT_STR:
                (L^):=(L^) xor StrToBoolDef(PStr(B^.Ptr)^,FALSE);
+            VT_UTF:
+               (L^):=(L^) xor StrToBoolDef(PUTF(B^.Ptr)^.ToAnsiString(),FALSE);
             VT_BOO:
                (L^):=(L^) xor (PBool(B^.Ptr)^);
             VT_ARR:
@@ -582,6 +703,11 @@ Procedure ValMod(Const A,B:PValue);
                If (tI <> 0) then (I^):=I^ mod tI
                             else (I^):=0
                end;
+            VT_UTF: begin
+               tI:=PUTF(B^.Ptr)^.ToInt(IntBase(A^.Typ));
+               If (tI <> 0) then (I^):=I^ mod tI
+                            else (I^):=0
+               end;
             VT_ARR:
                If (Not PArr(B^.Ptr)^.Empty)
                   then (I^):=I^ mod PArr(B^.Ptr)^.Count
@@ -608,6 +734,12 @@ Procedure ValMod(Const A,B:PValue);
             VT_STR:
                begin
                tF:=StrToReal(PStr(B^.Ptr)^);
+               If (tF <> 0.0) then (F^):=(F^) - (Trunc(F^ / tF) * tF)
+                              else (F^):=0.0
+               end;
+            VT_UTF:
+               begin
+               tF:=PUTF(B^.Ptr)^.ToFloat();
                If (tF <> 0.0) then (F^):=(F^) - (Trunc(F^ / tF) * tF)
                               else (F^):=0.0
                end;
@@ -641,6 +773,8 @@ Procedure ValPow(Const A,B:PValue);
                (I^):=Trunc(Power(I^, PFloat(B^.Ptr)^));
             VT_STR:
                (I^):=Trunc(IntPower(I^, StrToNum(PStr(B^.Ptr)^,A^.Typ)));
+            VT_UTF:
+               (I^):=Trunc(IntPower(I^, PUTF(B^.Ptr)^.ToInt(IntBase(A^.Typ))));
             VT_BOO:
                If (Not PBool(B^.Ptr)^) then (I^):=1;
             VT_ARR:
@@ -660,6 +794,8 @@ Procedure ValPow(Const A,B:PValue);
                (F^):=Power(F^, PFloat(B^.Ptr)^);
             VT_STR:
                (F^):=Power(F^, StrToReal(PStr(B^.Ptr)^));
+            VT_UTF:
+               (F^):=Power(F^, PUTF(B^.Ptr)^.ToFloat());
             VT_BOO:
                If (Not PBool(B^.Ptr)^) then (F^):=1.0;
             VT_ARR:

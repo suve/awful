@@ -1,6 +1,6 @@
 unit functions_strings;
 
-{$INCLUDE defines.inc} {$INLINE ON}
+{$INCLUDE defines.inc}
 
 interface
    uses Values;
@@ -14,6 +14,7 @@ Function F_TrimRight(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_UpperCase(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_LowerCase(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
+Function F_StrBts(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_StrLen(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_StrPos(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
@@ -22,6 +23,7 @@ Function F_DelStr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_InsertStr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 Function F_WriteStr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_WriteStr_UTF8(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 Function F_Chr_UTF8(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_Ord_UTF8(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
@@ -34,7 +36,7 @@ Function UTF8_Char(Code:LongWord):ShortString;
 Function UTF8_Ord(Chr:ShortString):LongInt;
 
 implementation
-   uses Values_Arith, SysUtils, EmptyFunc;
+   uses Values_Arith, UnicodeStrings, SysUtils, EmptyFunc;
 
 
 Procedure Register(Const FT:PFunTrie);
@@ -50,6 +52,7 @@ Procedure Register(Const FT:PFunTrie);
    FT^.SetVal('str-ritrim',@F_TrimRight);
    FT^.SetVal('str-upper',@F_UpperCase);
    FT^.SetVal('str-lower',@F_LowerCase);
+   FT^.SetVal('str-bytes',@F_StrBts);
    FT^.SetVal('str-len',@F_StrLen);
    FT^.SetVal('str-pos',@F_StrPos);
    FT^.SetVal('str-sub',@F_SubStr);
@@ -57,6 +60,8 @@ Procedure Register(Const FT:PFunTrie);
    FT^.SetVal('str-ins',@F_InsertStr);
    // Utils
    FT^.SetVal('str-write',@F_WriteStr);
+   FT^.SetVal('str-writeu',@F_WriteStr_UTF8);
+   FT^.SetVal('utf8-write',@F_WriteStr_UTF8);
    FT^.SetVal('perc',@F_Perc);
    end;
 
@@ -120,50 +125,73 @@ Function UTF8_Ord(Chr:ShortString):LongInt;
    Exit(O)
    end;
 
-Type TStringFunc = Function(Str:AnsiString):AnsiString;
-Type TChrFunc = Function(Code:LongWord):ShortString;
-Type TOrdFunc = Function(Str:ShortString):LongInt;
-
-Function myTrim(Str:AnsiString):AnsiString;      begin Exit(Trim(Str)) end;
-Function myTrimLeft(Str:AnsiString):AnsiString;  begin Exit(TrimLeft(Str)) end;
-Function myTrimRight(Str:AnsiString):AnsiString; begin Exit(TrimRight(Str)) end;
-Function myUpperCase(Str:AnsiString):AnsiString; begin Exit(UpperCase(Str)) end;
-Function myLowerCase(Str:AnsiString):AnsiString; begin Exit(LowerCase(Str)) end;
-
 Function ASCII_Char(Code:LongWord):ShortString;
    begin Exit(Chr(Code)) end;
 
 Function ASCII_Ord(Str:ShortString):LongInt;
    begin If (Length(Str)>0) then Exit(Ord(Str[0])) else Exit(0) end;
 
-Function F_TransformStr(Func:TStringFunc; Const DoReturn:Boolean; Const Arg:PArrPVal):PValue; Inline;
-   Var C:LongWord; S:AnsiString;
+Type TChrFunc = Function(Code:LongWord):ShortString;
+Type TOrdFunc = Function(Str:ShortString):LongInt;
+
+Type TTransformID = (TID_Trim, TID_TrimLe, TID_TrimRi, TID_Upper, TID_Lower);
+
+Function F_TransformStr(funID:TTransformID; Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   Var C:LongWord; V:PValue;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg^)=0) then Exit(NewVal(VT_STR,''));
    For C:=High(Arg^) downto 1 do
       If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
-   If (Arg^[0]^.Typ = VT_STR)
-      then S:=Func(PStr(Arg^[0]^.Ptr)^)
-      else S:=Func(ValAsStr(Arg^[0]));
+   If (Arg^[0]^.Typ = VT_UTF) then begin
+      V := CopyVal(Arg^[0]);
+      Case funID of
+         TID_Trim:   PUTF(V^.Ptr)^.Trim();
+         TID_TrimLe: PUTF(V^.Ptr)^.TrimLeft();
+         TID_TrimRi: PUTF(V^.Ptr)^.TrimRight();
+         TID_Upper:  PUTF(V^.Ptr)^.UpperCase();
+         TID_Lower:  PUTF(V^.Ptr)^.LowerCase()
+      end end else begin
+      V:=ValToStr(Arg^[0]);
+      Case funID of
+         TID_Trim:   PStr(V^.Ptr)^ := Trim(PStr(V^.Ptr)^);
+         TID_TrimLe: PStr(V^.Ptr)^ := TrimLeft(PStr(V^.Ptr)^);
+         TID_TrimRi: PStr(V^.Ptr)^ := TrimRight(PStr(V^.Ptr)^);
+         TID_Upper:  PStr(V^.Ptr)^ := UpperCase(PStr(V^.Ptr)^);
+         TID_Lower:  PStr(V^.Ptr)^ := LowerCase(PStr(V^.Ptr)^)
+      end end;
    If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
-   Exit(NewVal(VT_STR,S))
+   Exit(V)
    end;
 
 Function F_Trim(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_TransformStr(@myTrim, DoReturn, Arg)) end;
+   begin Exit(F_TransformStr(TID_Trim, DoReturn, Arg)) end;
 
 Function F_TrimLeft(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_TransformStr(@myTrimLeft, DoReturn, Arg)) end;
+   begin Exit(F_TransformStr(TID_TrimLe, DoReturn, Arg)) end;
 
 Function F_TrimRight(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_TransformStr(@myTrimRight, DoReturn, Arg)) end;
+   begin Exit(F_TransformStr(TID_TrimRi, DoReturn, Arg)) end;
 
 Function F_UpperCase(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_TransformStr(@myUpperCase, DoReturn, Arg)) end;
+   begin Exit(F_TransformStr(TID_Upper, DoReturn, Arg)) end;
 
 Function F_LowerCase(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_TransformStr(@myLowerCase, DoReturn, Arg)) end;
+   begin Exit(F_TransformStr(TID_Lower, DoReturn, Arg)) end;
+
+Function F_StrBts(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   Var C:LongWord; L:QInt;
+   begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
+   If (Length(Arg^)=0) then Exit(NewVal(VT_INT,0));
+   If (Length(Arg^)>1) then
+      For C:=High(Arg^) downto 1 do
+          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
+   If (Arg^[0]^.Typ = VT_UTF) then L:=PUTF(Arg^[0]^.Ptr)^.Bytes 
+                              else L:=Length(ValAsStr(Arg^[0]));
+   If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
+   Exit(NewVal(VT_INT,L))
+   end;
 
 Function F_StrLen(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; L:QInt;
@@ -173,32 +201,32 @@ Function F_StrLen(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    If (Length(Arg^)>1) then
       For C:=High(Arg^) downto 1 do
           If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
-   If (Arg^[0]^.Typ = VT_STR)
-      then L:=Length(PStr(Arg^[0]^.Ptr)^)
-      else L:=Length(ValAsStr(Arg^[0]));
+   If (Arg^[0]^.Typ = VT_STR) then L:=Length(PStr(Arg^[0]^.Ptr)^) else
+   If (Arg^[0]^.Typ = VT_UTF) then L:=PUTF(Arg^[0]^.Ptr)^.Len else
+                              {el} L:=Length(ValAsStr(Arg^[0]));
    If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
    Exit(NewVal(VT_INT,L))
    end;
 
 Function F_StrPos(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   Var C:LongWord; V:PValue; P:QInt;
+   Var C:LongWord; P:QInt;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg^)<2) then Exit(NewVal(VT_INT,0));
    If (Length(Arg^)>2) then
       For C:=High(Arg^) downto 1 do
           If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
-   For C:=1 downto 0 do 
-      If (Arg^[C]^.Typ<>VT_STR) then begin
-         V:=ValToStr(Arg^[C]); If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
-         Arg^[C]:=V end;
-   P:=Pos(PStr(Arg^[0]^.Ptr)^,PStr(Arg^[1]^.Ptr)^);
+   If (Arg^[0]^.Typ = VT_UTF) then begin
+      If (Arg^[1]^.Typ = VT_UTF) then P:=PUTF(Arg^[0]^.Ptr)^.Search(PUTF(Arg^[1]^.Ptr))
+                                 else P:=PUTF(Arg^[0]^.Ptr)^.Search(ValAsStr(Arg^[1]))
+      end else
+      P:=Pos(ValAsStr(Arg^[1]),ValAsStr(Arg^[0]));
    For C:=1 downto 0 do If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
    Exit(NewVal(VT_INT,P))
    end;
 
 Function F_SubStr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   Var C:LongWord; I:Array[1..2] of QInt; R:TStr;
+   Var C:LongWord; I:Array[1..2] of QInt; V:PValue;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg^)=0) then Exit(NewVal(VT_STR,''));
@@ -210,15 +238,15 @@ Function F_SubStr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
           If (Arg^[C]^.Typ >= VT_INT) and (Arg^[C]^.Typ<= VT_BIN)
              then i[C]:=PQInt(Arg^[C]^.Ptr)^
              else i[C]:=ValAsInt(Arg^[C])
-            end else
+          end else
              If (C=2) then i[C]:=High(QInt) else i[C]:=1;
-   If (Arg^[0]^.Typ = VT_STR)
-      then R:=Copy(PStr(Arg^[0]^.Ptr)^,i[1],i[2])
-      else R:=Copy(ValAsStr(Arg^[0]),i[1],i[2]);
+   If (Arg^[0]^.Typ = VT_STR) then V:=NewVal(VT_STR,Copy(PStr(Arg^[0]^.Ptr)^,i[1],i[2])) else
+   If (Arg^[0]^.Typ = VT_UTF) then V:=NewVal(VT_UTF,PUTF(Arg^[0]^.Ptr)^.SubStr(i[1],i[2])) else
+                              {el} V:=NewVal(VT_STR,Copy(ValAsStr(Arg^[0]),i[1],i[2]));
    For C:=2 downto 0 do
        If (Length(Arg^)>C) and (Arg^[C]^.Lev >= CurLev)
           then FreeVal(Arg^[C]);
-   Exit(NewVal(VT_STR,R))
+   Exit(V)
    end;
 
 Function F_DelStr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
@@ -236,10 +264,14 @@ Function F_DelStr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
              else i[C]:=ValAsInt(Arg^[C]);
             end else
              If (C=2) then i[C]:=High(QInt) else i[C]:=1;
-   If (Arg^[0]^.Typ = VT_STR)
-      then V:=CopyVal(Arg^[0])
-      else V:=ValToStr(Arg^[0]);
-   Delete(PStr(V^.Ptr)^,i[1],i[2]); 
+   If (Arg^[0]^.Typ = VT_UTF) then begin
+      V:=CopyVal(Arg^[0]); PUTF(V^.Ptr)^.Delete(i[1],i[2])
+      end else begin
+      If (Arg^[0]^.Typ = VT_STR)
+         then V:=CopyVal(Arg^[0])
+         else V:=ValToStr(Arg^[0]);
+      Delete(PStr(V^.Ptr)^,i[1],i[2])
+      end;
    For C:=2 downto 0 do
        If (Length(Arg^)>C) and (Arg^[C]^.Lev >= CurLev)
           then FreeVal(Arg^[C]);
@@ -256,8 +288,15 @@ Function F_InsertStr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    If (Length(Arg^) > 2)
       then Idx := ValAsInt(Arg^[2])
       else Idx := 1;
-   V := NewVal(VT_STR, ValAsStr(Arg^[0]));
-   Insert(ValAsStr(Arg^[1]), PStr(V^.Ptr)^, Idx);
+   If (Arg^[0]^.Typ = VT_UTF) then begin
+      V := CopyVal(Arg^[0]);
+      If (Arg^[1]^.Typ = VT_UTF)
+         then PUTF(V^.Ptr)^.Insert(PUTF(Arg^[1]^.Ptr),Idx)
+         else PUTF(V^.Ptr)^.Insert(ValAsStr(Arg^[1]),Idx)
+      end else begin
+      V := NewVal(VT_STR, ValAsStr(Arg^[0]));
+      Insert(ValAsStr(Arg^[1]), PStr(V^.Ptr)^, Idx)
+      end;
    For C:=0 to High(Arg^) do
        If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
    Exit(V)
@@ -347,7 +386,7 @@ Function F_WriteStr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
              VT_FLO: WriteStr(Tmp, Values.FloatToStr(PFloat(Arg^[C]^.Ptr)^));
              VT_BOO: WriteStr(Tmp, PBoolean(Arg^[C]^.Ptr)^);
              VT_STR: WriteStr(Tmp, PAnsiString(Arg^[C]^.Ptr)^);
-             VT_UTF: WriteStr(Tmp, '{UTF8}');
+             VT_UTF: WriteStr(Tmp, PUTF(Arg^[C]^.Ptr)^.ToAnsiString());
              VT_ARR: WriteStr(Tmp, 'array(',PArray(Arg^[C]^.Ptr)^.Count,')');
              VT_DIC: WriteStr(Tmp, 'dict(',PDict(Arg^[C]^.Ptr)^.Count,')');
              VT_FIL: WriteStr(Tmp, 'file(',PFileVal(Arg^[C]^.Ptr)^.Pth,')');
@@ -357,6 +396,17 @@ Function F_WriteStr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
           Str += Tmp
           end;
    Exit(NewVal(VT_STR, Str))
+   end;
+
+Function F_WriteStr_UTF8(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   Var V:PValue; U:PUTF8String;
+   begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
+   V := F_WriteStr(True, Arg);
+   New(U, Create(PStr(V^.Ptr)^));
+   Dispose(PStr(V^.Ptr));
+   V^.Typ := VT_UTF; V^.Ptr := U;
+   Exit(V)
    end;
 
 end.

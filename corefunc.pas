@@ -340,9 +340,13 @@ Function F_AutoCall(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    
    // Set procedure and expression number back to original values and return value
    Proc:=P; ExLn:=E; 
-   If (DoReturn) then begin If (R<>NIL) then Exit(R) else Exit(NilVal()) end
-                 else begin If (R<>NIL) then FreeVal(R); Exit(NIL) end
-   end;
+   If (DoReturn) then begin
+      If (R<>NIL) then Exit(R)
+                  else Exit(NilVal()) end
+      else begin
+      If (R<>NIL) then FreeVal(R);
+      Exit(NIL)
+   end end;
 
 
 Function F_FuncArgs(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;

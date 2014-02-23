@@ -1,8 +1,8 @@
-program awful; {$INCLUDE defines.inc} {$LONGSTRINGS ON} {$INLINE ON} {$PASCALMAINNAME AWFUL_MAIN}
+program awful;
 
-uses SysUtils, Math,
+{$INCLUDE defines.inc} {$LONGSTRINGS ON} {$PASCALMAINNAME AWFUL_MAIN}
 
-     Trie, Stack,
+uses SysUtils,
      
      Values, TokExpr,
      
@@ -60,11 +60,11 @@ Procedure AnalyseParams();
          ParamNum += 1; New(CustomStdIn);
          Assign(CustomStdIn^, ParamNow);
          
-         {$I-} Reset(CustomStdIn^); {$I+}
-         If (IOResult() <> 0) then Fatal(0,'Could not read script file.', 2);
-         
          YukPath:=ExpandFileName(ParamNow);
          YukName:=ExtractFileName(YukPath);
+         
+         {$I-} Reset(CustomStdIn^); {$I+}
+         If (IOResult() <> 0) then Fatal(0,'Could not read script file.', 2);
          
          {$I-} ChDir(ExtractFilePath(YukPath)); {$I+}
          ParamLim := 0 //; ParamNum := High(ParamNum)
@@ -175,7 +175,7 @@ If (CustomStdIn <> NIL) then begin
 
 If (Not Switch_NoRun)
     then Run()
-    else Writeln('No syntax errors detected in "',YukName,'" (parsed in ',PQInt(Cons^.GetVal('FILE-PARSETIME')^.Ptr)^,'ms).');
+    else Writeln('No syntax errors detected in "',YukName,'" (parsed in ',PQInt(Cons^.GetVal('AWFUL-PARSETIME')^.Ptr)^,'ms).');
 
 {$I-} ChDir(OrigDir); {$I+}
 Cleanup();

@@ -1,5 +1,7 @@
 unit emptyfunc;
 
+{$INCLUDE defines.inc}
+
 interface
    uses Values;
 

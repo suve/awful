@@ -1,6 +1,6 @@
 unit functions_sysinfo;
 
-{$INCLUDE defines.inc} {$INLINE ON}
+{$INCLUDE defines.inc}
 
 interface
    uses Values;

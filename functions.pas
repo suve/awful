@@ -213,9 +213,11 @@ Function F_sizeof(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    If (PStr(Arg^[0]^.Ptr)^ = 'oct'   ) then C:=SizeOf(QInt) else
    If (PStr(Arg^[0]^.Ptr)^ = 'bin'   ) then C:=SizeOf(QInt) else
    If (PStr(Arg^[0]^.Ptr)^ = 'str'   ) then C:=SizeOf(TStr) else
+   If (PStr(Arg^[0]^.Ptr)^ = 'utf'   ) then C:=SizeOf(TUTF) else
    If (PStr(Arg^[0]^.Ptr)^ = 'log'   ) then C:=SizeOf(TBool) else
    If (PStr(Arg^[0]^.Ptr)^ = 'float' ) then C:=SizeOf(TFloat) else
    If (PStr(Arg^[0]^.Ptr)^ = 'string') then C:=SizeOf(TStr) else
+   If (PStr(Arg^[0]^.Ptr)^ = 'utf-8' ) then C:=SizeOf(TUTF) else
    If (PStr(Arg^[0]^.Ptr)^ = 'bool'  ) then C:=SizeOf(TBool) else
    If (PStr(Arg^[0]^.Ptr)^ = 'arr'   ) then C:=SizeOf(TArray) else
    If (PStr(Arg^[0]^.Ptr)^ = 'array' ) then C:=SizeOf(TArray) else
@@ -243,6 +245,7 @@ Function F_typeof(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
       VT_HEX: V:=NewVal(VT_STR, 'hex'   );
       VT_FLO: V:=NewVal(VT_STR, 'float' );
       VT_STR: V:=NewVal(VT_STR, 'string');
+      VT_UTF: V:=NewVal(VT_STR, 'utf8'  );
       VT_ARR: V:=NewVal(VT_STR, 'array' );
       VT_DIC: V:=NewVal(VT_STR, 'dict'  );
       VT_FIL: V:=NewVal(VT_STR, 'file'  );
