@@ -7,13 +7,14 @@ interface
 
 const VMAJOR = '0';
       VMINOR = '4';
-      VBUGFX = '2';
-      VREVISION = 33;
+      VBUGFX = '3';
+      VREVISION = 34;
       VERSION = VMAJOR + '.' + VMINOR + '.' + VBUGFX;
 
 Var GLOB_MS:Comp;  GLOB_dt:TDateTime;
     GLOB_SMS:Comp; GLOB_sdt:TDateTime;
     YukPath,YukName:AnsiString;
+    ScriptName:AnsiString;
 
 Type TFileInfo = record
         Name : AnsiString;

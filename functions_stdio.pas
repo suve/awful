@@ -26,15 +26,15 @@ implementation
 Procedure Register(Const FT:PFunTrie);
    begin
    // stdout
-   FT^.SetVal('write', @F_Write);
-   FT^.SetVal('writeln', @F_Writeln);
+   FT^.SetVal('write', MkFunc(@F_Write));
+   FT^.SetVal('writeln', MkFunc(@F_Writeln));
    // stdin
-   FT^.SetVal('read', @F_Read);
-   FT^.SetVal('readln', @F_Readln);
-   FT^.SetVal('getchar', @F_GetChar);
-   FT^.SetVal('stdin-flush', @F_stdin_BufferFlush);
-   FT^.SetVal('stdin-clear', @F_stdin_BufferClear);
-   FT^.SetVal('stdin-push', @F_stdin_BufferPush)
+   FT^.SetVal('read', MkFunc(@F_Read,REF_MODIF));
+   FT^.SetVal('readln', MkFunc(@F_Readln,REF_MODIF));
+   FT^.SetVal('getchar', MkFunc(@F_GetChar));
+   FT^.SetVal('stdin-flush', MkFunc(@F_stdin_BufferFlush));
+   FT^.SetVal('stdin-clear', MkFunc(@F_stdin_BufferClear));
+   FT^.SetVal('stdin-push', MkFunc(@F_stdin_BufferPush))
    end;
 
 
@@ -83,7 +83,7 @@ Function F_Write(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
              VT_FLO: Write(StdOut, Values.FloatToStr(PFloat(Arg^[C]^.Ptr)^));
              VT_BOO: Write(StdOut, PBoolean(Arg^[C]^.Ptr)^);
              VT_STR: Write(StdOut, PStr(Arg^[C]^.Ptr)^);
-             VT_UTF: PUTF(Arg^[C]^.Ptr)^.Print();
+             VT_UTF: PUTF(Arg^[C]^.Ptr)^.Print(StdOut);
              VT_ARR: Write(StdOut, 'array(',PArray(Arg^[C]^.Ptr)^.Count,')');
              VT_DIC: Write(StdOut, 'dict(',PDict(Arg^[C]^.Ptr)^.Count,')');
              VT_FIL: Write(StdOut, 'file(',PFileVal(Arg^[C]^.Ptr)^.Pth,')');

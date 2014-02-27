@@ -14,7 +14,7 @@ implementation
 Procedure Register(Const FT:PFunTrie);
    begin
    //FT^.SetVal('', @F_);
-   FT^.SetVal('nil', @F_)
+   FT^.SetVal('nil', MkFunc(@F_))
    end;
 
 Function F_(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;

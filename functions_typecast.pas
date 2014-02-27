@@ -20,13 +20,13 @@ implementation
 
 Procedure Register(Const FT:PFunTrie);
    begin
-   FT^.SetVal('mkint',@F_mkint);
-   FT^.SetVal('mkhex',@F_mkhex);
-   FT^.SetVal('mkoct',@F_mkoct);
-   FT^.SetVal('mkbin',@F_mkbin);
-   FT^.SetVal('mkflo',@F_mkflo); FT^.SetVal('mkfloat',@F_mkflo);
-   FT^.SetVal('mkstr',@F_mkstr); FT^.SetVal('mkstring',@F_mkstr);
-   FT^.SetVal('mklog',@F_mklog); FT^.SetVal('mkbool',@F_mklog);
+   FT^.SetVal('mkint',MkFunc(@F_mkint,REF_MODIF));
+   FT^.SetVal('mkhex',MkFunc(@F_mkhex,REF_MODIF));
+   FT^.SetVal('mkoct',MkFunc(@F_mkoct,REF_MODIF));
+   FT^.SetVal('mkbin',MkFunc(@F_mkbin,REF_MODIF));
+   FT^.SetVal('mkflo',MkFunc(@F_mkflo,REF_MODIF)); FT^.SetVal('mkfloat',MkFunc(@F_mkflo,REF_MODIF));
+   FT^.SetVal('mkstr',MkFunc(@F_mkstr,REF_MODIF)); FT^.SetVal('mkstring',MkFunc(@F_mkstr,REF_MODIF));
+   FT^.SetVal('mklog',MkFunc(@F_mklog,REF_MODIF)); FT^.SetVal('mkbool',MkFunc(@F_mklog,REF_MODIF));
    end;
 
 Function F_mkint(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;

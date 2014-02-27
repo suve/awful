@@ -34,6 +34,7 @@ Procedure AnalyseParams();
    GetDir(0, OrigDir);
    YukPath := '(stdin)';
    YukName := YukPath;
+   ScriptName := '(stdin)';
    ParamNum := 1;
    CustomStdIn := NIL;
    
@@ -60,6 +61,7 @@ Procedure AnalyseParams();
          ParamNum += 1; New(CustomStdIn);
          Assign(CustomStdIn^, ParamNow);
          
+         ScriptName:=ParamNow;
          YukPath:=ExpandFileName(ParamNow);
          YukName:=ExtractFileName(YukPath);
          
@@ -73,15 +75,19 @@ Procedure AnalyseParams();
          ParamNum += 1;
          Assign(CustomStdOut, ParamNow);
          {$I-} Rewrite(CustomStdOut); {$I+}
-         If (IOResult() = 0) then begin Output := CustomStdOut; StdOut := CustomStdOut end;
-            ParMod:=PAR_INPUT
+         If (IOResult() = 0)
+            then begin Output := CustomStdOut; StdOut := CustomStdOut end
+            else Writeln(StdErr,'Could not redirect stdout to "'+ParamNow+'".');
+         ParMod:=PAR_INPUT
          end else
       If (ParMod = PAR_ERR) then begin
          ParamNum += 1;
          Assign(CustomStdErr, ParamNow);
          {$I-} Rewrite(CustomStdErr); {$I+}
-         If (IOResult() = 0) then StdErr := CustomStdErr;
-            ParMod:=PAR_INPUT
+         If (IOResult() = 0)
+            then StdErr := CustomStdErr
+            else Writeln(StdErr,'Could not redirect stderr to "'+ParamNow+'".');
+         ParMod:=PAR_INPUT
          end
       end
    end;
@@ -103,14 +109,14 @@ Procedure Run();
    Headers[0].Key:='content-type'; Headers[0].Val:='text/html';
    {$ENDIF}
    
+   CurLev := 0;
    R:=RunFunc(0); If (R<>NIL) then FreeVal(R)
    end;
 
 Procedure Cleanup();
-   Var C,I:LongWord; VEA:TDict.TEntryArr;
+   Var C,I:LongWord; VEA:TValTrie.TEntryArr;
    begin
    // Free all the user-functions, their expressions and tokens
-   UsrFun^.Flush(); Dispose(UsrFun, Destroy());
    If (Length(Pr)>0) then
       For C:=Low(Pr) to High(Pr) do
           FreeProc(Pr[C]);
@@ -147,7 +153,7 @@ begin //MAIN
 GLOB_dt:=Now(); GLOB_ms:=TimeStampToMSecs(DateTimeToTimeStamp(GLOB_dt));
 Randomize();
 
-New(Func,Create('!','z'));
+New(Func,Create(#33,#255));
 CoreFunc           . Register(Func);
 EmptyFunc          . Register(Func);
 Functions          . Register(Func);
@@ -175,7 +181,7 @@ If (CustomStdIn <> NIL) then begin
 
 If (Not Switch_NoRun)
     then Run()
-    else Writeln('No syntax errors detected in "',YukName,'" (parsed in ',PQInt(Cons^.GetVal('AWFUL-PARSETIME')^.Ptr)^,'ms).');
+    else Writeln('No syntax errors detected in "',ScriptName,'" (parsed in ',PQInt(Cons^.GetVal('AWFUL-PARSETIME')^.Ptr)^,'ms).');
 
 {$I-} ChDir(OrigDir); {$I+}
 Cleanup();

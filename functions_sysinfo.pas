@@ -52,27 +52,27 @@ Var Winderps : AnsiString = '';
 
 Procedure Register(Const FT:PFunTrie);
    begin
-   FT^.SetVal('sysinfo-get'       ,{$IFDEF LINUX}@F_SysInfo_Get       {$ELSE}@F_{$ENDIF});
-   FT^.SetVal('sysinfo-uptime'    ,{$IFDEF LINUX}@F_SysInfo_Uptime    {$ELSE}@F_{$ENDIF});
-   FT^.SetVal('sysinfo-load'      ,{$IFDEF LINUX}@F_SysInfo_Load      {$ELSE}@F_{$ENDIF});
-   FT^.SetVal('sysinfo-ram-total' ,{$IFDEF LINUX}@F_SysInfo_RAMtotal  {$ELSE}@F_{$ENDIF});
-   FT^.SetVal('sysinfo-ram-free'  ,{$IFDEF LINUX}@F_SysInfo_RAMfree   {$ELSE}@F_{$ENDIF});
-   FT^.SetVal('sysinfo-ram-used'  ,{$IFDEF LINUX}@F_SysInfo_RAMused   {$ELSE}@F_{$ENDIF});
-   FT^.SetVal('sysinfo-ram-buffer',{$IFDEF LINUX}@F_SysInfo_RAMbuffer {$ELSE}@F_{$ENDIF});
-   FT^.SetVal('sysinfo-swap-total',{$IFDEF LINUX}@F_SysInfo_SwapTotal {$ELSE}@F_{$ENDIF});
-   FT^.SetVal('sysinfo-swap-free' ,{$IFDEF LINUX}@F_SysInfo_SwapFree  {$ELSE}@F_{$ENDIF});
-   FT^.SetVal('sysinfo-swap-used' ,{$IFDEF LINUX}@F_SysInfo_SwapUsed  {$ELSE}@F_{$ENDIF});
-   FT^.SetVal('sysinfo-procnum'   ,{$IFDEF LINUX}@F_SysInfo_Procnum   {$ELSE}@F_{$ENDIF});
-   FT^.SetVal('sysinfo-thermal'   ,{$IFDEF LINUX}@F_SysInfo_Thermal   {$ELSE}@F_{$ENDIF});
-   FT^.SetVal('sysinfo-domainname',{$IFDEF LINUX}@F_SysInfo_DomainName{$ELSE}@F_{$ENDIF});
-   FT^.SetVal('sysinfo'           ,{$IFDEF LINUX}@F_SysInfo_All       {$ELSE}@F_{$ENDIF});
+   FT^.SetVal('sysinfo-get'       , MkFunc({$IFDEF LINUX}@F_SysInfo_Get       {$ELSE}@F_{$ENDIF}));
+   FT^.SetVal('sysinfo-uptime'    , MkFunc({$IFDEF LINUX}@F_SysInfo_Uptime    {$ELSE}@F_{$ENDIF}));
+   FT^.SetVal('sysinfo-load'      , MkFunc({$IFDEF LINUX}@F_SysInfo_Load      {$ELSE}@F_{$ENDIF}));
+   FT^.SetVal('sysinfo-ram-total' , MkFunc({$IFDEF LINUX}@F_SysInfo_RAMtotal  {$ELSE}@F_{$ENDIF}));
+   FT^.SetVal('sysinfo-ram-free'  , MkFunc({$IFDEF LINUX}@F_SysInfo_RAMfree   {$ELSE}@F_{$ENDIF}));
+   FT^.SetVal('sysinfo-ram-used'  , MkFunc({$IFDEF LINUX}@F_SysInfo_RAMused   {$ELSE}@F_{$ENDIF}));
+   FT^.SetVal('sysinfo-ram-buffer', MkFunc({$IFDEF LINUX}@F_SysInfo_RAMbuffer {$ELSE}@F_{$ENDIF}));
+   FT^.SetVal('sysinfo-swap-total', MkFunc({$IFDEF LINUX}@F_SysInfo_SwapTotal {$ELSE}@F_{$ENDIF}));
+   FT^.SetVal('sysinfo-swap-free' , MkFunc({$IFDEF LINUX}@F_SysInfo_SwapFree  {$ELSE}@F_{$ENDIF}));
+   FT^.SetVal('sysinfo-swap-used' , MkFunc({$IFDEF LINUX}@F_SysInfo_SwapUsed  {$ELSE}@F_{$ENDIF}));
+   FT^.SetVal('sysinfo-procnum'   , MkFunc({$IFDEF LINUX}@F_SysInfo_Procnum   {$ELSE}@F_{$ENDIF}));
+   FT^.SetVal('sysinfo-thermal'   , MkFunc({$IFDEF LINUX}@F_SysInfo_Thermal   {$ELSE}@F_{$ENDIF}));
+   FT^.SetVal('sysinfo-domainname', MkFunc({$IFDEF LINUX}@F_SysInfo_DomainName{$ELSE}@F_{$ENDIF}));
+   FT^.SetVal('sysinfo'           , MkFunc({$IFDEF LINUX}@F_SysInfo_All       {$ELSE}@F_{$ENDIF}));
    // Functions implemented on both platforms
-   FT^.SetVal('sysinfo-hostname',@F_SysInfo_Hostname);
-   FT^.SetVal('sysinfo-disk-total',@F_SysInfo_DiskTotal);
-   FT^.SetVal('sysinfo-disk-free',@F_SysInfo_DiskFree);
-   FT^.SetVal('sysinfo-disk-used',@F_SysInfo_DiskUsed);
-   FT^.SetVal('sysinfo-system',@F_SysInfo_System);
-   FT^.SetVal('sysinfo-version',@F_SysInfo_Version);
+   FT^.SetVal('sysinfo-hostname',MkFunc(@F_SysInfo_Hostname));
+   FT^.SetVal('sysinfo-disk-total',MkFunc(@F_SysInfo_DiskTotal));
+   FT^.SetVal('sysinfo-disk-free',MkFunc(@F_SysInfo_DiskFree));
+   FT^.SetVal('sysinfo-disk-used',MkFunc(@F_SysInfo_DiskUsed));
+   FT^.SetVal('sysinfo-system',MkFunc(@F_SysInfo_System));
+   FT^.SetVal('sysinfo-version',MkFunc(@F_SysInfo_Version));
    end;
 
 {$IFDEF LINUX}

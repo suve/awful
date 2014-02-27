@@ -58,8 +58,8 @@ Type TUTF8Char = String[4];
         Function  ToFloat():Extended;
         Function  ToAnsiString():AnsiString;
         
-        Procedure Print();
-        Procedure PrintHex();
+        Procedure Print(Var F:Text);
+        Procedure PrintHex(Var F:Text);
         
         Property Len : LongWord read _Len;
         Property Bytes : LongWord read _Bytes;
@@ -489,23 +489,23 @@ Function TUTF8String.ToAnsiString():AnsiString;
    Exit(Res)
    end;
 
-Procedure TUTF8String.Print();
+Procedure TUTF8String.Print(Var F:Text);
    Var C:LongWord;
    begin
    If (_Len = 0) then Exit();
    For C:=0 to (_Len - 1) do
-       Write(Self.Chr[C])
+       Write(F, Self.Chr[C])
    end;
 
-Procedure TUTF8String.PrintHex();
+Procedure TUTF8String.PrintHex(Var F:Text);
    Const HexDigit = '0123456789ABCDEF';
    Var C, B :LongWord;
    begin
    If (_Len = 0) then Exit();
    For C:=0 to (_Len - 1) do begin
        For B:=1 to Length(Chr[C]) do
-           Write(HexDigit[1+(Ord(Chr[C][B]) div 16)], HexDigit[1+(Ord(Chr[C][B]) mod 16)]);
-       Write(#$20)
+           Write(F, HexDigit[1+(Ord(Chr[C][B]) div 16)], HexDigit[1+(Ord(Chr[C][B]) mod 16)]);
+       Write(F, #$20)
        end
    end;
 

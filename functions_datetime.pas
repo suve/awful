@@ -29,16 +29,16 @@ implementation
 
 Procedure Register(Const FT:PFunTrie);
    begin
-   FT^.SetVal('dt-start',@F_DateTime_Start);
-   FT^.SetVal('dt-runstart',@F_DateTime_FileStart);
-   FT^.SetVal('dt-now',@F_DateTime_Now);
-   FT^.SetVal('dt-date',@F_DateTime_Date);
-   FT^.SetVal('dt-time',@F_DateTime_Time);
-   FT^.SetVal('dt-decode',@F_DateTime_Decode);
-   FT^.SetVal('dt-encode',@F_DateTime_Encode);
-   FT^.SetVal('dt-make',@F_DateTime_Make);
-   FT^.SetVal('dt-break',@F_DateTime_Break);
-   FT^.SetVal('dt-str',@F_DateTime_String);
+   FT^.SetVal('dt-start',MkFunc(@F_DateTime_Start));
+   FT^.SetVal('dt-runstart',MkFunc(@F_DateTime_FileStart));
+   FT^.SetVal('dt-now',MkFunc(@F_DateTime_Now));
+   FT^.SetVal('dt-date',MkFunc(@F_DateTime_Date));
+   FT^.SetVal('dt-time',MkFunc(@F_DateTime_Time));
+   FT^.SetVal('dt-decode',MkFunc(@F_DateTime_Decode));
+   FT^.SetVal('dt-encode',MkFunc(@F_DateTime_Encode));
+   FT^.SetVal('dt-make',MkFunc(@F_DateTime_Make));
+   FT^.SetVal('dt-break',MkFunc(@F_DateTime_Break));
+   FT^.SetVal('dt-str',MkFunc(@F_DateTime_String));
    end;
 
 Function F_DateTime_Start(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
@@ -274,9 +274,9 @@ Function F_DateTime_String(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
          Format := dtf(ValAsStr(Arg^[0]));
          dt := ValAsFlo(Arg^[1])
          end else begin
-         If (Arg^[0]^.Typ = VT_FLO) then begin
+         If (Arg^[0]^.Typ = VT_FLO) or ((Arg^[0]^.Typ >= VT_INT) and (Arg^[0]^.Typ <= VT_BIN)) then begin
             Format := dtf_def;
-            dt := PFloat(Arg^[0]^.Ptr)^;
+            dt := ValAsFlo(Arg^[0]);
             end else begin
             Format := dtf(ValAsStr(Arg^[0]));
             dt := SysUtils.Now()

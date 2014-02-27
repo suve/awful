@@ -3,7 +3,7 @@ unit parser;
 {$INCLUDE defines.inc} {$LONGSTRINGS ON}
 
 interface
-   uses Stack, Trie, TokExpr, Values;
+   uses Stack, TokExpr, Values;
 
 Type TLineInfo = LongInt; //This will probably become a record when functions get implemented // LOL NOPE
      TIf = Array[0..2] of TLineInfo;
@@ -17,21 +17,17 @@ Type TLineInfo = LongInt; //This will probably become a record when functions ge
      
      PConstructStack = ^TConstructStack;
      TConstructStack = specialize GenericStack<TConstructInfo>;
-     
-     PNumTrie = ^TNumTrie; 
-     TNumTrie = specialize GenericTrie<LongWord>;
 
 Var IfArr : Array of TIf;
     RepArr, WhiArr : Array of TLoop;
     
     Func : PFunTrie;
-    Cons : PDict;
+    Cons : PValTrie;
     
-    UsrFun : PNumTrie;
     Pr : Array of TProc;
     Proc, ExLn : LongWord;
 
-Procedure Fatal(Ln:LongWord;Msg:AnsiString;ErrCode:LongInt = 255);
+Procedure Fatal(Const Ln:LongWord;Const Msg:AnsiString;Const ErrCode:LongInt = 255);
 Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
 Procedure ProcessLine(L:AnsiString;N:LongWord);
 Procedure ParseFile(Var I:System.Text);
@@ -50,16 +46,7 @@ Const PREFIX_VAL = '$';
 Var cstruStack : PConstructStack;
     mulico:LongWord; {$IFDEF CGI} codemode:LongWord; {$ENDIF}
 
-Function GetFunc(Name:AnsiString):PFunc; Inline;
-   Var R:PFunc;
-   begin
-   Try R:=Func^.GetVal(Name);
-       Exit(R)
-   Except
-       Exit(Nil)
-   end end;
-
-Procedure Fatal(Ln:LongWord;Msg:AnsiString;ErrCode:LongInt = 255);
+Procedure Fatal(Const Ln:LongWord;Const Msg:AnsiString;Const ErrCode:LongInt = 255);
    {$IFDEF CGI} Var DTstr:AnsiString; {$ENDIF}
    begin
    If (Ln <> 0) then Writeln(StdErr, YukName,'(',Ln,'): Fatal: ',Msg)
@@ -88,10 +75,21 @@ Procedure Fatal(Ln:LongWord;Msg:AnsiString;ErrCode:LongInt = 255);
    {$ENDIF}
    end;
 
-Procedure Error(Ln:LongWord;Msg:AnsiString); Inline;
+Procedure Error(Const Ln:LongWord;Const Msg:AnsiString); Inline;
    begin Writeln(StdErr,YukName,'(',Ln,'): Error: ',Msg) end;
 
-Procedure cstruFatal(Ln:LongWord);
+Procedure DupeFuncFatal(Const Ln:LongWord; Const Name:AnsiString);
+   Var Fn : TFunc;
+   begin
+   Fn := Func^.GetVal(Name);
+   If (Fn.Usr) then begin
+      If (Pr[Fn.Ptr].Fil = 0)
+         then Fatal(Ln,'duplicate function name "'+Name+'", originally declared in '+ScriptName+' on line '+IntToStr(Pr[Fn.Ptr].Lin)+'.') 
+         else Fatal(Ln,'duplicate function name "'+Name+'", originally declared in '+FileIncludes[Pr[Fn.Ptr].Fil].Name+' on line '+IntToStr(Pr[Fn.Ptr].Lin)+'.')
+      end else Fatal(Ln,'function name "'+Name+'" collides with built-in function.')
+   end;
+
+Procedure cstruFatal(Const Ln:LongWord);
    Var cstru:TConstructInfo; Cnt:LongWord; PastWhat:ShortString;
    begin
    If (Ln <> 0) then PastWhat := 'function.'
@@ -104,13 +102,13 @@ Procedure cstruFatal(Ln:LongWord);
           CT_WHILE: Writeln(StdErr,YukName,'(',WhiArr[cstru.Idx][0],'): Error: !while block stretches past ',PastWhat);
          CT_REPEAT: Writeln(StdErr,YukName,'(',RepArr[cstru.Idx][0],'): Error: !repeat block stretches past ',PastWhat)
       end end;
-   Fatal(Ln, IntToStr(Cnt)+' unterminated code blocks')
+   Fatal(Ln, IntToStr(Cnt)+' unterminated code blocks.')
    end;
 
-Function mkcstru(T:TConstructType;I:LongWord):TConstructInfo;
+Function mkcstru(Const T:TConstructType; Const I:LongWord):TConstructInfo;
    begin Result.Typ := T; Result.Idx := I end;
 
-Procedure AddExpr(Ex:PExpr);
+Procedure AddExpr(Const Ex:PExpr);
    begin
    If (Pr[Proc].Num = Length(Pr[Proc].Exp)) 
       then SetLength(Pr[Proc].Exp, Length(Pr[Proc].Exp)+32);
@@ -208,18 +206,19 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
       Exit(Tok)
       end;
    
-   Function NewToken(Typ:TValueType;Val:Int64):PToken;
+   Function NewToken(Const Typ:TValueType;Const Val:Int64):PToken;
       Var Tok:PToken; 
       begin
-      New(Tok); Tok^.Typ := TK_LITE; Tok^.Ptr := NewVal(Typ,Val);
+      New(Tok); Tok^.Typ := TK_LITE; Tok^.Ptr := NewVal(Typ,Val); 
+      PValue(Tok^.Ptr)^.Lev := 0;
       Exit(Tok)
       end;
    
-   Var E:PExpr; FPtr:PFunc; sex:PExpr; A,Etk,LeTk:LongWord;
+   Var E:PExpr; FPtr:TFunc; sex:PExpr; A,Etk,LeTk:LongWord;
        Tok,otk:PToken; V:PValue; {PS:PStr;} atk : PArrTk;
        Nest:LongWord; CName:TStr; Tmp:LongInt; cstru : TConstructInfo;
    
-   Procedure AddToken(Tok:PToken);
+   Procedure AddToken(Const Tok:PToken);
       begin
       If (Etk = Length(E^.Tok))
          then SetLength(E^.Tok, Etk + 8);
@@ -248,7 +247,8 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
       
       SetLength(E^.Tok, 1);
       E^.Tok[0] := NewToken(VT_INT, A);
-      FPtr:=@(F_If)
+      FPtr.Usr := False; FPtr.Ref := REF_CONST;
+      FPtr.Ptr := PtrUInt(@F_If)
       end;
    
    Procedure Construct_Else();
@@ -267,7 +267,8 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
       
       SetLength(E^.Tok, 1);
       E^.Tok[0] := NewToken(VT_INT, cstru.Idx);
-      FPtr:=@(F_Else)
+      FPtr.Usr := False; FPtr.Ref := REF_CONST;
+      FPtr.Ptr := PtrUInt(@F_Else)
       end;
    
    Procedure Construct_Fi();
@@ -285,7 +286,8 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
       
       SetLength(E^.Tok, 1);
       E^.Tok[0] := NewToken(VT_INT, cstru.Idx);
-      FPtr:=@(F_)
+      FPtr.Usr := False; FPtr.Ref := REF_CONST;
+      FPtr.Ptr := PtrUInt(@F_)
       end;
    
    Procedure Construct_While();
@@ -299,7 +301,8 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
       
       SetLength(E^.Tok, 1);
       E^.Tok[0] := NewToken(VT_INT, A);
-      FPtr:=@(F_While)
+      FPtr.Usr := False; FPtr.Ref := REF_CONST;
+      FPtr.Ptr := PtrUInt(@F_While)
       end;
    
    Procedure Construct_Done();
@@ -316,7 +319,8 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
       
       SetLength(E^.Tok, 1);
       E^.Tok[0] := NewToken(VT_INT, cstru.Idx);
-      FPtr:=@(F_Done)
+      FPtr.Usr := False; FPtr.Ref := REF_CONST;
+      FPtr.Ptr := PtrUInt(@F_Done)
       end;
    
    Procedure Construct_Repeat();
@@ -332,7 +336,8 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
       
       SetLength(E^.Tok, 1);
       E^.Tok[0] := NewToken(VT_INT, A);
-      FPtr:=@(F_)
+      FPtr.Usr := False; FPtr.Ref := REF_CONST;
+      FPtr.Ptr := PtrUInt(@F_)
       end;
    
    Procedure Construct_Until();
@@ -347,7 +352,8 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
       
       SetLength(E^.Tok, 1);
       E^.Tok[0] := NewToken(VT_INT, cstru.Idx);
-      FPtr:=@(F_Until)
+      FPtr.Usr := False; FPtr.Ref := REF_CONST;
+      FPtr.Ptr := PtrUInt(@F_Until)
       end;
    
    Procedure Construct_Const();
@@ -393,13 +399,14 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
       If (Length(Tk[T+1])=0) or (Tk[T+1][1]<>':')
          then Fatal(Ln,'Function names must start with the colon (":") character.');
       CName:=Copy(Tk[T+1],2,Length(Tk[T+1]));
-      If (UsrFun^.IsVal(CName))
-         then Fatal(Ln,'Duplicate user function identifier ("'+Cname+'").');
+      If (Func^.IsVal(CName))
+         then DupeFuncFatal(Ln,CName);
       SetLength(Pr,Length(Pr)+1);
       Proc:=High(Pr); ExLn:=0;
-      Pr[Proc].Num:=0; SetLength(Pr[Proc].Exp,0);
+      Pr[Proc].Fil := Length(FileIncludes); Pr[Proc].Lin := Ln;
+      Pr[Proc].Num := 0; SetLength(Pr[Proc].Exp,0);
       SetLength(Pr[Proc].Arg, LeTk - 2); A := 0;
-      UsrFun^.SetVal(CName,Proc); T+=2;
+      Func^.SetVal(CName,MkFunc(Proc)); T+=2;
       While (T < LeTk) do begin
          If (Length(Tk[T])=0) then begin
             Error(Ln,'Empty token (#'+IntToStr(T)+').'); T+=1; Continue
@@ -435,8 +442,9 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
       SetLength(E^.Tok, 2);
       E^.Tok[0] := NewToken(VT_INT, Ord(cstru.Typ));
       E^.Tok[1] := NewToken(VT_INT, cstru.Idx);
-      If (Brk) then FPtr := @F_Break
-               else FPtr := @F_Continue
+      FPtr.Usr := False; FPtr.Ref := REF_CONST;
+      If (Brk) then FPtr.Ptr := PtrUInt(@F_Break)
+               else FPtr.Ptr := PtrUInt(@F_Continue)
       end;
    
    Procedure Construct_Include(Req:Boolean);
@@ -490,17 +498,24 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
       Cons^.SetVal('FILE-PATH', OldPathCons); YukPath := OldPath
       end;
    
+   Function GetFunc(Const Name:AnsiString):Boolean;
+      begin
+      Try FPtr:=Func^.GetVal(Name);
+          Exit(True)
+      Except
+          Exit(False)
+      end end;
+   
    begin
    New(E); LeTk:=Length(Tk);
    If (Tk[T][1]=':') then begin
-      FPtr:=GetFunc(Copy(Tk[T],2,Length(Tk[T])));
-      If (FPtr = NIL) then begin
-         Try    A:=UsrFun^.GetVal(Copy(Tk[T],2,Length(Tk[T])));
-         Except Fatal(Ln,'Unknown function: "'+Tk[T]+'".') end;
-         
+      If (Not GetFunc(Copy(Tk[T],2,Length(Tk[T]))))
+         then Fatal(Ln,'Unknown function: "'+Tk[T]+'".');
+      
+      If (FPtr.Usr) then begin
          SetLength(E^.Tok, 1);
-         E^.Tok[0] := NewToken(VT_INT, A);
-         FPtr:=@F_AutoCall
+         E^.Tok[0] := NewToken(VT_INT, FPtr.Ptr);
+         FPtr.Ptr:=PtrUInt(@F_AutoCall)
          end
       end else
    If (Tk[T][1]='!') then Case (Tk[T]) of
@@ -550,8 +565,8 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
          Fatal(Ln,'Unknown language construct: "'+Tk[T]+'".')
       end else
       Fatal(Ln,'First token in expression ("'+Tk[T]+'") is neither a function call nor a language construct.');
-   E^.Fun:=FPtr; T+=1;
-   If (T >= LeTk) then Exit(E);
+   E^.Fun:=TBuiltIn(FPtr.Ptr); E^.Ref := FPtr.Ref;
+   T+=1; If (T >= LeTk) then Exit(E);
    Etk := Length(E^.Tok); If (LeTk > Etk) then SetLength(E^.Tok, LeTk);
    While (T < LeTk) do begin
       If (Length(Tk[T])=0) then Error(Ln,'Empty token (#'+IntToStr(T)+').') else
@@ -832,7 +847,6 @@ Procedure ReadFile(Var I:System.Text);
    
    Var V:PValue; PTV:PValue; 
    begin
-   New(UsrFun,Create('!','~'));
    SetLength(Pr,1); Proc:=0; ExLn:=0; mulico:=0; {$IFDEF CGI} codemode:=0; {$ENDIF}
    SetLength(Pr[0].Arg,0); SetLength(Pr[0].Exp,0); Pr[0].Num:=0;
    
@@ -840,7 +854,7 @@ Procedure ReadFile(Var I:System.Text);
    SetLength(IfArr,0); SetLength(WhiArr,0); SetLength(RepArr,0);
    SetLength(FileIncludes, 0);
    
-   New(Cons,Create('!','~'));
+   New(Cons,Create(#33,#255));
    SpareVars_Prepare();
    
    V:=NilVal(); V^.Lev := 0; Cons^.SetVal('NIL', V);
@@ -860,7 +874,7 @@ Procedure ReadFile(Var I:System.Text);
    V:=NewVal(VT_FLO,2.71828182845904523536); V^.Lev := 0; Cons^.SetVal('e',  V);
    V:=NewVal(VT_FLO,3.14159265358979323846); V^.Lev := 0; Cons^.SetVal('pi', V);
    
-   SetLength(FCal,1); New(FCal[0].Vars,Create('!','~')); FCal[0].Args := NIL; FLev := 0;
+   SetLength(FCal,1); New(FCal[0].Vars,Create(#33,#255)); FCal[0].Args := NIL; FLev := 0;
    
    ParseFile(I); // loop moved to other file
    

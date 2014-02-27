@@ -3,7 +3,7 @@ unit values;
 {$INCLUDE defines.inc}
 
 interface
-   uses SysUtils, Trie, NumTrie, UnicodeStrings;
+   uses SysUtils, NumTrie, DynTrie, UnicodeStrings;
 
 Var RealPrec : LongWord = 3;
     RealForm : TFloatFormat = ffFixed;
@@ -57,17 +57,28 @@ Type PValue = ^TValue;
      PArr = PArray; TArr = TArray;
      
      PDict = ^TDict;
-     TDict = specialize GenericTrie<PValue>;
+     TDict = specialize GenericDynTrie<PValue>;
+     
+     PValTrie = ^TValTrie;
+     TValTrie = specialize GenericDynTrie<PValue>;
      
      TArrPVal = Array of PValue;
      PArrPVal = ^TArrPVal;
      
-     PFunc = Function(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-     
 Const RETURN_VALUE_YES = True; RETURN_VALUE_NO = False;
+      REF_MODIF = True; REF_CONST = False;
+      CASE_UPPER = True; CASE_LOWER = False;
+
+Type TBuiltIn = Function(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
      
-Type PFunTrie = ^TFunTrie;
-     TFunTrie = specialize GenericTrie<PFunc>;
+     TFunc = record
+        Ptr : PtrUInt;
+        Usr : Boolean;
+        Ref : Boolean
+        end;
+     
+     PFunTrie = ^TFunTrie;
+     TFunTrie = specialize GenericDynTrie<TFunc>;
 
 Function NumToStr(Int:QInt;Base:LongWord;Digs:LongWord=0):TStr; 
 Function IntToStr(Int:QInt;Digs:LongWord=0):TStr; 
@@ -76,6 +87,9 @@ Function OctToStr(Int:QInt;Digs:LongWord=0):TStr;
 Function BinToStr(Int:QInt;Digs:LongWord=0):TStr; 
 //Function RealToStr(Val:Extended;Prec:LongWord):TStr;
 Function FloatToStr(Val:TFloat):TStr;
+
+Procedure HexCase(Upper:Boolean);
+Function  HexCase():Boolean;
 
 Function IntBase(T:TValueType):LongInt; Inline;
 Function BoolToInt(B:TBool):LongWord; Inline;
@@ -127,6 +141,10 @@ Function Exv(DoReturn:Boolean):PValue; Inline;
 Procedure SpareVars_Prepare();
 Procedure SpareVars_Destroy();
 
+Function MkFunc(Fun:TBuiltIn; RefMod : Boolean = REF_CONST):TFunc;
+Function MkFunc(UsrID:LongWord):TFunc;
+
+
 implementation
    uses Math; 
 
@@ -139,10 +157,20 @@ Type TSpareArray = record
 
 Var SpareVars : Array[TValueType] of TSpareArray;
 
-const Sys16Dig:Array[0..15] of Char=(
+Var Sys16Dig:Array[0..15] of Char=(
       '0','1','2','3','4','5','6','7',
       '8','9','A','B','C','D','E','F');
-  
+
+Procedure HexCase(Upper:Boolean);
+   Var C,Off:LongWord;
+   begin
+   If (Upper) then Off := 65 - 10 else Off := 97 - 10;
+   For C:=10 to 15 do Sys16Dig[C]:=Chr(Off+C)
+   end;
+
+Function HexCase():Boolean;
+   begin Exit(Sys16Dig[10] = 'A') end;
+
 Function NumToStr(Int:QInt;Base:LongWord;Digs:LongWord=0):TStr; 
    Var Tmp:TStr; Plus:Boolean;
    Begin Tmp:='';
@@ -298,7 +326,7 @@ Function CreateVal(T:TValueType):PValue;
          VT_FLO: begin New(D);            R^.Ptr:=D   end;
          VT_BOO: begin New(B);            R^.Ptr:=B   end;
          VT_STR: begin New(S);            R^.Ptr:=S   end;
-         VT_UTF: begin New(Utf,Create());   R^.Ptr:=Utf end;
+         VT_UTF: begin New(Utf,Create()); R^.Ptr:=Utf end;
          VT_ARR: begin New(Arr,Create()); R^.Ptr:=Arr end;
          VT_DIC: begin New(Dic,Create()); R^.Ptr:=Dic end;
          VT_FIL: begin New(Fil);          R^.Ptr:=Fil end;
@@ -741,6 +769,20 @@ Procedure SpareVars_Destroy();
    For T:=Low(TValueType) to High(TValueType) do
        For i:=1 to SpareVars[T].Num do
            AnnihilateVal(SpareVars[T].Arr[i])
+   end;
+
+Function MkFunc(Fun:TBuiltIn; RefMod : Boolean = REF_CONST):TFunc;
+   begin
+   Result.Ptr := PtrUInt(Fun);
+   Result.Ref := RefMod;
+   Result.Usr := False
+   end;
+
+Function MkFunc(UsrID:LongWord):TFunc;
+   begin
+   Result.Ptr := UsrID;
+   Result.Ref := REF_MODIF;
+   Result.Usr := True
    end;
 
 end.

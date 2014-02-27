@@ -18,10 +18,10 @@ implementation
 
 Procedure Register(Const FT:PFunTrie);
    begin
-   FT^.SetVal('bwnot',@F_not);    FT^.SetVal('b!',@F_Not);
-   FT^.SetVal('bwand',@F_and);    FT^.SetVal('b&',@F_and);
-   FT^.SetVal('bwxor',@F_xor);    FT^.SetVal('b^',@F_xor);
-   FT^.SetVal('bwor' ,@F_or);     FT^.SetVal('b?',@F_or);
+   FT^.SetVal('bwnot',MkFunc(@F_not));    FT^.SetVal('b!',MkFunc(@F_Not));
+   FT^.SetVal('bwand',MkFunc(@F_and));    FT^.SetVal('b&',MkFunc(@F_and));
+   FT^.SetVal('bwxor',MkFunc(@F_xor));    FT^.SetVal('b^',MkFunc(@F_xor));
+   FT^.SetVal('bwor' ,MkFunc(@F_or));     FT^.SetVal('b?',MkFunc(@F_or));
    end;
 
 Function F_Not(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;

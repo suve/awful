@@ -15,6 +15,8 @@ Function F_random(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_fork(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 Function F_SetPrecision(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_HexCase(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+
 Function F_getenv(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 Function F_sizeof(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
@@ -26,18 +28,19 @@ implementation
 Procedure Register(Const FT:PFunTrie);
    begin
    // Timekeeping
-   FT^.SetVal('sleep',@F_Sleep);
-   FT^.SetVal('ticks',@F_Ticks);
-   FT^.SetVal('runticks',@F_RunTicks);
+   FT^.SetVal('sleep',MkFunc(@F_Sleep));
+   FT^.SetVal('ticks',MkFunc(@F_Ticks));
+   FT^.SetVal('runticks',MkFunc(@F_RunTicks));
    // Vartype info
-   FT^.SetVal('sizeof',@F_sizeof);
-   FT^.SetVal('typeof',@F_typeof);
+   FT^.SetVal('sizeof',MkFunc(@F_sizeof));
+   FT^.SetVal('typeof',MkFunc(@F_typeof));
    // Math
-   FT^.SetVal('random',@F_random);
-   FT^.SetVal('float-precision',@F_SetPrecision);
+   FT^.SetVal('random',MkFunc(@F_random));
+   FT^.SetVal('float-precision',MkFunc(@F_SetPrecision));
+   FT^.SetVal('hex-case',MkFunc(@F_HexCase));
    // Stuff
-   FT^.SetVal('fork',@F_fork);
-   FT^.SetVal('getenv',@F_getenv)
+   FT^.SetVal('fork',MkFunc(@F_fork));
+   FT^.SetVal('getenv',MkFunc(@F_getenv))
    end;
    
 Function F_Ticks(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
@@ -86,19 +89,34 @@ Function F_Sleep(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    end;
 
 Function F_SetPrecision(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   Var C:LongWord;
    begin
-   If (Length(Arg^)>1) then
-      For C:=High(Arg^) downto 1 do
-          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
    If (Length(Arg^) >= 1) then begin
       Values.RealForm := ffFixed;
-      If (Arg^[0]^.Typ >= VT_INT) and (Arg^[0]^.Typ <= VT_BIN)
-         then Values.RealPrec:=PQInt(Arg^[0]^.Ptr)^
-         else Values.RealPrec:=ValAsInt(Arg^[0]);
-      If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0])
+      Values.RealPrec := ValAsInt(Arg^[0]);
+      F_(False, Arg)
       end;
    If (DoReturn) then Exit(NewVal(VT_INT,Values.RealPrec)) else Exit(NIL)
+   end;
+
+Function F_HexCase(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   Var Vl:LongInt;
+   begin
+   If (Length(Arg^) >= 1) then begin
+      Case LowerCase(ValAsStr(Arg^[0])) of
+         'lo','low','lower','lowercase': Vl := -1;
+         'up','upper','uppercase': Vl := +1;
+         else Vl := 0
+         end;
+      Case Vl of
+         +1: Values.HexCase(CASE_UPPER);
+         -1: Values.HexCase(CASE_LOWER)
+         end;
+      F_(False, Arg)
+      end;
+   If (DoReturn) then
+      If (HexCase()) then Exit(NewVal(VT_STR,'upper'))
+                     else Exit(NewVal(VT_STR,'lower'))
+      else Exit(NIL)
    end;
 
 Function F_fork(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
@@ -195,36 +213,32 @@ Function F_getenv(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    end;
 
 Function F_sizeof(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   Var C:LongWord; V:PValue; 
+   Var C,S:LongWord; 
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg^)=0) then Exit(NewVal(VT_INT,0));
-   If (Length(Arg^)>1) then
-      For C:=High(Arg^) downto 1 do
-          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
-   If (Arg^[0]^.Typ <> VT_STR) then begin
-      V:=ValToStr(Arg^[0]);
-      If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
-      Arg^[0]:=V
+   Case (ValAsStr(Arg^[0])) of
+         'flo': S := SizeOf(TFloat);
+         'int': S := SizeOf(QInt);
+         'hex': S := SizeOf(QInt);
+         'oct': S := SizeOf(QInt);
+         'bin': S := SizeOf(QInt);
+         'str': S := SizeOf(TStr);
+         'utf': S := SizeOf(TUTF);
+         'log': S := SizeOf(TBool);
+       'float': S := SizeOf(TFloat);
+      'string': S := SizeOf(TStr);
+        'utf8': S := SizeOf(TUTF);
+       'utf-8': S := SizeOf(TUTF);
+        'bool': S := SizeOf(TBool);
+         'arr': S := SizeOf(TArray);
+       'array': S := SizeOf(TArray);
+        'dict': S := SizeOf(TDict);
+          else  S := 0
       end;
-   If (PStr(Arg^[0]^.Ptr)^ = 'flo'   ) then C:=SizeOf(TFloat) else
-   If (PStr(Arg^[0]^.Ptr)^ = 'int'   ) then C:=SizeOf(QInt) else
-   If (PStr(Arg^[0]^.Ptr)^ = 'hex'   ) then C:=SizeOf(QInt) else
-   If (PStr(Arg^[0]^.Ptr)^ = 'oct'   ) then C:=SizeOf(QInt) else
-   If (PStr(Arg^[0]^.Ptr)^ = 'bin'   ) then C:=SizeOf(QInt) else
-   If (PStr(Arg^[0]^.Ptr)^ = 'str'   ) then C:=SizeOf(TStr) else
-   If (PStr(Arg^[0]^.Ptr)^ = 'utf'   ) then C:=SizeOf(TUTF) else
-   If (PStr(Arg^[0]^.Ptr)^ = 'log'   ) then C:=SizeOf(TBool) else
-   If (PStr(Arg^[0]^.Ptr)^ = 'float' ) then C:=SizeOf(TFloat) else
-   If (PStr(Arg^[0]^.Ptr)^ = 'string') then C:=SizeOf(TStr) else
-   If (PStr(Arg^[0]^.Ptr)^ = 'utf-8' ) then C:=SizeOf(TUTF) else
-   If (PStr(Arg^[0]^.Ptr)^ = 'bool'  ) then C:=SizeOf(TBool) else
-   If (PStr(Arg^[0]^.Ptr)^ = 'arr'   ) then C:=SizeOf(TArray) else
-   If (PStr(Arg^[0]^.Ptr)^ = 'array' ) then C:=SizeOf(TArray) else
-   If (PStr(Arg^[0]^.Ptr)^ = 'dict'  ) then C:=SizeOf(TDict) else
-      (* else *) C:=0;
-   If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
-   Exit(NewVal(VT_INT,C*8))
+   For C:=Low(Arg^) to High(Arg^) do
+      If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
+   Exit(NewVal(VT_INT, S*8))
    end;
 
 Function F_typeof(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;

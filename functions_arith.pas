@@ -21,13 +21,13 @@ implementation
 
 Procedure Register(Const FT:PFunTrie);
    begin
-   FT^.SetVal('set',@F_Set);   FT^.SetVal('=',@F_Set);
-   FT^.SetVal('add',@F_Add);   FT^.SetVal('+',@F_Add);
-   FT^.SetVal('sub',@F_Sub);   FT^.SetVal('-',@F_Sub);
-   FT^.SetVal('mul',@F_Mul);   FT^.SetVal('*',@F_Mul);
-   FT^.SetVal('div',@F_Div);   FT^.SetVal('/',@F_Div);
-   FT^.SetVal('mod',@F_Mod);   FT^.SetVal('%',@F_Mod);
-   FT^.SetVal('pow',@F_Pow);   FT^.SetVal('^',@F_Pow);
+   FT^.SetVal('set',MkFunc(@F_Set,REF_MODIF));   FT^.SetVal('=',MkFunc(@F_Set,REF_MODIF));
+   FT^.SetVal('add',MkFunc(@F_Add,REF_MODIF));   FT^.SetVal('+',MkFunc(@F_Add,REF_MODIF));
+   FT^.SetVal('sub',MkFunc(@F_Sub,REF_MODIF));   FT^.SetVal('-',MkFunc(@F_Sub,REF_MODIF));
+   FT^.SetVal('mul',MkFunc(@F_Mul,REF_MODIF));   FT^.SetVal('*',MkFunc(@F_Mul,REF_MODIF));
+   FT^.SetVal('div',MkFunc(@F_Div,REF_MODIF));   FT^.SetVal('/',MkFunc(@F_Div,REF_MODIF));
+   FT^.SetVal('mod',MkFunc(@F_Mod,REF_MODIF));   FT^.SetVal('%',MkFunc(@F_Mod,REF_MODIF));
+   FT^.SetVal('pow',MkFunc(@F_Pow,REF_MODIF));   FT^.SetVal('^',MkFunc(@F_Pow,REF_MODIF))
    end;
 
 Type TArithProc = Procedure(Const A,B:PValue);

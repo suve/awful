@@ -18,11 +18,11 @@ implementation
 
 Procedure Register(Const FT:PFunTrie);
    begin
-   FT^.SetVal('not',@F_not);    FT^.SetVal('!',@F_Not);
-   FT^.SetVal('and',@F_and);    FT^.SetVal('&&',@F_and);
-   FT^.SetVal('xor',@F_xor);    FT^.SetVal('^^',@F_xor);
-   FT^.SetVal('or' ,@F_or);     FT^.SetVal('??',@F_or);
-   FT^.SetVal('impl',@F_impl);  FT^.SetVal('->',@F_impl);
+   FT^.SetVal('not',MkFunc(@F_not));    FT^.SetVal('!',MkFunc(@F_Not));
+   FT^.SetVal('and',MkFunc(@F_and));    FT^.SetVal('&&',MkFunc(@F_and));
+   FT^.SetVal('xor',MkFunc(@F_xor));    FT^.SetVal('^^',MkFunc(@F_xor));
+   FT^.SetVal('or' ,MkFunc(@F_or));     FT^.SetVal('??',MkFunc(@F_or));
+   FT^.SetVal('impl',MkFunc(@F_impl));  FT^.SetVal('->',MkFunc(@F_impl));
    end;
 
 Function F_Not(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;

@@ -42,27 +42,27 @@ implementation
 Procedure Register(Const FT:PFunTrie);
    begin
    // Char functions
-   FT^.SetVal('chr',@F_chr);
-   FT^.SetVal('chru',@F_chr_UTF8);
-   FT^.SetVal('ord',@F_ord);
-   FT^.SetVal('ordu',@F_ord_UTF8);
+   FT^.SetVal('chr',MkFunc(@F_chr));
+   FT^.SetVal('chru',MkFunc(@F_chr_UTF8));
+   FT^.SetVal('ord',MkFunc(@F_ord));
+   FT^.SetVal('ordu',MkFunc(@F_ord_UTF8));
    // String manipulation functions
-   FT^.SetVal('str-trim',@F_Trim);
-   FT^.SetVal('str-letrim',@F_TrimLeft);
-   FT^.SetVal('str-ritrim',@F_TrimRight);
-   FT^.SetVal('str-upper',@F_UpperCase);
-   FT^.SetVal('str-lower',@F_LowerCase);
-   FT^.SetVal('str-bytes',@F_StrBts);
-   FT^.SetVal('str-len',@F_StrLen);
-   FT^.SetVal('str-pos',@F_StrPos);
-   FT^.SetVal('str-sub',@F_SubStr);
-   FT^.SetVal('str-del',@F_DelStr);
-   FT^.SetVal('str-ins',@F_InsertStr);
+   FT^.SetVal('str-trim',MkFunc(@F_Trim));
+   FT^.SetVal('str-letrim',MkFunc(@F_TrimLeft));
+   FT^.SetVal('str-ritrim',MkFunc(@F_TrimRight));
+   FT^.SetVal('str-upper',MkFunc(@F_UpperCase));
+   FT^.SetVal('str-lower',MkFunc(@F_LowerCase));
+   FT^.SetVal('str-bytes',MkFunc(@F_StrBts));
+   FT^.SetVal('str-len',MkFunc(@F_StrLen));
+   FT^.SetVal('str-pos',MkFunc(@F_StrPos));
+   FT^.SetVal('str-sub',MkFunc(@F_SubStr));
+   FT^.SetVal('str-del',MkFunc(@F_DelStr));
+   FT^.SetVal('str-ins',MkFunc(@F_InsertStr));
    // Utils
-   FT^.SetVal('str-write',@F_WriteStr);
-   FT^.SetVal('str-writeu',@F_WriteStr_UTF8);
-   FT^.SetVal('utf8-write',@F_WriteStr_UTF8);
-   FT^.SetVal('perc',@F_Perc);
+   FT^.SetVal('str-write',MkFunc(@F_WriteStr));
+   FT^.SetVal('str-writeu',MkFunc(@F_WriteStr_UTF8));
+   FT^.SetVal('utf8-write',MkFunc(@F_WriteStr_UTF8));
+   FT^.SetVal('perc',MkFunc(@F_Perc));
    end;
 
 Const UTF8_Mask:Array[2..6] of Byte =

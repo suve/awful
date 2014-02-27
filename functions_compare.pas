@@ -23,14 +23,14 @@ implementation
 Procedure Register(Const FT:PFunTrie);
    begin
    // Comparisons
-   FT^.SetVal('eq',@F_Eq);     FT^.SetVal('==',@F_Eq);
-   FT^.SetVal('neq',@F_NEq);   FT^.SetVal('!=',@F_NEq);   FT^.SetVal('<>',@F_NEq);
-   FT^.SetVal('seq',@F_SEq);   FT^.SetVal('===',@F_SEq);  
-   FT^.SetVal('sneq',@F_SNEq); FT^.SetVal('!==',@F_SNEq); 
-   FT^.SetVal('gt',@F_gt);     FT^.SetVal('>',@F_Gt);
-   FT^.SetVal('ge',@F_ge);     FT^.SetVal('>=',@F_Ge);
-   FT^.SetVal('lt',@F_lt);     FT^.SetVal('<',@F_Lt);
-   FT^.SetVal('le',@F_le);     FT^.SetVal('<=',@F_Le);
+   FT^.SetVal('eq',MkFunc(@F_Eq));     FT^.SetVal('==',MkFunc(@F_Eq));
+   FT^.SetVal('neq',MkFunc(@F_NEq));   FT^.SetVal('!=',MkFunc(@F_NEq));   FT^.SetVal('<>',MkFunc(@F_NEq));
+   FT^.SetVal('seq',MkFunc(@F_SEq));   FT^.SetVal('===',MkFunc(@F_SEq));  
+   FT^.SetVal('sneq',MkFunc(@F_SNEq)); FT^.SetVal('!==',MkFunc(@F_SNEq)); 
+   FT^.SetVal('gt',MkFunc(@F_gt));     FT^.SetVal('>',MkFunc(@F_Gt));
+   FT^.SetVal('ge',MkFunc(@F_ge));     FT^.SetVal('>=',MkFunc(@F_Ge));
+   FT^.SetVal('lt',MkFunc(@F_lt));     FT^.SetVal('<',MkFunc(@F_Lt));
+   FT^.SetVal('le',MkFunc(@F_le));     FT^.SetVal('<=',MkFunc(@F_Le));
    end;
 
 Type TCompareFunc = Function(Const A,B:PValue):Boolean;

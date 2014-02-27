@@ -36,27 +36,27 @@ implementation
 Procedure Register(Const FT:PFunTrie);
    begin
    // Trigonometry
-   FT^.SetVal('cos', @F_cos);
-   FT^.SetVal('sin', @F_sin);
-   FT^.SetVal('tan', @F_tan);
-   FT^.SetVal('ctg', @F_ctg);
+   FT^.SetVal('cos', MkFunc(@F_cos));
+   FT^.SetVal('sin', MkFunc(@F_sin));
+   FT^.SetVal('tan', MkFunc(@F_tan));
+   FT^.SetVal('ctg', MkFunc(@F_ctg));
    // Positive-negative
-   FT^.SetVal('abs', @F_abs);
-   FT^.SetVal('sgn', @F_sgn);
+   FT^.SetVal('abs', MkFunc(@F_abs));
+   FT^.SetVal('sgn', MkFunc(@F_sgn));
    // Rounding
-   FT^.SetVal('ceil', @F_ceil);
-   FT^.SetVal('floor', @F_floor);
-   FT^.SetVal('round', @F_round);
-   FT^.SetVal('trunc', @F_trunc);
-   FT^.SetVal('frac', @F_frac);
+   FT^.SetVal('ceil', MkFunc(@F_ceil));
+   FT^.SetVal('floor', MkFunc(@F_floor));
+   FT^.SetVal('round', MkFunc(@F_round));
+   FT^.SetVal('trunc', MkFunc(@F_trunc));
+   FT^.SetVal('frac', MkFunc(@F_frac));
    // Built-in calc
-   FT^.SetVal('sqrt', @F_Sqrt);
-   FT^.SetVal('log', @F_Log);
+   FT^.SetVal('sqrt', MkFunc(@F_Sqrt));
+   FT^.SetVal('log', MkFunc(@F_Log));
    // Own algo calc
-   FT^.SetVal('gcd', @F_gcd);
-   FT^.SetVal('lcm', @F_lcm);
-   FT^.SetVal('newt', @F_newt);
-   FT^.SetVal('hypotenuse', @F_hypotenuse)
+   FT^.SetVal('gcd', MkFunc(@F_gcd));
+   FT^.SetVal('lcm', MkFunc(@F_lcm));
+   FT^.SetVal('newt', MkFunc(@F_newt));
+   FT^.SetVal('hypotenuse', MkFunc(@F_hypotenuse))
    end;
 
 Type TFloatToFloatFunc = Function(V:TFloat):TFloat;

@@ -28,19 +28,25 @@ Type TCompareFunc = Function(Const A,B:PValue):Boolean;
 Procedure Register(Const FT:PFunTrie);
    begin
    // array functions, bitches!
-   FT^.SetVal('arr',@F_array);
+   FT^.SetVal('arr',MkFunc(@F_array));
    // dict funtions
-   FT^.SetVal('dict',@F_dict);
-   FT^.SetVal('dict-keys',@F_dict_keys);
-   FT^.SetVal('dict-values',@F_dict_values);
-   FT^.SetVal('dict-nextkey',@F_dict_nextkey);
+   FT^.SetVal('dict',MkFunc(@F_dict));
+   FT^.SetVal('dict-keys',MkFunc(@F_dict_keys));
+   FT^.SetVal('dict-values',MkFunc(@F_dict_values));
+   FT^.SetVal('dict-nextkey',MkFunc(@F_dict_nextkey));
    // arr+dic functions
-   FT^.SetVal('arr-flush',@F_array_flush); FT^.SetVal('dict-flush',@F_array_flush);
-   FT^.SetVal('arr-count',@F_array_count); FT^.SetVal('dict-count',@F_array_count);
-   FT^.SetVal('arr-empty',@F_array_empty); FT^.SetVal('dict-empty',@F_array_empty);
-   FT^.SetVal('arr-print',@F_array_print); FT^.SetVal('dict-print',@F_array_print);
-   FT^.SetVal('arr-contains',@F_array_contains_eq); FT^.SetVal('dict-contains',@F_array_contains_eq);
-   FT^.SetVal('arr-contains-seq',@F_array_contains_seq); FT^.SetVal('dict-contains-seq',@F_array_contains_seq);
+   FT^.SetVal( 'arr-flush',MkFunc(@F_array_flush,REF_MODIF));
+   FT^.SetVal('dict-flush',MkFunc(@F_array_flush,REF_MODIF));
+   FT^.SetVal( 'arr-count',MkFunc(@F_array_count));
+   FT^.SetVal('dict-count',MkFunc(@F_array_count));
+   FT^.SetVal( 'arr-empty',MkFunc(@F_array_empty));
+   FT^.SetVal('dict-empty',MkFunc(@F_array_empty));
+   FT^.SetVal( 'arr-print',MkFunc(@F_array_print));
+   FT^.SetVal('dict-print',MkFunc(@F_array_print));
+   FT^.SetVal( 'arr-contains',MkFunc(@F_array_contains_eq));
+   FT^.SetVal('dict-contains',MkFunc(@F_array_contains_eq));
+   FT^.SetVal( 'arr-contains-seq',MkFunc(@F_array_contains_seq));
+   FT^.SetVal('dict-contains-seq',MkFunc(@F_array_contains_seq));
    end;
 
 

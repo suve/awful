@@ -14,26 +14,29 @@ Type TTokenType = (
      
      PArrTk = ^TArrTk;
      TArrTk = record
-     Ptr : Pointer;
-     Ind : Array of PToken
-     end;
+        Ptr : Pointer;        // Token to be indexed
+        Ind : Array of PToken // Array of indexing tokens
+        end;
      
      TToken = record
-     Typ : TTokenType;
-     Ptr : Pointer
-     end;
+        Typ : TTokenType; // Token type
+        Ptr : Pointer     // Pointer to actual data, needs to be typecasted
+        end;
      
      TExpr = record
-     //Lin : LongWord;
-     Fun : PFunc;
-     Tok : Array of PToken
-     end;
+        //Lin : LongWord;     // Line number
+        Fun : TBuiltIn;       // Pointer to built-in func
+        Ref : Boolean;        // Reference-modifying?
+        Tok : Array of PToken // Array of tokens in expression
+        end;
      
      TProc = record
-     Num : LongWord;
-     Exp : Array of PExpr;
-     Arg : Array of AnsiString;
-     end;
+        Fil : LongWord;            // File number
+        Lin : LongWord;            // Line number
+        Num : LongWord;            // Numer of expressions
+        Exp : Array of PExpr;      // Array of expressions
+        Arg : Array of AnsiString; // Argument name array
+        end;
 
 Procedure FreeToken(T:PToken);
 Procedure FreeExpr(E:PExpr);

@@ -56,36 +56,36 @@ implementation
 Procedure Register(Const FT:PFunTrie);
    begin
    // String thingies
-   FT^.SetVal('doctype',@F_Doctype);
-   FT^.SetVal('encodeURL',@F_EncodeURL);   FT^.SetVal('url-encode',@F_EncodeURL);
-   FT^.SetVal('decodeURL',@F_DecodeURL);   FT^.SetVal('url-decode',@F_DecodeURL);
-   FT^.SetVal('encodeHTML',@F_EncodeHTML); FT^.SetVal('html-encode',@F_EncodeHTML);
-   FT^.SetVal('decodeHTML',@F_EncodeHTML); FT^.SetVal('html-decode',@F_DecodeHTML);
+   FT^.SetVal('doctype',MkFunc(@F_Doctype));
+   FT^.SetVal('encodeURL',MkFunc(@F_EncodeURL));   FT^.SetVal('url-encode',MkFunc(@F_EncodeURL));
+   FT^.SetVal('decodeURL',MkFunc(@F_DecodeURL));   FT^.SetVal('url-decode',MkFunc(@F_DecodeURL));
+   FT^.SetVal('encodeHTML',MkFunc(@F_EncodeHTML)); FT^.SetVal('html-encode',MkFunc(@F_EncodeHTML));
+   FT^.SetVal('decodeHTML',MkFunc(@F_EncodeHTML)); FT^.SetVal('html-decode',MkFunc(@F_DecodeHTML));
    // GET related functions
-   FT^.SetVal('get-is',@F_GetIs_);
-   FT^.SetVal('get-val',@F_GetVal);
-   FT^.SetVal('get-key',@F_GetKey);
-   FT^.SetVal('get-num',@F_GetNum);
-   FT^.SetVal('get-dict',@F_GetDict);
+   FT^.SetVal('get-is',MkFunc(@F_GetIs_));
+   FT^.SetVal('get-val',MkFunc(@F_GetVal));
+   FT^.SetVal('get-key',MkFunc(@F_GetKey));
+   FT^.SetVal('get-num',MkFunc(@F_GetNum));
+   FT^.SetVal('get-dict',MkFunc(@F_GetDict));
    // POST related functions
-   FT^.SetVal('post-is',@F_PostIs_);
-   FT^.SetVal('post-val',@F_PostVal);
-   FT^.SetVal('post-key',@F_PostKey);
-   FT^.SetVal('post-num',@F_PostNum);
-   FT^.SetVal('post-dict',@F_PostDict);
+   FT^.SetVal('post-is',MkFunc(@F_PostIs_));
+   FT^.SetVal('post-val',MkFunc(@F_PostVal));
+   FT^.SetVal('post-key',MkFunc(@F_PostKey));
+   FT^.SetVal('post-num',MkFunc(@F_PostNum));
+   FT^.SetVal('post-dict',MkFunc(@F_PostDict));
    // HTTP-Cookie related functions
-   FT^.SetVal('cookie-is',@F_CakeIs_);
-   FT^.SetVal('cookie-val',@F_CakeVal);
-   FT^.SetVal('cookie-key',@F_CakeKey);
-   FT^.SetVal('cookie-num',@F_CakeNum);
-   FT^.SetVal('cookie-dict',@F_CakeDict);
+   FT^.SetVal('cookie-is',MkFunc(@F_CakeIs_));
+   FT^.SetVal('cookie-val',MkFunc(@F_CakeVal));
+   FT^.SetVal('cookie-key',MkFunc(@F_CakeKey));
+   FT^.SetVal('cookie-num',MkFunc(@F_CakeNum));
+   FT^.SetVal('cookie-dict',MkFunc(@F_CakeDict));
    // Functions available in CGI mode only
-   FT^.SetVal('http-header', {$IFDEF CGI} @F_HTTPheader {$ELSE} @F_ {$ENDIF} );
-   FT^.SetVal('http-cookie', {$IFDEF CGI} @F_HTTPcookie {$ELSE} @F_ {$ENDIF} );
+   FT^.SetVal('http-header', MkFunc({$IFDEF CGI} @F_HTTPheader {$ELSE} @F_ {$ENDIF} ));
+   FT^.SetVal('http-cookie', MkFunc({$IFDEF CGI} @F_HTTPcookie {$ELSE} @F_ {$ENDIF} ));
    // Function available only outside CGI mode
-   FT^.SetVal('get-prepare', {$IFNDEF CGI} @F_GetProcess {$ELSE} @F_ {$ENDIF} );
-   FT^.SetVal('post-prepare', {$IFNDEF CGI} @F_PostProcess {$ELSE} @F_ {$ENDIF} );
-   FT^.SetVal('cookie-prepare', {$IFNDEF CGI} @F_CakeProcess {$ELSE} @F_ {$ENDIF} );
+   FT^.SetVal('get-prepare', MkFunc({$IFNDEF CGI} @F_GetProcess {$ELSE} @F_ {$ENDIF} ));
+   FT^.SetVal('post-prepare', MkFunc({$IFNDEF CGI} @F_PostProcess {$ELSE} @F_ {$ENDIF} ));
+   FT^.SetVal('cookie-prepare', MkFunc({$IFNDEF CGI} @F_CakeProcess {$ELSE} @F_ {$ENDIF} ));
    end;
 
 
