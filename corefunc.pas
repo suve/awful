@@ -64,11 +64,10 @@ Function Eval(Const Ret:Boolean; Const E:PExpr):PValue;
    Function GetVar(Name:PStr;Typ:TValueType):PValue;
       Var R:PValue;
       begin
-      Try R:=FCal[FLev].Vars^.GetVal(Name^);
-          Exit(R)
-      Except Try R:=FCal[0].Vars^.GetVal(Name^);
-                 Exit(R);
-             Except end end;
+      R:=FCal[FLev].Vars^.GetVal(Name^);
+      If (R <> NIL) then Exit(R);
+      R:=FCal[0].Vars^.GetVal(Name^);
+      If (R <> NIL) then Exit(R);
       R:=EmptyVal(Typ); R^.Lev -= 1;
       FCal[FLev].Vars^.SetVal(Name^,R);
       Exit(R)
@@ -103,17 +102,19 @@ Function Eval(Const Ret:Boolean; Const E:PExpr):PValue;
                else KeyInt:=ValAsInt(V); //begin H:=ValToInt(V); KeyInt:=PQInt(H^.Ptr)^; FreeVal(H) end;
             If (Index^.Typ = TK_EXPR) then FreeVal(V);
             Arr:=PArray(A^.Ptr); 
-            Try    V:=Arr^.GetVal(KeyInt)
-            Except V:=EmptyVal(Typ); V^.Lev := A^.Lev;
-                   Arr^.SetVal(KeyInt, V)
+            V:=Arr^.GetVal(KeyInt);
+            If (V = NIL) then begin
+               V:=EmptyVal(Typ); V^.Lev := A^.Lev;
+               Arr^.SetVal(KeyInt, V)
             end end else begin
             If (V^.Typ = VT_STR) then KeyStr:=PStr(V^.Ptr)^
                else KeyStr:=ValAsStr(V); //begin H:=ValToStr(V); KeyStr:=PStr(H^.Ptr)^; FreeVal(H) end;
             If (Index^.Typ = TK_EXPR) then FreeVal(V);
             Dic:=PDict(A^.Ptr);
-            Try    V:=Dic^.GetVal(KeyStr)
-            Except V:=EmptyVal(Typ); V^.Lev := A^.Lev;
-                   Dic^.SetVal(KeyStr, V)
+            V:=Dic^.GetVal(KeyStr);
+            If (V = NIL) then begin
+               V:=EmptyVal(Typ); V^.Lev := A^.Lev;
+               Dic^.SetVal(KeyStr, V)
             end end
          end else
       If (A^.Typ = VT_NIL) then V:=A

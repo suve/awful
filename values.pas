@@ -3,7 +3,7 @@ unit values;
 {$INCLUDE defines.inc}
 
 interface
-   uses SysUtils, NumTrie, DynTrie, UnicodeStrings;
+   uses SysUtils, NumPtrTrie, DynTrie, DynPtrTrie, UnicodeStrings;
 
 Var RealPrec : LongWord = 3;
     RealForm : TFloatFormat = ffFixed;
@@ -52,15 +52,15 @@ Type PValue = ^TValue;
      TFloat = ValReal;
      
      PArray = ^TArray;
-     TArray = specialize GenericNumTrie<PValue>;
+     TArray = specialize GenericNumPtrTrie<PValue>;
      
      PArr = PArray; TArr = TArray;
      
      PDict = ^TDict;
-     TDict = specialize GenericDynTrie<PValue>;
+     TDict = specialize GenericDynPtrTrie<PValue>;
      
      PValTrie = ^TValTrie;
-     TValTrie = specialize GenericDynTrie<PValue>;
+     TValTrie = specialize GenericDynPtrTrie<PValue>;
      
      TArrPVal = Array of PValue;
      PArrPVal = ^TArrPVal;

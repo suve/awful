@@ -7,8 +7,8 @@ interface
 
 const VMAJOR = '0';
       VMINOR = '4';
-      VBUGFX = '3';
-      VREVISION = 34;
+      VBUGFX = '4';
+      VREVISION = 35;
       VERSION = VMAJOR + '.' + VMINOR + '.' + VBUGFX;
 
 Var GLOB_MS:Comp;  GLOB_dt:TDateTime;

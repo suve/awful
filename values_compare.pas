@@ -128,7 +128,7 @@ Function ValNeq(Const A,B:PValue):Boolean;
 
 Function ValGt(Const A,B:PValue):Boolean;
    begin
-   {$DEFINE __OPERATOR__ := = }
+   {$DEFINE __OPERATOR__ := > }
    {$DEFINE __STR_UTF__  := = -1}
    {$DEFINE __UTF_STR__  := = +1}
    {$DEFINE __UTF_UTF__  := = +1}

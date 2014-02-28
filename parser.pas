@@ -42,6 +42,8 @@ Const PREFIX_VAL = '$';
       PREFIX_REF = '&';
       SKIP_BREAK = True;
       SKIP_CONTINUE = False;
+      INCL_INCLUDE = False;
+      INCL_REQUIRE = True;
 
 Var cstruStack : PConstructStack;
     mulico:LongWord; {$IFDEF CGI} codemode:LongWord; {$ENDIF}
@@ -429,15 +431,44 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
       end;
    
    Procedure Construct_Skip(Brk:Boolean);
-      Var cstruName : ShortString;
+      Var cstruName : ShortString; Constant : PValue; 
+          DepStr:AnsiString; Dep:Int64; Met:LongWord;
       begin
       If (Brk) then cstruName := '!break' else cstruName := '!continue';
       If (cstruStack^.Empty) then Fatal(Ln,cstruName+' outside a loop block.');
-      cstru := cstruStack^.Peek(); A := 1;
-      While (cstru.Typ = CT_IF) do begin
-         If (cstruStack^.Count = 0) then Fatal(Ln,cstruName+' outside a loop block.');
-         cstru := cstruStack^.Peek(A); A += 1
-         end;
+      
+      If (LeTk > 1) then begin
+         If (LeTk > 2) then Fatal(Ln,cstruName+' accepts at most one parameter.');
+         DepStr := Copy(Tk[1], 2, Length(Tk[T]));
+         If (Tk[1][1]='s') then Dep := Values.StrToInt(Copy(DepStr,2,Length(DepStr)-2)) else
+         If (Tk[1][1]='u') then Dep := Values.StrToInt(Copy(DepStr,2,Length(DepStr)-2)) else
+         If (Tk[1][1]='i') then Dep := Values.StrToInt(DepStr) else
+         If (Tk[1][1]='h') then Dep := Values.StrToHex(DepStr) else
+         If (Tk[1][1]='o') then Dep := Values.StrToOct(DepStr) else
+         If (Tk[1][1]='b') then Dep := Values.StrToBin(DepStr) else
+         If (Tk[1][1]='f') then Dep := Trunc(Values.StrToReal(DepStr)) else
+         If (Tk[1][1]='l') then Dep := BoolToInt(StrToBoolDef(DepStr,False)) else
+         If (Tk[1][1]='=') then begin
+            Try    Constant := Cons^.GetVal(DepStr);
+            Except Fatal(Ln,'Unknown constant "'+DepStr+'"') end;
+            Dep := ValAsInt(Constant)
+            end else
+            Fatal(Ln,'Arguments for '+cstruName+' must be either value literals or constants.');
+         
+         If (Dep <= 0) then Fatal(Ln,'invalid '+cstruName+' depth ('+IntToStr(Dep)+').')
+         end else Dep := 1;
+      
+      A := 0; Met := 0;
+      Repeat
+         cstru := cstruStack^.Peek(A); A += 1;
+         If (cstru.Typ <> CT_IF) then begin 
+            Met += 1; If (Met = Dep) then break
+            end;
+         If (cstruStack^.Count <= A) then begin
+            If (LeTk = 1) then Fatal(Ln,cstruName+' outside a loop block.')
+                          else Fatal(Ln,cstruName+' depth ('+IntToStr(Dep)+') is greater than loop nest level ('+IntToStr(Met)+').')
+            end
+         until False;
       
       SetLength(E^.Tok, 2);
       E^.Tok[0] := NewToken(VT_INT, Ord(cstru.Typ));
@@ -550,11 +581,13 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
          Dispose(E); Exit(NIL)
          end;
       '!include': begin
-         T += 1; While (T < LeTk) do begin Construct_Include(False); T += 1 end;
+         T += 1; If (T = LeTk) then Error(Ln,'!include without arguments.');
+         Repeat Construct_Include(INCL_INCLUDE); T += 1 until (T = LeTk);
          Dispose(E); Exit(NIL)
          end;
       '!require': begin
-         T += 1; While (T < LeTk) do begin Construct_Include(True); T += 1 end;
+         T += 1; If (T = LeTk) then Fatal(Ln,'!require without arguments.');
+         Repeat Construct_Include(INCL_REQUIRE); T += 1 until (T = LeTk);
          Dispose(E); Exit(NIL)
          end;
       {'!return': begin

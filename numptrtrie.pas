@@ -1,24 +1,22 @@
-unit numtrie;
+unit numptrtrie;
 
 {$MODE OBJFPC} {$COPERATORS ON} 
 
 (* Do you want the NumTrie to be an object or a class? Obviously, it's *
  * impossible to have both at the same time. If both symbols are set,  *
  * Trie becomes a class. If none are set, compilation error occurs.    *)
-//{$DEFINE NUMTRIE_CLASS}
-{$DEFINE NUMTRIE_OBJECT} 
+//{$DEFINE NUMPTRTRIE_CLASS}
+{$DEFINE NUMPTRTRIE_OBJECT} 
 
 interface
    uses SysUtils;
 
 {$MACRO ON}
-{$IFDEF NUMTRIE_CLASS}  {$DEFINE NUMTRIETYPE:=Class(TObject)} {$ELSE}
-{$IFDEF NUMTRIE_OBJECT} {$DEFINE NUMTRIETYPE:=Object}         {$ELSE}
+{$IFDEF NUMPTRTRIE_CLASS}  {$DEFINE NUMPTRTRIETYPE:=Class(TObject)} {$ELSE}
+{$IFDEF NUMPTRTRIE_OBJECT} {$DEFINE NUMPTRTRIETYPE:=Object}         {$ELSE}
    {$FATAL numtrie.pas: No OBJECT/CLASS symbol set!} {$ENDIF} {$ENDIF}
 
-Type ExNotSet = class(Exception);
-     
-     generic GenericNumTrie<Tp> = NUMTRIETYPE
+Type generic GenericNumPtrTrie<Tp> = NUMPTRTRIETYPE
      Public
         Type
         TEntry = record
@@ -51,11 +49,8 @@ Type ExNotSet = class(Exception);
         Function  IsVal(Const K:QWA; D:LongWord; N:PNode):Boolean;
         Function  GetVal(Const K:QWA; D:LongWord; N:PNode):Tp;
         
-        //Function  NextKey(Const K:QWA; D:LongWord; N:PNode; Var I:Int64):Boolean;
         Procedure ToArray(Var A:TEntryArr; Var I:LongWord; N:PNode; D:LongWord; K:QWord);
         
-        {Function  GetVal(N:PNode):Tp;
-        Function  RemVal(N:PNode):Tp;}
         Procedure FreeNode(N:PNode; D:LongWord);
         
      Public
@@ -66,10 +61,6 @@ Type ExNotSet = class(Exception);
         Function  IsVal(Key:Int64):Boolean;
         Function  GetVal(Key:Int64):Tp;
         
-        {Function  GetVal():Tp;
-        Function  RemVal():Tp;}
-        
-        //Function  NextKey(K:Int64):Int64;
         Function  ToArray():TEntryArr;
         
         Function  Empty() : Boolean;
@@ -80,7 +71,7 @@ Type ExNotSet = class(Exception);
         Procedure Flush();
         
         Constructor Create();
-        Destructor  Destroy(); {$IFDEF NUMTRIE_CLASS} Override; {$ENDIF}
+        Destructor  Destroy(); {$IFDEF NUMPTRTRIE_CLASS} Override; {$ENDIF}
      end;
 
 implementation
@@ -90,7 +81,7 @@ implementation
 {$DEFINE NXTSIZ:=256}
 {$DEFINE DEPTH:=7}
 
-Procedure GenericNumTrie.SetVal(Const K:QWA;D:LongWord;N:PNode;Const V:Tp);
+Procedure GenericNumPtrTrie.SetVal(Const K:QWA;D:LongWord;N:PNode;Const V:Tp);
    Var E:PNode; C:LongWord; Vp:PTp;
    begin
    If (D < DEPTH) then begin
@@ -109,7 +100,7 @@ Procedure GenericNumTrie.SetVal(Const K:QWA;D:LongWord;N:PNode;Const V:Tp);
       end
    end;
 
-Procedure GenericNumTrie.SetVal(Key:Int64;Val:Tp);
+Procedure GenericNumPtrTrie.SetVal(Key:Int64;Val:Tp);
    Var K:QWA; C:LongWord;
    begin
    If (Key > MaxKey) then MaxKey := Key;
@@ -122,7 +113,7 @@ Procedure GenericNumTrie.SetVal(Key:Int64;Val:Tp);
    SetVal(K, 0, Root, Val)
    end;
 
-Procedure GenericNumTrie.RemVal(Const K:QWA; D:LongWord; N:PNode);
+Procedure GenericNumPtrTrie.RemVal(Const K:QWA; D:LongWord; N:PNode);
    begin
    If (D < DEPTH) then begin
       If (N^.Nxt[K[D]] = NIL) then Exit();
@@ -139,7 +130,7 @@ Procedure GenericNumTrie.RemVal(Const K:QWA; D:LongWord; N:PNode);
       end
    end;
 
-Procedure GenericNumTrie.RemVal(Key:Int64);
+Procedure GenericNumPtrTrie.RemVal(Key:Int64);
    Var K:QWA; C:LongWord;
    begin
    For C:=7 downto 1 do begin
@@ -150,7 +141,7 @@ Procedure GenericNumTrie.RemVal(Key:Int64);
    RemVal(K, 0, Root)
    end;
 
-Function GenericNumTrie.IsVal(Const K:QWA; D:LongWord; N:PNode):Boolean;
+Function GenericNumPtrTrie.IsVal(Const K:QWA; D:LongWord; N:PNode):Boolean;
    begin
    If (D < DEPTH) then begin
       If (N^.Nxt[K[D]] = NIL) then Exit(False);
@@ -160,7 +151,7 @@ Function GenericNumTrie.IsVal(Const K:QWA; D:LongWord; N:PNode):Boolean;
       end;
    end;
 
-Function GenericNumTrie.IsVal(Key:Int64):Boolean;
+Function GenericNumPtrTrie.IsVal(Key:Int64):Boolean;
    Var K:QWA; C:LongWord;
    begin
    For C:=7 downto 1 do begin
@@ -171,20 +162,20 @@ Function GenericNumTrie.IsVal(Key:Int64):Boolean;
    Exit(IsVal(K, 0, Root))
    end;
 
-Function GenericNumTrie.GetVal(Const K:QWA; D:LongWord; N:PNode):Tp;
+Function GenericNumPtrTrie.GetVal(Const K:QWA; D:LongWord; N:PNode):Tp;
    begin
    If (D < DEPTH) then begin
-      If (N^.Nxt[K[D]] = NIL) 
-         then Raise ExNotSet.Create('Called GenericNumTrie.GetVal() with an unset key!');
-      Exit(GetVal(K, D+1, N^.Nxt[K[D]]))
+      If (N^.Nxt[K[D]] <> NIL)
+         then Exit(GetVal(K, D+1, N^.Nxt[K[D]]))
+         else Exit(NIL)
       end else begin
-      If (N^.Nxt[K[D]] = NIL)
-         then Raise ExNotSet.Create('Called GenericNumTrie.GetVal() with an unset key!');
-      Exit(PTp(N^.Nxt[K[D]])^)
+      If (N^.Nxt[K[D]] <> NIL)
+         then Exit(PTp(N^.Nxt[K[D]])^)
+         else Exit(NIL)
       end;
    end;
 
-Function GenericNumTrie.GetVal(Key:Int64):Tp;
+Function GenericNumPtrTrie.GetVal(Key:Int64):Tp;
    Var K:QWA; C:LongWord;
    begin
    For C:=7 downto 1 do begin
@@ -195,45 +186,10 @@ Function GenericNumTrie.GetVal(Key:Int64):Tp;
    Exit(GetVal(K, 0, Root))
    end;
 
-Function GenericNumTrie.Empty():Boolean;
+Function GenericNumPtrTrie.Empty():Boolean;
    begin Exit(Self.Vals = 0) end;
-{
-Function GenericNumTrie.GetVal(N:PNode):Tp;
-   Var C:LongWord;
-   begin
-   If (N^.Val <> NIL) Then Exit(N^.Val^);
-   If (N^.Chi = 0) then
-      Raise ExNotSet.Create('Called GenericNumTrie.GetVal() on an empty trie!');
-   For C:=NXTMIN to NXTMAX do
-       If (N^.Nxt[C]<>NIL) then Exit(GetVal(N^.Nxt[C]))
-   end;
 
-Function GenericNumTrie.GetVal():Tp;
-   begin Exit(GetVal(Root)) end;
-
-Function GenericNumTrie.RemVal(N:PNode):Tp;
-   Var C:LongWord; R:Tp;
-   begin
-   If (N^.Val <> NIL) Then begin
-      R:=N^.Val^; Dispose(N^.Val); N^.Val:=NIL; Self.Vals-=1;
-      Exit(R)
-      end;
-   If (N^.Chi = 0) then
-      Raise ExNotSet.Create('Called GenericNumTrie.RemVal() on an empty trie!');
-   For C:=System.Low(N^.Nxt) to System.High(N^.Nxt) do
-       If (N^.Nxt[C]<>NIL) then begin
-          R:=RemVal(N^.Nxt[C]);
-          If (N^.Nxt[C]^.Val = NIL) and (N^.Nxt[C]^.Chi = 0) then begin
-             Dispose(N^.Nxt[C]); N^.Nxt[C]:=NIL; N^.Chi-=1
-             end;
-          Exit(R)
-          end
-   end;
-
-Function GenericNumTrie.RemVal():Tp;
-   begin Exit(RemVal(Root)) end;
-}
-Procedure GenericNumTrie.ToArray(Var A:TEntryArr; Var I:LongWord; N:PNode; D:LongWord; K:QWord);
+Procedure GenericNumPtrTrie.ToArray(Var A:TEntryArr; Var I:LongWord; N:PNode; D:LongWord; K:QWord);
    Var C:LongWord;
    begin
    If (N^.Chi = 0) then Exit();
@@ -251,7 +207,7 @@ Procedure GenericNumTrie.ToArray(Var A:TEntryArr; Var I:LongWord; N:PNode; D:Lon
       end
    end;
 
-Function GenericNumTrie.ToArray():TEntryArr;
+Function GenericNumPtrTrie.ToArray():TEntryArr;
    Var Res:Array of TEntry; Idx:LongWord; C:LongWord;
    begin
    SetLength(Res, Self.Vals); Idx := 0;
@@ -266,7 +222,7 @@ Function GenericNumTrie.ToArray():TEntryArr;
    Exit(Res)
    end;
 
-Procedure GenericNumTrie.FreeNode(N:PNode; D:LongWord);
+Procedure GenericNumPtrTrie.FreeNode(N:PNode; D:LongWord);
    Var I:LongWord;
    begin
    If (N^.Chi = 0) then Exit();
@@ -287,23 +243,23 @@ Procedure GenericNumTrie.FreeNode(N:PNode; D:LongWord);
    N^.Chi:=0
    end;
 
-Constructor GenericNumTrie.Create();
+Constructor GenericNumPtrTrie.Create();
    Var C:LongWord;
    begin
-   {$IFDEF NUMTRIE_CLASS} Inherited Create(); {$ENDIF}
+   {$IFDEF NUMPTRTRIE_CLASS} Inherited Create(); {$ENDIF}
    New(Root); SetLength(Root^.Nxt, NXTSIZ); Root^.Chi:=0;
    For C:=NXTMIN to NXTMAX do Root^.Nxt[C]:=NIL;
    Self.MinKey := System.High(Int64); Self.MaxKey := System.Low(Int64);
-   Self.Vals:=0;
+   Self.Vals:=0
    end;
 
-Procedure GenericNumTrie.Flush();
+Procedure GenericNumPtrTrie.Flush();
    begin FreeNode(Root, 0) end;
 
-Destructor GenericNumTrie.Destroy();
+Destructor GenericNumPtrTrie.Destroy();
    begin
-   Flush(); Dispose(Root);
-   {$IFDEF NUMTRIE_CLASS} ; Inherited Destroy() {$ENDIF}
+   Flush(); Dispose(Root)
+   {$IFDEF NUMPTRTRIE_CLASS} ; Inherited Destroy() {$ENDIF}
    end;
 
 end.
