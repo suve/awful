@@ -31,7 +31,7 @@ Function F_hypotenuse(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 
 implementation
-   uses EmptyFunc, Math;
+   uses Math, EmptyFunc, Values_Typecast;
 
 Procedure Register(Const FT:PFunTrie);
    begin
@@ -59,20 +59,32 @@ Procedure Register(Const FT:PFunTrie);
    FT^.SetVal('hypotenuse', MkFunc(@F_hypotenuse))
    end;
 
-Type TFloatToFloatFunc = Function(V:TFloat):TFloat;
-     TFloatToIntFunc = Function(V:TFloat):QInt;
+Type TFloatToFloatFunc = Function(Const V:TFloat):TFloat;
+     TFloatToIntFunc = Function(Const V:TFloat):QInt;
      TIntIntToIntFunc = Function(A,B:QInt):QInt;
 
-Function myCos(V:TFloat):TFloat; begin Exit(Cos(V)) end;
-Function mySin(V:TFloat):TFloat; begin Exit(Sin(V)) end;
-Function myTan(V:TFloat):TFloat; begin Exit(Tan(V)) end;
-Function myCtg(V:TFloat):TFloat; begin Exit(Cot(V)) end;
+Function myCos(Const V:TFloat):TFloat; Inline;
+   begin Exit(Cos(V)) end; 
+   
+Function mySin(Const V:TFloat):TFloat; Inline;
+   begin Exit(Sin(V)) end;
+   
+Function myTan(Const V:TFloat):TFloat; Inline;
+   begin Exit(Tan(V)) end;
+   
+Function myCtg(Const V:TFloat):TFloat; Inline;
+   begin Exit(Cot(V)) end;
 
-Function myCeil(V:TFloat):QInt; begin Exit(Ceil(V)) end;
-Function myFloor(V:TFloat):QInt; begin Exit(Floor(V)) end;
-Function myTrunc(V:TFloat):QInt; begin Exit(Trunc(V)) end;
+Function myCeil(Const V:TFloat):QInt;  Inline;
+   begin Exit(Ceil(V)) end;
+   
+Function myFloor(Const V:TFloat):QInt; Inline;
+   begin Exit(Floor(V)) end;
+   
+Function myTrunc(Const V:TFloat):QInt; Inline;
+   begin Exit(Trunc(V)) end;
 
-Function myRound(V:TFloat):QInt;
+Function myRound(Const V:TFloat):QInt; Inline;
    begin 
    Case Sign(V) of
       -1: If (Frac(V) <= -0.5)
@@ -169,7 +181,7 @@ Function F_sgn(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Exit(R)   
    end;
 
-Function F_trigonometric(Func:TFloatToFloatFunc; Const DoReturn:Boolean; Const Arg:PArrPVal):PValue; Inline;
+Function F_trigonometric(Const DoReturn:Boolean; Const Arg:PArrPVal; Const Func:TFloatToFloatFunc):PValue; 
    Var C:LongWord; R:PValue;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -189,18 +201,18 @@ Function F_trigonometric(Func:TFloatToFloatFunc; Const DoReturn:Boolean; Const A
    end;
 
 Function F_cos(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_trigonometric(@myCos, DoReturn, Arg)) end;
+   begin Exit(F_trigonometric(DoReturn, Arg, @myCos)) end;
 
 Function F_sin(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_trigonometric(@mySin, DoReturn, Arg)) end;
+   begin Exit(F_trigonometric(DoReturn, Arg, @mySin)) end;
    
 Function F_tan(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_trigonometric(@myTan, DoReturn, Arg)) end;
+   begin Exit(F_trigonometric(DoReturn, Arg, @myTan)) end;
    
 Function F_ctg(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_trigonometric(@myCtg, DoReturn, Arg)) end;
+   begin Exit(F_trigonometric(DoReturn, Arg, @myCtg)) end;
 
-Function F_rounding(Func:TFloatToIntFunc; Const DoReturn:Boolean; Const Arg:PArrPVal):PValue; Inline;
+Function F_rounding(Const DoReturn:Boolean; Const Arg:PArrPVal; Const Func:TFloatToIntFunc):PValue;
    Var C:LongWord; R:PValue;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -218,18 +230,18 @@ Function F_rounding(Func:TFloatToIntFunc; Const DoReturn:Boolean; Const Arg:PArr
    end;
 
 Function F_ceil(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_rounding(@myCeil, DoReturn, Arg)) end;
+   begin Exit(F_rounding(DoReturn, Arg, @myCeil)) end;
 
 Function F_floor(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_rounding(@myFloor, DoReturn, Arg)) end;
+   begin Exit(F_rounding(DoReturn, Arg, @myFloor)) end;
 
 Function F_round(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_rounding(@myRound, DoReturn, Arg)) end;
+   begin Exit(F_rounding(DoReturn, Arg, @myRound)) end;
 
 Function F_trunc(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_rounding(@myTrunc, DoReturn, Arg)) end;
+   begin Exit(F_rounding(DoReturn, Arg, @myTrunc)) end;
 
-Function F_frac(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue; Inline;
+Function F_frac(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue; 
    Var C:LongWord; R:PValue;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -277,7 +289,7 @@ Function NewtonsSymbol(A,B:QInt):QInt;
    Exit((A+1) * Product)
    end;
 
-Function F_commons(Func:TIntIntToIntFunc; Const DoReturn:Boolean; Const Arg:PArrPVal):PValue; Inline;
+Function F_commons(Const DoReturn:Boolean; Const Arg:PArrPVal; Const Func:TIntIntToIntFunc):PValue; 
    Var C:LongWord; Int:Array[0..1] of QInt;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -301,13 +313,13 @@ Function F_commons(Func:TIntIntToIntFunc; Const DoReturn:Boolean; Const Arg:PArr
    end;
 
 Function F_gcd(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_commons(@GreatestCommonDivisor, DoReturn, Arg)) end;
+   begin Exit(F_commons(DoReturn, Arg, @GreatestCommonDivisor)) end;
 
 Function F_lcm(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_commons(@LeastCommonMultiple, DoReturn, Arg)) end;
+   begin Exit(F_commons(DoReturn, Arg, @LeastCommonMultiple)) end;
 
 Function F_newt(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_commons(@NewtonsSymbol, DoReturn, Arg)) end;
+   begin Exit(F_commons(DoReturn, Arg, @NewtonsSymbol)) end;
 
 Function F_hypotenuse(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; Flt:Array[0..1] of TFloat;

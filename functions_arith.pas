@@ -32,7 +32,7 @@ Procedure Register(Const FT:PFunTrie);
 
 Type TArithProc = Procedure(Const A,B:PValue);
 
-Function F_Arith(Arith:TArithProc; Const DoReturn:Boolean; Const Arg:PArrPVal):PValue; Inline;
+Function F_Arith(Const DoReturn:Boolean; Const Arg:PArrPVal; Const Arith:TArithProc):PValue; 
    Var C:LongWord; 
    begin
    If (Length(Arg^)=0) then begin
@@ -53,24 +53,24 @@ Function F_Arith(Arith:TArithProc; Const DoReturn:Boolean; Const Arg:PArrPVal):P
    end;
 
 Function F_Set(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_Arith(@ValSet, DoReturn, Arg)) end;
+   begin Exit(F_Arith(DoReturn, Arg, @ValSet)) end;
 
 Function F_Add(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_Arith(@ValAdd, DoReturn, Arg)) end;
+   begin Exit(F_Arith(DoReturn, Arg, @ValAdd)) end;
 
 Function F_Sub(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_Arith(@ValSub, DoReturn, Arg)) end;
+   begin Exit(F_Arith(DoReturn, Arg, @ValSub)) end;
 
 Function F_Mul(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_Arith(@ValMul, DoReturn, Arg)) end;
+   begin Exit(F_Arith(DoReturn, Arg, @ValMul)) end;
 
 Function F_Div(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_Arith(@ValDiv, DoReturn, Arg)) end;
+   begin Exit(F_Arith(DoReturn, Arg, @ValDiv)) end;
 
 Function F_Mod(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_Arith(@ValMod, DoReturn, Arg)) end;
+   begin Exit(F_Arith(DoReturn, Arg, @ValMod)) end;
 
 Function F_Pow(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_Arith(@ValPow, DoReturn, Arg)) end;
+   begin Exit(F_Arith(DoReturn, Arg, @ValPow)) end;
 
 end.

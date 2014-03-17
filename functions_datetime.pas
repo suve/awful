@@ -5,8 +5,6 @@ unit functions_datetime;
 interface
    uses Values;
 
-Const dtf_def = 'yyyy"-"mm"-"dd" "hh":"nn';
-
 Procedure Register(Const FT:PFunTrie);
 
 Function F_DateTime_Start(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
@@ -25,7 +23,8 @@ Function F_DateTime_Break(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_DateTime_String(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 implementation
-   uses Values_Arith, SysUtils, EmptyFunc, CoreFunc, Globals;
+   uses SysUtils, Convert, Values_Arith, Values_Typecast,
+        EmptyFunc, CoreFunc, Globals;
 
 Procedure Register(Const FT:PFunTrie);
    begin
@@ -191,7 +190,7 @@ Function F_DateTime_Break(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Exit(V)
    end;
 
-Function dtf(S:AnsiString):AnsiString;
+Function dtf(Const S:AnsiString):AnsiString;
    Var R:AnsiString; P:LongWord; Q:Boolean;
    begin
    R:=''; Q:=False;

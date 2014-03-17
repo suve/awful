@@ -14,10 +14,15 @@ Var FCal : Array of TCallState;
     FLev : LongWord;
     DoExit : Boolean;
 
+Var FuncInfo_AutoCall,
+    FuncInfo_If, FuncInfo_Else,
+    FuncInfo_Break, FuncInfo_Continue,
+    FuncInfo_While, FuncInfo_Done, FuncInfo_Until : TFuncInfo;
+    
 Procedure Register(Const FT:PFunTrie);
 
-Function Eval(Const Ret:Boolean; Const E:PExpr):PValue;
-Function RunFunc(Const P:LongWord):PValue;
+Function  Eval(Const Ret:Boolean; Const E:PExpr):PValue;
+Function  RunFunc(Const P:LongWord):PValue;
 
 Function F_If(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_Else(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
@@ -44,7 +49,7 @@ Function F_ParamCnt(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_ParamStr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 implementation
-   uses Globals, Parser, EmptyFunc;
+   uses SysUtils, Globals, Parser, EmptyFunc, Values_Typecast;
 
 Procedure Register(Const FT:PFunTrie);
    begin
@@ -56,7 +61,17 @@ Procedure Register(Const FT:PFunTrie);
    FT^.SetVal('file-includes',MkFunc(@F_FileIncludes));
    FT^.SetVal('param-arr',MkFunc(@F_ParamArr));
    FT^.SetVal('param-cnt',MkFunc(@F_ParamCnt));
-   FT^.SetVal('param-str',MkFunc(@F_ParamStr))
+   FT^.SetVal('param-num',MkFunc(@F_ParamCnt));
+   FT^.SetVal('param-str',MkFunc(@F_ParamStr));
+   
+   SetFuncInfo(FuncInfo_AutoCall, @F_AutoCall, REF_MODIF);
+   SetFuncInfo(FuncInfo_If      , @F_If      , REF_CONST);
+   SetFuncInfo(FuncInfo_Else    , @F_Else    , REF_CONST);
+   SetFuncInfo(FuncInfo_While   , @F_While   , REF_CONST);
+   SetFuncInfo(FuncInfo_Done    , @F_Done    , REF_CONST);
+   SetFuncInfo(FuncInfo_Until   , @F_Until   , REF_CONST);
+   SetFuncInfo(FuncInfo_Break   , @F_Break   , REF_CONST);
+   SetFuncInfo(FuncInfo_Continue, @F_Continue, REF_CONST)
    end;
 
 Function Eval(Const Ret:Boolean; Const E:PExpr):PValue;
@@ -295,14 +310,14 @@ Function F_Exit(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    end;
 
 Function F_AutoCall(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   Var P,E:LongWord; A,H,Pass,Want:LongInt; R,TV{,ArrV}:PValue; //Arr:PArray;
+   Var P,E:LongWord; A,H,Pass,Want:LongInt; R{,TV,ArrV}:PValue; //Arr:PArray;
    begin
    P:=Proc; E:=ExLn; Proc:=PQInt(Arg^[0]^.Ptr)^;
    
    CurLev += 1; FLev += 1;
    If (FLev > High(FCal)) then begin
       SetLength(FCal, FLev + 1);
-      New(FCal[FLev].Vars,Create(#33,#255))
+      New(FCal[FLev].Vars,Create())
       end;
    FCal[FLev].Args := Arg;
    
@@ -326,10 +341,11 @@ Function F_AutoCall(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
       For A:=0 to (H-1) do FCal[FLev].Vars^.RemVal(Pr[Proc].Arg[A]);
    
    // Remove user-defined vars from trie
-   While (FCal[FLev].Vars^.Count > 0) do begin
+   FCal[FLev].Vars^.Flush(@FreeVal);
+   {While (FCal[FLev].Vars^.Count > 0) do begin
       TV:=FCal[FLev].Vars^.RemVal();
       FreeVal(TV)
-      end;
+      end;}
    
    // Decrease runlevel and free vals if needed
    FLev -= 1; CurLev -= 1;
@@ -358,14 +374,14 @@ Function F_FuncArgs(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    end;
 
 Function F_Call(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   Var FPtr:TFunc; S:TStr;
+   Var FPtr:PFuncInfo; S:TStr;
    
    Function BuiltInCall():PValue;
       Var C:LongWord; NArg:TArrPVal;
       begin
       SetLength(NArg, Length(Arg^)-1);
       For C:=1 to High(Arg^) do NArg[C-1] := Arg^[C];
-      Exit(TBuiltIn(FPtr.Ptr)(DoReturn, @NArg))
+      Exit(TBuiltIn(FPtr^.Ptr)(DoReturn, @NArg))
       end;
    
    begin
@@ -373,17 +389,16 @@ Function F_Call(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    S:=ValAsStr(Arg^[0]);
    If (Length(S)>0) and (S[1]=':') then Delete(S,1,1);
    If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
-   Try
-      FPtr := Func^.GetVal(S);
-      If (FPtr.Usr) then begin
-         Arg^[0] := NewVal(VT_INT, FPtr.Ptr);
-         Exit(F_AutoCall(DoReturn, Arg))
-         end else
-         Exit(BuiltInCall())
-   Except
-      FPtr.Ptr := PtrUInt(@F_);
+   FPtr := Func^.GetVal(S);
+   If (FPtr = NIL) then begin
+      FPtr := @FuncInfo_NIL;
       Exit(BuiltInCall())
-      end
+      end;
+   If (FPtr^.Usr) then begin
+      Arg^[0] := NewVal(VT_INT, FPtr^.Ptr);
+      Exit(F_AutoCall(DoReturn, Arg))
+      end else
+      Exit(BuiltInCall())
    end;
 
 Function F_FileIncludes(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;

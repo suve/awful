@@ -1,0 +1,56 @@
+.\" Manpage for awful
+.\" Contact veg@svgames.pl to correct errors or typos.
+.TH man 1 "2014-03-16" "0.5.0" "Scripting language"
+.SH NAME
+awful - an ugly scripting language
+.SH SYNOPSIS
+.TP
+\fBawful\fR [\-o \fIoutfile\fR] [\-e \fIerrfile\fR] [\-i \fIinfile\fR] \fIscriptfile\fR [\fIparams\fR]
+.TP
+\fBawful\fR [\-o \fIoutfile\fR] [\-e \fIerrfile\fR] [\-i \fIinfile\fR]
+.SH DESCRIPTION
+awful is a multi-purpose, ugly scripting language.
+.SH OPTIONS
+When reading script from a file, option parsing stops at the filename. The remaining options are treated as arguments to be forwarded to the script.
+.TP 3
+.BR \-o \ \fIoutfile\fR
+Redirects all output to \fIoutfile\fR. If the file exists, it is overwritten.
+.TP
+.BR \-O \ \fIoutfile\fR
+Redirects all output to \fIoutfile\fR. If the file exists, content is appended to end of file.
+.TP
+.BR \-e \ \fIerrfile\fR
+Redirects all errors to \fIerrfile\fR. If the file exists, it is overwritten.
+.TP
+.BR \-E \ \fIerrfile\fR
+Redirects all errors to \fIerrfile\fR. If the file exists, content is appended to end of file.
+.TP
+.BR \-i \ \fIinfile\fR
+Instead of stdin, script input will be taken from \fIinfile\fR.
+.TP
+.B \-\-norun
+Do not run the script; simply perform a syntax check and exit.
+.TP
+.B \-\-version
+Print interpreter version and build information and exit.
+.SH "EXIT STATUS"
+.TP
+.B 0
+Script was executed successfully.
+.TP
+.B 2
+Script file not found.
+.TP
+.B 255
+Parse error.
+.TP
+.B Other
+Runtime error. Please consider writing a bug report.
+.SH TIPS
+Because \fBawful\fR uses the \fB#\fR character for comments, you can use a shebang (\fB#!\fR) to automatically invoke scripts.
+.SH BUGS
+None known. If you found one, please report it at https://bitbucket.org/suve/awful/issues
+.SH DOCUMENTATION
+For complete language documentation, consult http://pi.svgames.pl/wiki/
+.SH AUTHOR
+suve (veg@svgames.pl)

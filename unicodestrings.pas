@@ -1,6 +1,6 @@
 unit unicodestrings; 
 
-{$MODE OBJFPC} {$COPERATORS ON}
+{$MODE OBJFPC} {$COPERATORS ON} {$MACRO ON}
 
 interface
 
@@ -22,15 +22,15 @@ Type TUTF8Char = String[4];
      
      Public
         Procedure Append(Const Txt:AnsiString);
-        Procedure Append(Txt:PUTF8String);
+        Procedure Append(Const Txt:PUTF8String);
         
-        Procedure Multiply(Times:LongInt);
+        Procedure Multiply(Const Times:LongInt);
         
         Procedure Insert(Const Txt:AnsiString;Idx:LongInt);
-        Procedure Insert(Txt:PUTF8String;Idx:LongInt);
+        Procedure Insert(Const Txt:PUTF8String;Idx:LongInt);
         
         Procedure SetTo(Const Txt:AnsiString);
-        Procedure SetTo(Txt:PUTF8String);
+        Procedure SetTo(Const Txt:PUTF8String);
         
         Function  SubStr(Start : LongInt; Len : LongWord = 0):PUTF8String;
         Function  Clone():PUTF8String;
@@ -39,13 +39,13 @@ Type TUTF8Char = String[4];
         Procedure Clear();
         
         Function  Search(Const Txt:AnsiString):LongWord;
-        Function  Search(Txt:PUTF8String):LongWord;
+        Function  Search(Const Txt:PUTF8String):LongWord;
         
         Function  Equals(Const Txt:AnsiString):Boolean;
-        Function  Equals(Txt:PUTF8String):Boolean;
+        Function  Equals(Const Txt:PUTF8String):Boolean;
         
         Function  Compare(Const Txt:AnsiString):LongInt;
-        Function  Compare(Txt:PUTF8String):LongInt;
+        Function  Compare(Const Txt:PUTF8String):LongInt;
         
         Procedure UpperCase();
         Procedure LowerCase();
@@ -54,7 +54,7 @@ Type TUTF8Char = String[4];
         Procedure TrimLeft();
         Procedure TrimRight();
         
-        Function  ToInt(Base:LongInt = 10):Int64;
+        Function  ToInt(Const Base:LongInt = 10):Int64;
         Function  ToFloat():Extended;
         Function  ToAnsiString():AnsiString;
         
@@ -96,11 +96,19 @@ Function IsWhitespace(Chara:TUTF8Char):Boolean;
          Exit(False)
    end end;
 
+{$DEFINE _ := : Exit }
 Function CharToUpper(Chara:TUTF8Char):TUTF8Char;
-   begin {$INCLUDE unicodestrings-toupper.inc} end;
+   begin Case Chara of
+      {$INCLUDE unicodestrings-toupper.min.inc}
+      else Exit(Chara)
+   end end;
 
 Function CharToLower(Chara:TUTF8Char):TUTF8Char;
-   begin {$INCLUDE unicodestrings-tolower.inc} end;
+   begin Case Chara of
+      {$INCLUDE unicodestrings-tolower.min.inc}
+      else Exit(Chara)
+   end end;
+{$UNDEF _ }
 
 Procedure TUTF8String.SetLength(L:LongWord);
    Var C:LongWord;
@@ -172,7 +180,7 @@ Procedure TUTF8String.Append(Const Txt:AnsiString);
    System.SetLength(Self.Chr, _Len)
    end;
 
-Procedure TUTF8String.Append(Txt:PUTF8String);
+Procedure TUTF8String.Append(Const Txt:PUTF8String);
    Var P:LongWord;
    begin
    If (Txt = NIL) or (Txt^._Len = 0) then Exit;
@@ -182,7 +190,7 @@ Procedure TUTF8String.Append(Txt:PUTF8String);
    Self._Len += Txt^._Len; Self._Bytes += Txt^._Bytes
    end;
 
-Procedure TUTF8String.Multiply(Times:LongInt);
+Procedure TUTF8String.Multiply(Const Times:LongInt);
    Var C,OL:LongWord;
    begin
    If (Times < 2) or (Self._Len = 0) then Exit;
@@ -227,7 +235,7 @@ Procedure TUTF8String.SetTo(Const Txt:AnsiString);
    System.SetLength(Self.Chr, _Len)
    end;
 
-Procedure TUTF8String.SetTo(Txt:PUTF8String);
+Procedure TUTF8String.SetTo(Const Txt:PUTF8String);
    Var P:LongWord;
    begin
    If (Txt = NIL) or (Txt^._Len = 0) then begin
@@ -240,7 +248,7 @@ Procedure TUTF8String.SetTo(Txt:PUTF8String);
    Self._Len := Txt^._Len; Self._Bytes := Txt^._Bytes
    end;
 
-Procedure TUTF8String.Insert(Txt:PUTF8String;Idx:LongInt);
+Procedure TUTF8String.Insert(Const Txt:PUTF8String;Idx:LongInt);
    Var P:LongWord;
    begin
    If (Idx < 0) then Idx := _Len - Idx else If (Idx > 0) then Idx -= 1;
@@ -316,7 +324,7 @@ Function  TUTF8String.Search(Const Txt:AnsiString):LongWord;
    Exit(Res)
    end;
    
-Function  TUTF8String.Search(Txt:PUTF8String):LongWord;
+Function  TUTF8String.Search(Const Txt:PUTF8String):LongWord;
    Var C, P, S : LongWord;
    begin
    If (Txt = NIL) or (Txt^._Len = 0) then Exit(0);
@@ -340,7 +348,7 @@ Function TUTF8String.Equals(Const Txt:AnsiString):Boolean;
    Exit(Res)
    end;
 
-Function TUTF8String.Equals(Txt:PUTF8String):Boolean;
+Function TUTF8String.Equals(Const Txt:PUTF8String):Boolean;
    Var C : LongWord;
    begin
    If (Txt = NIL) then Exit(False);
@@ -359,7 +367,7 @@ Function TUTF8String.Compare(Const Txt:AnsiString):LongInt;
    Exit(Res)
    end;
 
-Function TUTF8String.Compare(Txt:PUTF8String):LongInt;
+Function TUTF8String.Compare(Const Txt:PUTF8String):LongInt;
    Var C, L : LongWord;
    begin
    If (Txt = NIL) then Exit(1);
@@ -436,7 +444,7 @@ Procedure TUTF8String.TrimRight();
    Self.SetLength(C)
    end;
 
-Function TUTF8String.ToInt(Base:LongInt = 10):Int64;
+Function TUTF8String.ToInt(Const Base:LongInt = 10):Int64;
    Var R:Int64; C, D :LongWord;
    begin R := 0;
    For C:=0 to (Self._Len - 1) do begin
@@ -476,18 +484,15 @@ Function TUTF8String.ToFloat():Extended;
    end;
 
 Function TUTF8String.ToAnsiString():AnsiString;
-   Var Res:AnsiString; P, C, B : LongWord;
+   Var P, C, B : LongWord;
    begin
    If (_Len = 0) then Exit('');
-   System.SetLength(Res,_Bytes);
-   P:=1;
+   System.SetLength(Result,_Bytes); P:=1;
    For C:=0 to (_Len - 1) do
        For B:=1 to Length(Self.Chr[C]) do begin
-           Res[P] := Self.Chr[C][B];
+           Result[P] := Self.Chr[C][B];
            P += 1
-           end;
-   Exit(Res)
-   end;
+   end end;
 
 Procedure TUTF8String.Print(Var F:Text);
    Var C:LongWord;

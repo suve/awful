@@ -38,13 +38,13 @@ Type TTokenType = (
         Arg : Array of AnsiString; // Argument name array
         end;
 
-Procedure FreeToken(T:PToken);
-Procedure FreeExpr(E:PExpr);
+Procedure FreeToken(Const T:PToken);
+Procedure FreeExpr(Const E:PExpr);
 Procedure FreeProc(Var P:TProc);
 
 implementation
 
-Procedure FreeToken(T:PToken);
+Procedure FreeToken(Const T:PToken);
    Var atk:PArrTk; C:LongWord;
    begin
    Case (T^.Typ) of
@@ -59,12 +59,12 @@ Procedure FreeToken(T:PToken);
       TK_AVAL, TK_AREF: begin
          atk:=PArrTk(T^.Ptr); Dispose(PStr(atk^.Ptr)); 
          For C:=Low(atk^.Ind) to High(atk^.Ind) do FreeToken(atk^.Ind[C]);
-         SetLength(atk^.Ind, 0); Dispose(atk)
+         {SetLength(atk^.Ind, 0);} Dispose(atk)
          end;
       TK_AFLY: begin
          atk:=PArrTk(T^.Ptr); FreeExpr(PExpr(atk^.Ptr)); 
          For C:=Low(atk^.Ind) to High(atk^.Ind) do FreeToken(atk^.Ind[C]);
-         SetLength(atk^.Ind, 0); Dispose(atk)
+         {SetLength(atk^.Ind, 0);} Dispose(atk)
          end;
       TK_BADT:
          ; // Bad token. Holds no data. Unused.
@@ -72,13 +72,13 @@ Procedure FreeToken(T:PToken);
    Dispose(T)
    end;
 
-Procedure FreeExpr(E:PExpr);
+Procedure FreeExpr(Const E:PExpr);
    Var C:LongWord;
    begin
    If (Length(E^.Tok)>0) then
       For C:=Low(E^.Tok) to High(E^.Tok) do
           FreeToken(E^.Tok[C]);
-   SetLength(E^.Tok, 0); Dispose(E)
+   {SetLength(E^.Tok, 0);} Dispose(E)
    end;
 
 Procedure FreeProc(Var P:TProc);
@@ -87,7 +87,7 @@ Procedure FreeProc(Var P:TProc);
    If (Length(P.Exp)>0) then
       For C:=Low(P.Exp) to High(P.Exp) do
           FreeExpr(P.Exp[C]);
-   SetLength(P.Exp, 0); SetLength(P.Arg, 0)
+   {SetLength(P.Exp, 0); SetLength(P.Arg, 0)}
    end;
 
 end.

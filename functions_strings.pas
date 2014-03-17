@@ -33,10 +33,11 @@ Function F_Ord(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_Perc(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 Function UTF8_Char(Code:LongWord):ShortString;
-Function UTF8_Ord(Chr:ShortString):LongInt;
+Function UTF8_Ord(Const Chr:ShortString):LongInt;
 
 implementation
-   uses Values_Arith, UnicodeStrings, SysUtils, EmptyFunc;
+   uses SysUtils, FileHandling, EmptyFunc,
+        Values_Arith, Values_Typecast, Convert;
 
 
 Procedure Register(Const FT:PFunTrie);
@@ -71,7 +72,7 @@ Const UTF8_Mask:Array[2..6] of Byte =
 Function UTF8_Char(Code:LongWord):ShortString;
    Var Bit:Array[0..31] of Byte; C:LongInt; S:ShortString;
    
-   Function MakeChar(Mask:Byte;Max,Min:LongInt):Char;
+   Function MakeChar(Const Mask:Byte;Max,Min:LongInt):Char;
       Var B:Byte;
       begin B:=0;
       While (Max > Min) do begin
@@ -100,7 +101,7 @@ Function UTF8_Char(Code:LongWord):ShortString;
    Exit(S)
    end;
 
-Function UTF8_Ord(Chr:ShortString):LongInt;
+Function UTF8_Ord(Const Chr:ShortString):LongInt;
    
    Function Bitmask(Val,Mask:Byte):Boolean; Inline;
       begin Exit((Val and Mask) = Mask) end;
@@ -128,15 +129,15 @@ Function UTF8_Ord(Chr:ShortString):LongInt;
 Function ASCII_Char(Code:LongWord):ShortString;
    begin Exit(Chr(Code)) end;
 
-Function ASCII_Ord(Str:ShortString):LongInt;
+Function ASCII_Ord(Const Str:ShortString):LongInt;
    begin If (Length(Str)>0) then Exit(Ord(Str[0])) else Exit(0) end;
 
 Type TChrFunc = Function(Code:LongWord):ShortString;
-Type TOrdFunc = Function(Str:ShortString):LongInt;
+Type TOrdFunc = Function(Const Str:ShortString):LongInt;
 
 Type TTransformID = (TID_Trim, TID_TrimLe, TID_TrimRi, TID_Upper, TID_Lower);
 
-Function F_TransformStr(funID:TTransformID; Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_TransformStr(Const DoReturn:Boolean; Const Arg:PArrPVal; Const funID:TTransformID):PValue;
    Var C:LongWord; V:PValue;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -165,19 +166,19 @@ Function F_TransformStr(funID:TTransformID; Const DoReturn:Boolean; Const Arg:PA
    end;
 
 Function F_Trim(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_TransformStr(TID_Trim, DoReturn, Arg)) end;
+   begin Exit(F_TransformStr(DoReturn, Arg, TID_Trim)) end;
 
 Function F_TrimLeft(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_TransformStr(TID_TrimLe, DoReturn, Arg)) end;
+   begin Exit(F_TransformStr(DoReturn, Arg, TID_TrimLe)) end;
 
 Function F_TrimRight(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_TransformStr(TID_TrimRi, DoReturn, Arg)) end;
+   begin Exit(F_TransformStr(DoReturn, Arg, TID_TrimRi)) end;
 
 Function F_UpperCase(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_TransformStr(TID_Upper, DoReturn, Arg)) end;
+   begin Exit(F_TransformStr(DoReturn, Arg, TID_Upper)) end;
 
 Function F_LowerCase(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_TransformStr(TID_Lower, DoReturn, Arg)) end;
+   begin Exit(F_TransformStr(DoReturn, Arg, TID_Lower)) end;
 
 Function F_StrBts(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; L:QInt;
@@ -302,7 +303,7 @@ Function F_InsertStr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Exit(V)
    end;
 
-Function F_MakeCharacter(Func:TChrFunc; Const DoReturn:Boolean; Const Arg:PArrPVal):PValue; Inline;
+Function F_MakeCharacter(Const DoReturn:Boolean; Const Arg:PArrPVal; Const Func:TChrFunc):PValue;
    Var C:LongWord; V:PValue; 
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -314,7 +315,7 @@ Function F_MakeCharacter(Func:TChrFunc; Const DoReturn:Boolean; Const Arg:PArrPV
    Exit(V)
    end;
 
-Function F_MakeOrdinal(Func:TOrdFunc; Const DoReturn:Boolean; Const Arg:PArrPVal):PValue; Inline;
+Function F_MakeOrdinal(Const DoReturn:Boolean; Const Arg:PArrPVal; Const Func:TOrdFunc):PValue;
    Var C:LongWord; V:PValue;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -327,16 +328,16 @@ Function F_MakeOrdinal(Func:TOrdFunc; Const DoReturn:Boolean; Const Arg:PArrPVal
    end;
 
 Function F_Chr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_MakeCharacter(@ASCII_Char, DoReturn, Arg)) end;
+   begin Exit(F_MakeCharacter(DoReturn, Arg, @ASCII_Char)) end;
 
 Function F_Chr_UTF8(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_MakeCharacter(@UTF8_Char, DoReturn, Arg)) end;
+   begin Exit(F_MakeCharacter(DoReturn, Arg, @UTF8_Char)) end;
 
 Function F_Ord(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_MakeOrdinal(@ASCII_Ord, DoReturn, Arg)) end;
+   begin Exit(F_MakeOrdinal(DoReturn, Arg, @ASCII_Ord)) end;
 
 Function F_Ord_UTF8(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_MakeOrdinal(@UTF8_Ord, DoReturn, Arg)) end;
+   begin Exit(F_MakeOrdinal(DoReturn, Arg, @UTF8_Ord)) end;
 
 Function F_Perc(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; V:PValue; I:PQInt; S:AnsiString; D:PFloat;
@@ -349,19 +350,19 @@ Function F_Perc(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    If (Length(Arg^)>=2) then begin
       If (Arg^[0]^.Typ = VT_FLO) then begin
          V:=CopyVal(Arg^[0]); D:=PFloat(V^.Ptr); (D^)*=100; ValDiv(V,Arg^[1]);
-         S:=Values.IntToStr(Trunc(PFloat(V^.Ptr)^))+'%';
+         S:=Convert.IntToStr(Trunc(PFloat(V^.Ptr)^))+'%';
          FreeVal(V)
          end else begin
          If (Arg^[0]^.Typ >= VT_INT) and (Arg^[0]^.Typ <= VT_BIN)
             then V:=CopyVal(Arg^[0]) else V:=ValToInt(Arg^[0]);
          I:=PQInt(V^.Ptr); (I^)*=100; ValDiv(V,Arg^[1]);
-         S:=Values.IntToStr(PQInt(V^.Ptr)^)+'%';
+         S:=Convert.IntToStr(PQInt(V^.Ptr)^)+'%';
          FreeVal(V)
          end
       end else begin
       If (Arg^[0]^.Typ = VT_FLO)
-         then S:=Values.IntToStr(Trunc(100*PFloat(Arg^[0]^.Ptr)^))+'%'
-         else S:=Values.IntToStr(Trunc(100*ValAsFlo(Arg^[0])))+'%';
+         then S:=Convert.IntToStr(Trunc(100*PFloat(Arg^[0]^.Ptr)^))+'%'
+         else S:=Convert.IntToStr(Trunc(100*ValAsFlo(Arg^[0])))+'%';
       end;
    If (Length(Arg^) >= 2) and (Arg^[1]^.Lev >= CurLev) then FreeVal(Arg^[1]);
    If (Length(Arg^) >= 1) and (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
@@ -380,16 +381,16 @@ Function F_WriteStr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
              VT_NEW: WriteStr(Tmp, '{NEW}');
              VT_PTR: WriteStr(Tmp, '{PTR}');
              VT_INT: WriteStr(Tmp, PQInt(Arg^[C]^.Ptr)^);
-             VT_HEX: WriteStr(Tmp, Values.HexToStr(PQInt(Arg^[C]^.Ptr)^));
-             VT_OCT: WriteStr(Tmp, Values.OctToStr(PQInt(Arg^[C]^.Ptr)^));
-             VT_BIN: WriteStr(Tmp, Values.BinToStr(PQInt(Arg^[C]^.Ptr)^));
-             VT_FLO: WriteStr(Tmp, Values.FloatToStr(PFloat(Arg^[C]^.Ptr)^));
+             VT_HEX: WriteStr(Tmp, Convert.HexToStr(PQInt(Arg^[C]^.Ptr)^));
+             VT_OCT: WriteStr(Tmp, Convert.OctToStr(PQInt(Arg^[C]^.Ptr)^));
+             VT_BIN: WriteStr(Tmp, Convert.BinToStr(PQInt(Arg^[C]^.Ptr)^));
+             VT_FLO: WriteStr(Tmp, Convert.FloatToStr(PFloat(Arg^[C]^.Ptr)^));
              VT_BOO: WriteStr(Tmp, PBoolean(Arg^[C]^.Ptr)^);
              VT_STR: WriteStr(Tmp, PAnsiString(Arg^[C]^.Ptr)^);
              VT_UTF: WriteStr(Tmp, PUTF(Arg^[C]^.Ptr)^.ToAnsiString());
              VT_ARR: WriteStr(Tmp, 'array(',PArray(Arg^[C]^.Ptr)^.Count,')');
              VT_DIC: WriteStr(Tmp, 'dict(',PDict(Arg^[C]^.Ptr)^.Count,')');
-             VT_FIL: WriteStr(Tmp, 'file(',PFileVal(Arg^[C]^.Ptr)^.Pth,')');
+             VT_FIL: WriteStr(Tmp, 'file(',PFileHandle(Arg^[C]^.Ptr)^.Pth,')');
              else WriteStr(Tmp, '(',Arg^[C]^.Typ,')');
              end;
           If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
@@ -399,14 +400,13 @@ Function F_WriteStr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    end;
 
 Function F_WriteStr_UTF8(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   Var V:PValue; U:PUTF8String;
+   Var U:PUTF;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
-   V := F_WriteStr(True, Arg);
-   New(U, Create(PStr(V^.Ptr)^));
-   Dispose(PStr(V^.Ptr));
-   V^.Typ := VT_UTF; V^.Ptr := U;
-   Exit(V)
+   Result := F_WriteStr(True, Arg);
+   New(U, Create(PStr(Result^.Ptr)^));
+   Dispose(PStr(Result^.Ptr));
+   Result^.Typ := VT_UTF; Result^.Ptr := U
    end;
 
 end.

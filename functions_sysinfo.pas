@@ -33,9 +33,9 @@ Function F_SysInfo_Version(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 implementation
    uses SysUtils, Process,
-        {$IFDEF LINUX}Unix, Linux,{$ENDIF}
-        {$IFDEF WINDOWS}Winsock,{$ENDIF}
-        EmptyFunc;
+        {$IFDEF LINUX} Unix, Linux, {$ENDIF}
+        {$IFDEF WINDOWS} Winsock, {$ENDIF}
+        EmptyFunc, Values_Typecast, Convert;
 
 Const DISK_DEFAULT = 0;
       {$IFDEF LINUX} ROOTDISK = 3; {$ENDIF}
@@ -44,10 +44,6 @@ Const DISK_DEFAULT = 0;
 Var     SI : PSysInfo = NIL;
     unameR : AnsiString = '';
     unameS : AnsiString = '';
-{$ENDIF}
-
-{$IFDEF WINDOWS}
-Var Winderps : AnsiString = '';
 {$ENDIF}
 
 Procedure Register(Const FT:PFunTrie);
@@ -347,7 +343,7 @@ Function F_SysInfo_Version(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 {$ENDIF}
 
 {$IFDEF WINDOWS} // Functions present on both Lin&Win; Winderps implementations
-Function F_SysInfo_Disk(DiskFunc:TDiskFunc; Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_SysInfo_Disk(Const DiskFunc:TDiskFunc; Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C, DiskNum : LongInt; DiskPath : AnsiString;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
@@ -416,9 +412,9 @@ Function F_SysInfo_Version(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin
    If (Length(Arg^)>0) then F_(False, Arg);
    If (Not DoReturn) then Exit(NIL);
-   Exit(NewVal(VT_STR, Values.IntToStr(Win32Platform)+'.'+
-                       Values.IntToStr(Win32MajorVersion)+'.'+
-                       Values.IntToStr(Win32MinorVersion)))
+   Exit(NewVal(VT_STR, Convert.IntToStr(Win32Platform)+'.'+
+                       Convert.IntToStr(Win32MajorVersion)+'.'+
+                       Convert.IntToStr(Win32MinorVersion)))
    end;
 {$ENDIF}
 

@@ -24,12 +24,11 @@ Type generic GenericNumPtrTrie<Tp> = NUMPTRTRIETYPE
            Val : Tp
            end;
         TEntryArr = Array of TEntry;
+        TDisposeProc = Procedure(Const V:Tp);
      
      Private
         Type
         QWA = Array[0..7] of NativeUInt;
-        
-        PTp = ^Tp;
         
         PNode = ^TNode;
         TNode = record
@@ -51,7 +50,8 @@ Type generic GenericNumPtrTrie<Tp> = NUMPTRTRIETYPE
         
         Procedure ToArray(Var A:TEntryArr; Var I:LongWord; N:PNode; D:LongWord; K:QWord);
         
-        Procedure FreeNode(N:PNode; D:LongWord);
+        Procedure FreeNode(Const N:PNode; Const D:LongWord);
+        Procedure FreeNode(Const N:PNode; Const D:LongWord; Const Proc:TDisposeProc);
         
      Public
         {Method}
@@ -69,6 +69,7 @@ Type generic GenericNumPtrTrie<Tp> = NUMPTRTRIETYPE
         Property  High    : Int64 read MaxKey;
         
         Procedure Flush();
+        Procedure Flush(Const Proc:TDisposeProc);
         
         Constructor Create();
         Destructor  Destroy(); {$IFDEF NUMPTRTRIE_CLASS} Override; {$ENDIF}
@@ -82,7 +83,7 @@ implementation
 {$DEFINE DEPTH:=7}
 
 Procedure GenericNumPtrTrie.SetVal(Const K:QWA;D:LongWord;N:PNode;Const V:Tp);
-   Var E:PNode; C:LongWord; Vp:PTp;
+   Var E:PNode; C:LongWord;
    begin
    If (D < DEPTH) then begin
       If (N^.Nxt[K[D]] = NIL) then begin
@@ -93,10 +94,9 @@ Procedure GenericNumPtrTrie.SetVal(Const K:QWA;D:LongWord;N:PNode;Const V:Tp);
       SetVal(K, D+1, N^.Nxt[K[D]], V)
       end else begin
       If (N^.Nxt[K[D]] = NIL) then begin 
-         New(Vp); N^.Nxt[K[D]]:=Vp;
          N^.Chi += 1; Self.Vals += 1
          end;
-      PTp(N^.Nxt[K[D]])^:=V
+      Tp(N^.Nxt[K[D]]):=V
       end
    end;
 
@@ -124,8 +124,8 @@ Procedure GenericNumPtrTrie.RemVal(Const K:QWA; D:LongWord; N:PNode);
          end
       end else begin
       If (N^.Nxt[K[D]] <> NIL) then begin
-         Dispose(PTp(N^.Nxt[K[D]])); N^.Nxt[K[D]]:=NIL;
-         N^.Chi -= 1; Self.Vals -= 1
+         N^.Chi -= 1; Self.Vals -= 1;
+         N^.Nxt[K[D]]:=NIL
          end
       end
    end;
@@ -168,11 +168,8 @@ Function GenericNumPtrTrie.GetVal(Const K:QWA; D:LongWord; N:PNode):Tp;
       If (N^.Nxt[K[D]] <> NIL)
          then Exit(GetVal(K, D+1, N^.Nxt[K[D]]))
          else Exit(NIL)
-      end else begin
-      If (N^.Nxt[K[D]] <> NIL)
-         then Exit(PTp(N^.Nxt[K[D]])^)
-         else Exit(NIL)
-      end;
+      end else
+      Exit(Tp(N^.Nxt[K[D]]))
    end;
 
 Function GenericNumPtrTrie.GetVal(Key:Int64):Tp;
@@ -201,7 +198,7 @@ Procedure GenericNumPtrTrie.ToArray(Var A:TEntryArr; Var I:LongWord; N:PNode; D:
       end else begin
       For C:=NXTMIN to NXTMAX do
           If (N^.Nxt[C] <> NIL) then begin
-             A[I].Key := K+C; A[I].Val := PTp(N^.Nxt[C])^;
+             A[I].Key := K+C; A[I].Val := Tp(N^.Nxt[C]);
              I := I + 1
              end
       end
@@ -222,7 +219,7 @@ Function GenericNumPtrTrie.ToArray():TEntryArr;
    Exit(Res)
    end;
 
-Procedure GenericNumPtrTrie.FreeNode(N:PNode; D:LongWord);
+Procedure GenericNumPtrTrie.FreeNode(Const N:PNode; Const D:LongWord);
    Var I:LongWord;
    begin
    If (N^.Chi = 0) then Exit();
@@ -236,8 +233,28 @@ Procedure GenericNumPtrTrie.FreeNode(N:PNode; D:LongWord);
       end else begin
       For I:=NXTMIN to NXTMAX do
           If (N^.Nxt[I]<>NIL) then begin
-             Dispose(PTp(N^.Nxt[I])); N^.Nxt[I]:=NIL;
-             Self.Vals -= 1
+             N^.Nxt[I]:=NIL; Self.Vals -= 1
+             end
+      end;
+   N^.Chi:=0
+   end;
+
+Procedure GenericNumPtrTrie.FreeNode(Const N:PNode; Const D:LongWord; Const Proc:TDisposeProc);
+   Var I:LongWord;
+   begin
+   If (N^.Chi = 0) then Exit();
+   If (D < DEPTH) then begin
+      For I:=NXTMIN to NXTMAX do
+          If (N^.Nxt[I]<>NIL) then begin
+             FreeNode(N^.Nxt[I], D+1, Proc);
+             Dispose(PNode(N^.Nxt[I]));
+             N^.Nxt[I]:=NIL
+             end
+      end else begin
+      For I:=NXTMIN to NXTMAX do
+          If (N^.Nxt[I]<>NIL) then begin
+             Proc(Tp(N^.Nxt));
+             N^.Nxt[I]:=NIL; Self.Vals -= 1
              end
       end;
    N^.Chi:=0
@@ -255,6 +272,9 @@ Constructor GenericNumPtrTrie.Create();
 
 Procedure GenericNumPtrTrie.Flush();
    begin FreeNode(Root, 0) end;
+
+Procedure GenericNumPtrTrie.Flush(Const Proc:TDisposeProc);
+   begin FreeNode(Root, 0, Proc) end;
 
 Destructor GenericNumPtrTrie.Destroy();
    begin

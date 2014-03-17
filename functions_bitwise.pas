@@ -44,7 +44,7 @@ Function F_Not(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 Type TBitwiseFunc = Function(Const A,B:PValue):PValue;
 
-Function F_Bitwise(Bitwise:TBitwiseFunc; Const DoReturn:Boolean; Const Arg:PArrPVal):PValue; Inline;
+Function F_Bitwise(Const DoReturn:Boolean; Const Arg:PArrPVal; Const Bitwise:TBitwiseFunc):PValue;
    Var C:LongWord; V:PValue;
    begin
    If (Not DoReturn) or (Length(Arg^)<2)
@@ -59,12 +59,12 @@ Function F_Bitwise(Bitwise:TBitwiseFunc; Const DoReturn:Boolean; Const Arg:PArrP
    end;
 
 Function F_And(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_Bitwise(@ValAnd, DoReturn, Arg)) end;
+   begin Exit(F_Bitwise(DoReturn, Arg, @ValAnd)) end;
 
 Function F_Xor(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_Bitwise(@ValXor, DoReturn, Arg)) end;
+   begin Exit(F_Bitwise(DoReturn, Arg, @ValXor)) end;
 
 Function F_Or(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_Bitwise(@ValOr, DoReturn, Arg)) end;
+   begin Exit(F_Bitwise(DoReturn, Arg, @ValOr)) end;
 
 end.

@@ -15,6 +15,7 @@ Function F_Impl(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 
 implementation
+   uses Values_Typecast;
 
 Procedure Register(Const FT:PFunTrie);
    begin

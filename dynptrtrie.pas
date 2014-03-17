@@ -17,10 +17,12 @@ interface
    {$FATAL trie.pas: No OBJECT/CLASS symbol set!} {$ENDIF} {$ENDIF}
 
 Type generic GenericDynPtrTrie<Tp> = DYNPTRTRIETYPE
+     Public
+        Type
+        TDisposeProc = Procedure(Const V:Tp);
+        
      Private
         Type
-        PTp = ^Tp;
-        
         PNodeFan = ^TNodeFan;
         PNode = ^TNode;
         
@@ -32,7 +34,7 @@ Type generic GenericDynPtrTrie<Tp> = DYNPTRTRIETYPE
         TNode = record
            Fan : Array[0..15] of PNodeFan;
            Cnt : LongWord;
-           Val : PTp;
+           Val : Tp;
            end;
         
         Var
@@ -48,9 +50,11 @@ Type generic GenericDynPtrTrie<Tp> = DYNPTRTRIETYPE
         
         Function  NextKey(N:PNode;C:LongWord;Const K:AnsiString;Var R:AnsiString):Boolean;
         
-        Function  GetVal(N:PNode):Tp;
-        Function  RemVal(N:PNode):Tp;
-        Procedure FreeNode(N:PNode);
+        Function  GetVal(Const N:PNode):Tp;
+        Function  RemVal(Const N:PNode):Tp;
+        Procedure FreeNode(Const N:PNode);
+        Procedure FreeNode(Const N:PNode;Const Proc:TDisposeProc);
+     
      Public
         Type
         TEntry = record
@@ -76,9 +80,9 @@ Type generic GenericDynPtrTrie<Tp> = DYNPTRTRIETYPE
         Property  Count   : LongWord read Vals;
         
         Procedure Flush();
+        Procedure Flush(Const Proc:TDisposeProc);
         
         Constructor Create();
-        Constructor Create(Dummy1,Dummy2:Char);
         Destructor  Destroy(); {$IFDEF DYNPTRTRIE_CLASS} Override; {$ENDIF}
      end;
 
@@ -101,8 +105,8 @@ Procedure GenericDynPtrTrie.SetVal(Const K:AnsiString;P:LongWord;N:PNode;Const V
          end;
       SetVal(K,P+1,N^.Fan[F]^.Nod[I],V)
       end else begin
-      If (N^.Val = NIL) then begin New(N^.Val); Self.Vals+=1 end;
-      N^.Val^:=V
+      If (N^.Val = NIL) then Self.Vals += 1;
+      N^.Val:=V
       end
    end;
 
@@ -127,8 +131,8 @@ Procedure GenericDynPtrTrie.RemVal(Const K:AnsiString;P:LongWord;N:PNode);
          end
       end else begin
       If (N^.Val <> NIL) then begin
-         Dispose(N^.Val); N^.Val:=NIL;
-         Self.Vals -= 1 end
+         N^.Val:=NIL; Self.Vals -= 1
+         end
       end
    end;
 
@@ -158,11 +162,8 @@ Function GenericDynPtrTrie.GetVal(Const K:AnsiString;P:LongWord;N:PNode):Tp;
       F:=Ord(K[P]) div 16; I:=Ord(K[P]) mod 16;
       If (N^.Fan[F] = NIL) or (N^.Fan[F]^.Nod[I] = NIL) then Exit(NIL);
       Exit(GetVal(K,P+1,N^.Fan[F]^.Nod[I]))
-      end else begin
-      If (N^.Val <> NIL)
-         then Exit(N^.Val^)
-         else Exit(NIL)
-      end;
+      end else
+      Exit(N^.Val)
    end;
 
 Function GenericDynPtrTrie.GetVal(Const Key:AnsiString):Tp;
@@ -171,10 +172,10 @@ Function GenericDynPtrTrie.GetVal(Const Key:AnsiString):Tp;
 Function GenericDynPtrTrie.Empty():Boolean;
    begin Exit(Self.Vals = 0) end;
 
-Function GenericDynPtrTrie.GetVal(N:PNode):Tp;
+Function GenericDynPtrTrie.GetVal(Const N:PNode):Tp;
    Var F,I:LongWord;
    begin
-   If (N^.Val <> NIL) Then Exit(N^.Val^);
+   If (N^.Val <> NIL) Then Exit(N^.Val);
    If (N^.Cnt = 0) then Exit(NIL);
    For F:=0 to 15 do
        If (N^.Fan[F] <> NIL) then
@@ -186,11 +187,11 @@ Function GenericDynPtrTrie.GetVal(N:PNode):Tp;
 Function GenericDynPtrTrie.GetVal():Tp;
    begin Exit(GetVal(Root)) end;
 
-Function GenericDynPtrTrie.RemVal(N:PNode):Tp;
+Function GenericDynPtrTrie.RemVal(Const N:PNode):Tp;
    Var F,I:LongWord; R:Tp;
    begin
    If (N^.Val <> NIL) Then begin
-      R:=N^.Val^; Dispose(N^.Val); N^.Val:=NIL; Self.Vals-=1;
+      R:=N^.Val; N^.Val:=NIL; Self.Vals-=1;
       Exit(R)
       end;
    If (N^.Cnt = 0) then Exit(NIL);
@@ -265,7 +266,7 @@ Function GenericDynPtrTrie.ToArray():TEntryArr;
    Exit(Res)
    end;
 
-Procedure GenericDynPtrTrie.FreeNode(N:PNode);
+Procedure GenericDynPtrTrie.FreeNode(Const N:PNode);
    Var F,I:LongWord;
    begin
    If (N^.Cnt > 0) then begin
@@ -282,7 +283,29 @@ Procedure GenericDynPtrTrie.FreeNode(N:PNode);
              end;
       N^.Cnt:=0;
       end;
-   If (N^.Val <> NIL) then begin Dispose(N^.Val); Self.Vals-=1 end
+   If (N^.Val <> NIL) then Self.Vals -= 1
+   end;
+
+Procedure GenericDynPtrTrie.FreeNode(Const N:PNode;Const Proc:TDisposeProc);
+   Var F,I:LongWord;
+   begin
+   If (N^.Cnt > 0) then begin
+      For F:=0 to 15 do
+          If (N^.Fan[F]<>NIL) then begin
+             If (N^.Fan[F]^.Cnt > 0) then
+                For I:=0 to 15 do 
+                    If (N^.Fan[F]^.Nod[I] <> NIL) then begin
+                       FreeNode(N^.Fan[F]^.Nod[I],Proc);
+                       Dispose(N^.Fan[F]^.Nod[I])
+                       end;
+             Dispose(N^.Fan[F]);
+             N^.Fan[F]:=NIL
+             end;
+      N^.Cnt:=0;
+      end;
+   If (N^.Val <> NIL) then begin
+      Proc(N^.Val); Self.Vals-=1
+      end
    end;
 
 Constructor GenericDynPtrTrie.Create();
@@ -294,17 +317,11 @@ Constructor GenericDynPtrTrie.Create();
    Self.Vals:=0
    end;
 
-Constructor GenericDynPtrTrie.Create(Dummy1,Dummy2:Char);
-   Var C:LongWord;
-   begin
-   {$IFDEF DYNPTRTRIE_CLASS} Inherited Create(); {$ENDIF}
-   New(Root); Root^.Cnt:=0; Root^.Val:=NIL;
-   For C:=0 to 15 do Root^.Fan[C]:=NIL;
-   Self.Vals:=0
-   end;
-
 Procedure GenericDynPtrTrie.Flush();
-   begin FreeNode(Root) end;
+   begin FreeNode(Root); Root^.Val := NIL end;
+
+Procedure GenericDynPtrTrie.Flush(Const Proc:TDisposeProc);
+   begin FreeNode(Root,Proc); Root^.Val := NIL end;
 
 Destructor GenericDynPtrTrie.Destroy();
    begin

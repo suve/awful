@@ -9,12 +9,14 @@ Procedure Register(Const FT:PFunTrie);
 
 Function F_(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
+Var FuncInfo_NIL : TFuncInfo;
+
 implementation
 
 Procedure Register(Const FT:PFunTrie);
    begin
-   //FT^.SetVal('', @F_);
-   FT^.SetVal('nil', MkFunc(@F_))
+   FT^.SetVal('nil', MkFunc(@F_));
+   SetFuncInfo(FuncInfo_NIL, @F_, REF_CONST)
    end;
 
 Function F_(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;

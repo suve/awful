@@ -15,7 +15,7 @@ Function ValLt(Const A,B:PValue):Boolean;
 Function ValLe(Const A,B:PValue):Boolean;
 
 implementation
-   uses SysUtils;
+   uses SysUtils, Convert;
 
 Function ValSeq(Const A,B:PValue):Boolean;
    begin

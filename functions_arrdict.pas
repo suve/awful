@@ -8,20 +8,32 @@ interface
 Procedure Register(Const FT:PFunTrie);
 
 Function F_array(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_dict(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+
 Function F_array_count(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_array_empty(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-Function F_array_flush(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-Function F_array_print(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+
+Function F_array_qsort(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+
+Function F_array_min(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_array_max(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+
+Function F_array_intSum(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_array_fltSum(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+
 Function F_array_contains_eq(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_array_contains_seq(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
-Function F_dict(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_array_flush(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_array_print(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+
 Function F_dict_nextkey(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_dict_keys(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_dict_values(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 implementation
-   uses Values_Compare, EmptyFunc, Globals;
+   uses Values_Compare, Values_Typecast, Convert,
+        EmptyFunc, Globals;
 
 Type TCompareFunc = Function(Const A,B:PValue):Boolean;
 
@@ -29,12 +41,19 @@ Procedure Register(Const FT:PFunTrie);
    begin
    // array functions, bitches!
    FT^.SetVal('arr',MkFunc(@F_array));
+   FT^.SetVal('arr-min',MkFunc(@F_array_min));
+   FT^.SetVal('arr-max',MkFunc(@F_array_max));
+   FT^.SetVal('arr-qsort',MkFunc(@F_array_qsort,REF_MODIF));
    // dict funtions
    FT^.SetVal('dict',MkFunc(@F_dict));
    FT^.SetVal('dict-keys',MkFunc(@F_dict_keys));
    FT^.SetVal('dict-values',MkFunc(@F_dict_values));
    FT^.SetVal('dict-nextkey',MkFunc(@F_dict_nextkey));
    // arr+dic functions
+   FT^.SetVal( 'arr-isum',MkFunc(@F_array_intSum));
+   FT^.SetVal('dict-isum',MkFunc(@F_array_intSum));
+   FT^.SetVal( 'arr-fsum',MkFunc(@F_array_fltSum));
+   FT^.SetVal('dict-fsum',MkFunc(@F_array_fltSum));
    FT^.SetVal( 'arr-flush',MkFunc(@F_array_flush,REF_MODIF));
    FT^.SetVal('dict-flush',MkFunc(@F_array_flush,REF_MODIF));
    FT^.SetVal( 'arr-count',MkFunc(@F_array_count));
@@ -203,7 +222,7 @@ Function F_array_flush(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    If (DoReturn) then Exit(NewVal(VT_INT,R)) else Exit(NIL)
    end;
 
-Function F_array_contains(Const DoReturn:Boolean; Const Arg:PArrPVal; Cmpr:TCompareFunc):PValue; Inline;
+Function F_array_contains(Const DoReturn:Boolean; Const Arg:PArrPVal; Const Cmpr:TCompareFunc):PValue; Inline;
    Var C,I,Lo,Hi:LongInt; Cont:Array of TBool; Res:Boolean;
        Arr:PArray; AEA:TArray.TEntryArr;
        Dic:PDict; DEA:TDict.TEntryArr;
@@ -242,6 +261,95 @@ Function F_array_contains_eq(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 Function F_array_contains_seq(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_array_contains(DoReturn, Arg, @Values_Compare.ValSeq)) end;
+
+Function qsort(Var Arr:TArray.TEntryArr; Const Min,Max:QWord):QWord;
+   Var Piv,Pos:QWord; pivval : PValue;
+   begin
+   Pos := Min; Piv := Max; pivval := Arr[Max].Val; Result := 0;
+   While (Pos <> Piv) do
+      If (ValGt(Arr[Pos].Val,pivval)) then begin
+         Arr[Piv].Val := Arr[Pos].Val;
+         Piv -= 1; Result += 3;
+         Arr[Pos].Val := Arr[Piv].Val;
+         Arr[Piv].Val := pivval
+         end else Pos += 1;
+   
+   If ((Pos - Min) > 1) then Result += qsort(Arr,Min,Pos-1);
+   If ((Max - Pos) > 1) then Result -= qsort(Arr,Pos+1,Max)
+   end;
+
+Function F_array_qsort(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   Var C,I,Cnt:LongWord; Swp:QWord; Arr:PArray; Ent:TArray.TEntryArr;
+   begin Swp := 0;
+   If (Length(Arg^) > 0) then
+      For C:=0 to High(Arg^) do begin
+         If (Arg^[C]^.Typ = VT_ARR) then begin
+            Arr := PArray(Arg^[C]^.Ptr);
+            Cnt := Arr^.Count;
+            If (Cnt > 0) then begin
+               Ent := Arr^.ToArray();
+               Swp += qsort(Ent,0,Cnt-1);
+               For I:=0 to (Cnt-1) do
+                  Arr^.SetVal(Ent[I].Key,Ent[I].Val)
+               end end;
+         If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
+         end;
+   If (DoReturn) then Exit(NewVal(VT_INT, Swp))
+                 else Exit(NIL)
+   end;
+
+Function F_array_edgy(Const DoReturn:Boolean; Const Arg:PArrPVal; Const Cmpr:TCompareFunc):PValue;
+   
+   Function Fork(Const Condition:Boolean; Const TrueVal,FalseVal:LongWord):LongWord; Inline;
+      begin If (Condition) then Result:=TrueVal else Result:=FalseVal end;
+   
+   Var Ent:TArray.TEntryArr; C,I,Cnt:LongWord; V:PValue; Arr:PArray;
+   begin 
+   If (Not DoReturn) then Exit(F_(DoReturn, Arg)) else V := NIL;
+   If (Length(Arg^) > 0) then
+      For C:=0 to High(Arg^) do
+         If (Arg^[C]^.Typ = VT_ARR) then begin
+            Arr := PArray(Arg^[C]^.Ptr);
+            Cnt := Arr^.Count;
+            If (Cnt > 0) then begin
+               Ent := Arr^.ToArray();
+               If (V = NIL) then V:=Ent[0].Val;
+               For I:=Fork(V=NIL,1,0) to (Cnt-1) do
+                  If (Cmpr(Ent[I].Val,V)) then V:=Ent[I].Val
+            end end;
+   If (V <> NIL) then V := CopyVal(V); F_(False, Arg);
+   Exit(V)
+   end;
+
+Function F_array_min(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   begin Exit(F_array_edgy(DoReturn, Arg, @ValLt)) end;
+   
+Function F_array_max(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   begin Exit(F_array_edgy(DoReturn, Arg, @ValGt)) end;
+
+Function F_array_intSum(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   {$DEFINE __FPC_TYPE__   := QInt     }
+   {$DEFINE __AWFUL_TYPE__ := VT_INT   }
+   {$DEFINE __CAST_FUNC__  := ValAsInt }
+   
+   {$INCLUDE functions_arrdict-sum.inc}
+   
+   {$UNDEF __FPC_TYPE__   }
+   {$UNDEF __AWFUL_TYPE__ }
+   {$UNDEF __CAST_FUNC__  }
+   end;
+
+Function F_array_fltSum(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   {$DEFINE __FPC_TYPE__   := TFloat   }
+   {$DEFINE __AWFUL_TYPE__ := VT_FLO   }
+   {$DEFINE __CAST_FUNC__  := ValAsFlo }
+   
+   {$INCLUDE functions_arrdict-sum.inc}
+   
+   {$UNDEF __FPC_TYPE__   }
+   {$UNDEF __AWFUL_TYPE__ }
+   {$UNDEF __CAST_FUNC__  }
+   end;
 
 Function F_array_print(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C,I:LongWord; R:Boolean; S:AnsiString;

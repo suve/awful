@@ -23,7 +23,9 @@ Function F_sizeof(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_typeof(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 implementation
-   uses SysUtils, Math, EmptyFunc, CoreFunc, Globals;
+   uses SysUtils, Math,
+        EmptyFunc, CoreFunc, Globals,
+        Convert, Values_Typecast;
 
 Procedure Register(Const FT:PFunTrie);
    begin
@@ -108,14 +110,15 @@ Function F_HexCase(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
          else Vl := 0
          end;
       Case Vl of
-         +1: Values.HexCase(CASE_UPPER);
-         -1: Values.HexCase(CASE_LOWER)
+         +1: Convert.HexCase(CASE_UPPER);
+         -1: Convert.HexCase(CASE_LOWER)
          end;
       F_(False, Arg)
       end;
    If (DoReturn) then
-      If (HexCase()) then Exit(NewVal(VT_STR,'upper'))
-                     else Exit(NewVal(VT_STR,'lower'))
+      If (Convert.HexCase())
+         then Exit(NewVal(VT_STR,'upper'))
+         else Exit(NewVal(VT_STR,'lower'))
       else Exit(NIL)
    end;
 

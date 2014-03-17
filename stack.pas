@@ -30,7 +30,7 @@ Type ExEmptyStack = class(Exception);
         Ptr : PNode;
         Size : LongWord;
      Public
-        Procedure Push(Val:Tp);
+        Procedure Push(Const Val:Tp);
         Function  Peek(Depth:LongInt):Tp;
         Function  Peek():Tp;
         Function  Pop():Tp;
@@ -45,7 +45,7 @@ Type ExEmptyStack = class(Exception);
 
 implementation
 
-Procedure GenericStack.Push(Val:Tp);
+Procedure GenericStack.Push(Const Val:Tp);
    Var N:PNode;
    begin
    New(N); N^.Val:=Val; N^.Nxt:=Ptr;

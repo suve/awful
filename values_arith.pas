@@ -14,7 +14,7 @@ Procedure ValMod(Const A,B:PValue);
 Procedure ValPow(Const A,B:PValue);
 
 implementation
-   uses SysUtils, Math;
+   uses SysUtils, Math, Convert;
 
 Procedure ValSet_ArrDict(Const A,B:PValue);
    Var AArr,BArr:PArray; AEntA,BEntA:TArray.TEntryArr;
@@ -168,360 +168,333 @@ Procedure ValArith_ArrDict(Proc:TArithProc;A,B:PValue);
          end end
    end end;
 
+{$DEFINE __I__ := PQInt (A^.Ptr)^ }
+{$DEFINE __F__ := PFloat(A^.Ptr)^ }
+{$DEFINE __S__ := PStr  (A^.Ptr)^ }
+{$DEFINE __L__ := PBool (A^.Ptr)^ }
+{$DEFINE __U__ := PUTF  (A^.Ptr)^ }
+
 Procedure ValSet(Const A,B:PValue);
-   Var I:PQInt; S:PStr; L:PBoolean; F:PFloat; U:PUTF;
    begin
    Case (A^.Typ) of
       VT_INT .. VT_BIN:
-         begin
-         I := PQInt(A^.Ptr);
          Case (B^.Typ) of
             VT_INT .. VT_BIN: 
-               (I^):=(PQInt(B^.Ptr)^);
+               __I__:=(PQInt(B^.Ptr)^);
             VT_FLO:
-               (I^):=Trunc((PFloat(B^.Ptr)^));
+               __I__:=Trunc((PFloat(B^.Ptr)^));
             VT_STR:
-               (I^):=StrToNum(PStr(B^.Ptr)^,A^.Typ);
+               __I__:=StrToNum(PStr(B^.Ptr)^,A^.Typ);
             VT_UTF:
-               (I^):=PUTF(B^.Ptr)^.ToInt(IntBase(A^.Typ));
+               __I__:=PUTF(B^.Ptr)^.ToInt(IntBase(A^.Typ));
             VT_ARR:
-               (I^):=PArray(B^.Ptr)^.Count;
+               __I__:=PArray(B^.Ptr)^.Count;
             VT_DIC:
-               (I^):=PDict(B^.Ptr)^.Count;
+               __I__:=PDict(B^.Ptr)^.Count;
             VT_BOO:
-               (I^):=BoolToInt(PBool(B^.Ptr)^);
+               __I__:=BoolToInt(PBool(B^.Ptr)^);
             else
-               (I^) := 0
-         end end;
+               __I__:= 0
+         end;
       VT_FLO: 
-         begin
-         F := PFloat(A^.Ptr);
          Case (B^.Typ) of
             VT_INT .. VT_BIN: 
-               (F^):=(PQInt(B^.Ptr)^);
+               __F__:=(PQInt(B^.Ptr)^);
             VT_FLO:
-               (F^):=(PFloat(B^.Ptr)^);
+               __F__:=(PFloat(B^.Ptr)^);
             VT_STR:
-               (F^):=StrToReal(PStr(B^.Ptr)^);
+               __F__:=StrToReal(PStr(B^.Ptr)^);
             VT_UTF:
-               (F^):=PUTF(B^.Ptr)^.ToFloat();
+               __F__:=PUTF(B^.Ptr)^.ToFloat();
             VT_ARR:
-               (F^):=PArray(B^.Ptr)^.Count;
+               __F__:=PArray(B^.Ptr)^.Count;
             VT_DIC:
-               (F^):=PDict(B^.Ptr)^.Count;
+               __F__:=PDict(B^.Ptr)^.Count;
             VT_BOO:
-               (F^):=BoolToInt(PBool(B^.Ptr)^);
+               __F__:=BoolToInt(PBool(B^.Ptr)^);
             else
-               (F^):=0.0
-         end end;
+               __F__:=0.0
+         end;
       VT_STR:
-         begin
-         S:=PStr(A^.Ptr);
          Case (B^.Typ) of
             VT_INT:
-               (S^):=IntToStr(PQInt(B^.Ptr)^);
+               __S__:=IntToStr(PQInt(B^.Ptr)^);
             VT_HEX:
-               (S^):=HexToStr(PQInt(B^.Ptr)^);
+               __S__:=HexToStr(PQInt(B^.Ptr)^);
             VT_OCT:
-               (S^):=OctToStr(PQInt(B^.Ptr)^);
+               __S__:=OctToStr(PQInt(B^.Ptr)^);
             VT_BIN:
-               (S^):=BinToStr(PQInt(B^.Ptr)^);
+               __S__:=BinToStr(PQInt(B^.Ptr)^);
             VT_FLO:
-               (S^):=FloatToStr(PFloat(B^.Ptr)^);
+               __S__:=FloatToStr(PFloat(B^.Ptr)^);
             VT_STR:
-               (S^):=(PStr(B^.Ptr)^);
+               __S__:=(PStr(B^.Ptr)^);
             VT_UTF:
-               (S^):=PUTF(B^.Ptr)^.ToAnsiString();
+               __S__:=PUTF(B^.Ptr)^.ToAnsiString();
             VT_ARR:
-               (S^):=IntToStr(PArray(B^.Ptr)^.Count);
+               __S__:=IntToStr(PArray(B^.Ptr)^.Count);
             VT_DIC:
-               (S^):=IntToStr(PDict(B^.Ptr)^.Count);
+               __S__:=IntToStr(PDict(B^.Ptr)^.Count);
             VT_BOO:
-               If (PBoolean(B^.Ptr)^) then (S^):='TRUE' else (S^):='FALSE';
+               If (PBoolean(B^.Ptr)^) then __S__:='TRUE' else __S__:='FALSE';
             else
-               (S^):=''
-         end end;
+               __S__:=''
+         end;
       VT_UTF:
-         begin
-         U:=PUTF(A^.Ptr);
          Case (B^.Typ) of
             VT_INT:
-               U^.SetTo(IntToStr(PQInt(B^.Ptr)^));
+               __U__.SetTo(IntToStr(PQInt(B^.Ptr)^));
             VT_HEX:
-               U^.SetTo(HexToStr(PQInt(B^.Ptr)^));
+               __U__.SetTo(HexToStr(PQInt(B^.Ptr)^));
             VT_OCT:
-               U^.SetTo(OctToStr(PQInt(B^.Ptr)^));
+               __U__.SetTo(OctToStr(PQInt(B^.Ptr)^));
             VT_BIN:
-               U^.SetTo(BinToStr(PQInt(B^.Ptr)^));
+               __U__.SetTo(BinToStr(PQInt(B^.Ptr)^));
             VT_FLO:
-               U^.SetTo(FloatToStr(PFloat(B^.Ptr)^));
+               __U__.SetTo(FloatToStr(PFloat(B^.Ptr)^));
             VT_STR:
-               U^.SetTo(PStr(B^.Ptr)^);
+               __U__.SetTo(PStr(B^.Ptr)^);
             VT_UTF:
-               U^.SetTo(PUTF(B^.Ptr));
+               __U__.SetTo(PUTF(B^.Ptr));
             VT_ARR:
-               U^.SetTo(IntToStr(PArray(B^.Ptr)^.Count));
+               __U__.SetTo(IntToStr(PArray(B^.Ptr)^.Count));
             VT_DIC:
-               U^.SetTo(IntToStr(PDict(B^.Ptr)^.Count));
+               __U__.SetTo(IntToStr(PDict(B^.Ptr)^.Count));
             VT_BOO:
-               If (PBoolean(B^.Ptr)^) then U^.SetTo('TRUE') else U^.SetTo('FALSE');
+               If (PBoolean(B^.Ptr)^) then __U__.SetTo('TRUE') else __U__.SetTo('FALSE');
             else
-               U^.Clear()
-         end end;
+               __U__.Clear()
+         end;
       VT_BOO: 
-         begin
-         L:=PBool(A^.Ptr);
          Case (B^.Typ) of 
             VT_INT .. VT_BIN: 
-               (L^):=(PQInt(B^.Ptr)^<>0);
+               __L__:=(PQInt(B^.Ptr)^<>0);
             VT_FLO:
-               (L^):=(Abs(PFloat(B^.Ptr)^)>=1.0);
+               __L__:=(Abs(PFloat(B^.Ptr)^)>=1.0);
             VT_STR:
-               (L^):=StrToBoolDef(PStr(B^.Ptr)^,FALSE);
+               __L__:=StrToBoolDef(PStr(B^.Ptr)^,FALSE);
             VT_UTF:
-               (L^):=StrToBoolDef(PUTF(B^.Ptr)^.ToAnsiString(),FALSE);
+               __L__:=StrToBoolDef(PUTF(B^.Ptr)^.ToAnsiString(),FALSE);
             VT_ARR:
-               (L^):=(Not PArray(B^.Ptr)^.Empty);
+               __L__:=(Not PArray(B^.Ptr)^.Empty);
             VT_DIC:
-               (L^):=(Not PDict(B^.Ptr)^.Empty);
+               __L__:=(Not PDict(B^.Ptr)^.Empty);
             VT_BOO:
-               (L^):=(PBool(B^.Ptr)^);
+               __L__:=(PBool(B^.Ptr)^);
             else
-               (L^):=FALSE
-         end end;
+               __L__:=FALSE
+         end;
       VT_ARR: ValSet_ArrDict(A,B);
       VT_DIC: ValSet_ArrDict(A,B);
+      VT_FIL:
+         If (B^.Typ = VT_FIL) then A^.Ptr := B^.Ptr
    end end;
 
 
 Procedure ValAdd(Const A,B:PValue);
-   Var  I:PQInt; S:PStr; L:PBoolean; F:PFloat; U:PUTF;
    begin
    Case (A^.Typ) of
       VT_INT .. VT_BIN:
-         begin
-         I:=PQInt(A^.Ptr);
          Case (B^.Typ) of
             VT_INT .. VT_BIN: 
-               (I^)+=(PQInt(B^.Ptr)^);
+               __I__+=(PQInt(B^.Ptr)^);
             VT_FLO:
-               (I^):=Trunc((I^)+(PFloat(B^.Ptr)^));
+               __I__:=Trunc(__I__+(PFloat(B^.Ptr)^));
             VT_STR:
-               (I^)+=StrToNum(PStr(B^.Ptr)^,A^.Typ);
+               __I__+=StrToNum(PStr(B^.Ptr)^,A^.Typ);
             VT_UTF:
-               (I^)+=PUTF(B^.Ptr)^.ToInt(IntBase(A^.Typ));
+               __I__+=PUTF(B^.Ptr)^.ToInt(IntBase(A^.Typ));
             VT_BOO:
-               If (PBool(B^.Ptr)^) then (I^)+=1;
+               If (PBool(B^.Ptr)^) then __I__+=1;
             VT_ARR:
-               (I^)+=PArr(B^.Ptr)^.Count;
+               __I__+=PArr(B^.Ptr)^.Count;
             VT_DIC:
-               (I^)+=PDict(B^.Ptr)^.Count;
-         end end;
+               __I__+=PDict(B^.Ptr)^.Count;
+         end;
       VT_FLO:
-         begin
-         F:=PFloat(A^.Ptr);
          Case (B^.Typ) of
             VT_INT .. VT_BIN: 
-               (F^)+=(PQInt(B^.Ptr)^);
+               __F__+=(PQInt(B^.Ptr)^);
             VT_FLO:
-               (F^)+=(PFloat(B^.Ptr)^);
+               __F__+=(PFloat(B^.Ptr)^);
             VT_STR:
-               (F^)+=StrToReal(PStr(B^.Ptr)^);
+               __F__+=StrToReal(PStr(B^.Ptr)^);
             VT_UTF:
-               (F^)+=PUTF(B^.Ptr)^.ToFloat();
+               __F__+=PUTF(B^.Ptr)^.ToFloat();
             VT_BOO:
-               If (PBool(B^.Ptr)^) then (F^)+=1;
+               If (PBool(B^.Ptr)^) then __F__+=1;
             VT_ARR:
-               (F^)+=PArr(B^.Ptr)^.Count;
+               __F__+=PArr(B^.Ptr)^.Count;
             VT_DIC:
-               (F^)+=PDict(B^.Ptr)^.Count;
-         end end;
+               __F__+=PDict(B^.Ptr)^.Count;
+         end;
       VT_STR:
-         begin
-         S:=PStr(A^.Ptr);
          Case (B^.Typ) of
             VT_INT:
-               (S^)+=IntToStr(PQInt(B^.Ptr)^);
+               __S__+=IntToStr(PQInt(B^.Ptr)^);
             VT_HEX:
-               (S^)+=HexToStr(PQInt(B^.Ptr)^);
+               __S__+=HexToStr(PQInt(B^.Ptr)^);
             VT_OCT:
-               (S^)+=OctToStr(PQInt(B^.Ptr)^);
+               __S__+=OctToStr(PQInt(B^.Ptr)^);
             VT_BIN:
-               (S^)+=BinToStr(PQInt(B^.Ptr)^);
+               __S__+=BinToStr(PQInt(B^.Ptr)^);
             VT_FLO:
-               (S^)+=FloatToStr(PFloat(B^.Ptr)^);
+               __S__+=FloatToStr(PFloat(B^.Ptr)^);
             VT_STR:
-               (S^)+=(PStr(B^.Ptr)^);
+               __S__+=(PStr(B^.Ptr)^);
             VT_UTF:
-               (S^)+=PUTF(B^.Ptr)^.ToAnsiString();
+               __S__+=PUTF(B^.Ptr)^.ToAnsiString();
             VT_BOO:
-               If (PBool(B^.Ptr)^) then (S^)+='TRUE' else (S^)+='FALSE'
-         end end;
+               If (PBool(B^.Ptr)^) then __S__+='TRUE' else __S__+='FALSE'
+         end;
       VT_UTF:
-         begin
-         U:=PUTF(A^.Ptr);
          Case (B^.Typ) of
             VT_INT:
-               U^.Append(IntToStr(PQInt(B^.Ptr)^));
+               __U__.Append(IntToStr(PQInt(B^.Ptr)^));
             VT_HEX:
-               U^.Append(HexToStr(PQInt(B^.Ptr)^));
+               __U__.Append(HexToStr(PQInt(B^.Ptr)^));
             VT_OCT:
-               U^.Append(OctToStr(PQInt(B^.Ptr)^));
+               __U__.Append(OctToStr(PQInt(B^.Ptr)^));
             VT_BIN:
-               U^.Append(BinToStr(PQInt(B^.Ptr)^));
+               __U__.Append(BinToStr(PQInt(B^.Ptr)^));
             VT_FLO:
-               U^.Append(FloatToStr(PFloat(B^.Ptr)^));
+               __U__.Append(FloatToStr(PFloat(B^.Ptr)^));
             VT_STR:
-               U^.Append(PStr(B^.Ptr)^);
+               __U__.Append(PStr(B^.Ptr)^);
             VT_UTF:
-               U^.Append(PUTF(B^.Ptr));
+               __U__.Append(PUTF(B^.Ptr));
             VT_ARR:
-               U^.Append(IntToStr(PArray(B^.Ptr)^.Count));
+               __U__.Append(IntToStr(PArray(B^.Ptr)^.Count));
             VT_DIC:
-               U^.Append(IntToStr(PDict(B^.Ptr)^.Count));
+               __U__.Append(IntToStr(PDict(B^.Ptr)^.Count));
             VT_BOO:
-               If (PBoolean(B^.Ptr)^) then U^.Append('TRUE') else U^.Append('FALSE');
-         end end;
+               If (PBoolean(B^.Ptr)^) then __U__.Append('TRUE') else __U__.Append('FALSE');
+         end;
       VT_BOO:
-         begin
-         L:=PBool(A^.Ptr);
          Case (B^.Typ) of 
             VT_INT .. VT_BIN: 
-               (L^):=(L^) or (PQInt(B^.Ptr)^<>0);
+               __L__:=__L__ or (PQInt(B^.Ptr)^<>0);
             VT_FLO:
-               (L^):=(L^) or (Abs(PFloat(B^.Ptr)^)>=1.0);
+               __L__:=__L__ or (Abs(PFloat(B^.Ptr)^)>=1.0);
             VT_STR:
-               (L^):=(L^) or StrToBoolDef(PStr(B^.Ptr)^,FALSE);
+               __L__:=__L__ or StrToBoolDef(PStr(B^.Ptr)^,FALSE);
             VT_UTF:
-               (L^):=(L^) or StrToBoolDef(PUTF(B^.Ptr)^.ToAnsiString(),FALSE);
+               __L__:=__L__ or StrToBoolDef(PUTF(B^.Ptr)^.ToAnsiString(),FALSE);
             VT_BOO:
-               (L^):=(L^) or (PBool(B^.Ptr)^);
+               __L__:=__L__ or (PBool(B^.Ptr)^);
             VT_ARR:
-               (L^):=(L^) or (Not PArr(B^.Ptr)^.Empty);
+               __L__:=__L__ or (Not PArr(B^.Ptr)^.Empty);
             VT_DIC:
-               (L^):=(L^) or (Not PDict(B^.Ptr)^.Empty);
-         end end;
+               __L__:=__L__ or (Not PDict(B^.Ptr)^.Empty);
+         end;
       VT_ARR: ValArith_ArrDict(@ValAdd,A,B);
       VT_DIC: ValArith_ArrDict(@ValAdd,A,B);
    end end;
 
 
 Procedure ValSub(Const A,B:PValue);
-   Var  I:PQInt; L:PBoolean; F:PFloat;
    begin
    Case (A^.Typ) of
       VT_INT .. VT_BIN:
-         begin
-         I:=PQInt(A^.Ptr);
          Case (B^.Typ) of
             VT_INT .. VT_BIN: 
-               (I^)-=(PQInt(B^.Ptr)^);
+               __I__-=(PQInt(B^.Ptr)^);
             VT_FLO:
-               (I^):=Trunc((I^)-(PFloat(B^.Ptr)^));
+               __I__:=Trunc(__I__-(PFloat(B^.Ptr)^));
             VT_STR:
-               (I^)-=StrToNum(PStr(B^.Ptr)^,A^.Typ);
+               __I__-=StrToNum(PStr(B^.Ptr)^,A^.Typ);
             VT_UTF:
-               (I^)-=PUTF(B^.Ptr)^.ToInt(IntBase(A^.Typ));
+               __I__-=PUTF(B^.Ptr)^.ToInt(IntBase(A^.Typ));
             VT_BOO:
-               If (PBool(B^.Ptr)^) then (I^)-=1;
+               If (PBool(B^.Ptr)^) then __I__-=1;
             VT_ARR:
-               (I^)-=PArr(B^.Ptr)^.Count;
+               __I__-=PArr(B^.Ptr)^.Count;
             VT_DIC:
-               (I^)-=PDict(B^.Ptr)^.Count;
-         end end;
+               __I__-=PDict(B^.Ptr)^.Count;
+         end;
       VT_FLO:
-         begin
-         F:=PFloat(A^.Ptr);
          Case (B^.Typ) of
             VT_INT .. VT_BIN: 
-               (F^)-=(PQInt(B^.Ptr)^);
+               __F__-=(PQInt(B^.Ptr)^);
             VT_FLO:
-               (F^)-=(PFloat(B^.Ptr)^);
+               __F__-=(PFloat(B^.Ptr)^);
             VT_STR:
-               (F^)-=StrToReal(PStr(B^.Ptr)^);
+               __F__-=StrToReal(PStr(B^.Ptr)^);
             VT_UTF:
-               (F^)-=PUTF(B^.Ptr)^.ToFloat();
+               __F__-=PUTF(B^.Ptr)^.ToFloat();
             VT_BOO:
-               If (PBool(B^.Ptr)^) then (F^)-=1;
+               If (PBool(B^.Ptr)^) then __F__-=1;
             VT_ARR:
-               (F^)-=PArr(B^.Ptr)^.Count;
+               __F__-=PArr(B^.Ptr)^.Count;
             VT_DIC:
-               (F^)-=PDict(B^.Ptr)^.Count;
-         end end;
+               __F__-=PDict(B^.Ptr)^.Count;
+         end;
       VT_BOO:
-         begin
-         L:=PBool(A^.Ptr);
          Case (B^.Typ) of 
             VT_INT .. VT_BIN: 
-               (L^):=(L^) xor (PQInt(B^.Ptr)^<>0);
+               __L__:=__L__ xor (PQInt(B^.Ptr)^<>0);
             VT_FLO:
-               (L^):=(L^) xor (Abs(PFloat(B^.Ptr)^)>=1.0);
+               __L__:=__L__ xor (Abs(PFloat(B^.Ptr)^)>=1.0);
             VT_STR:
-               (L^):=(L^) xor StrToBoolDef(PStr(B^.Ptr)^,FALSE);
+               __L__:=__L__ xor StrToBoolDef(PStr(B^.Ptr)^,FALSE);
             VT_UTF:
-               (L^):=(L^) xor StrToBoolDef(PUTF(B^.Ptr)^.ToAnsiString,FALSE);
+               __L__:=__L__ xor StrToBoolDef(PUTF(B^.Ptr)^.ToAnsiString,FALSE);
             VT_BOO:
-               (L^):=(L^) xor (PBool(B^.Ptr)^);
+               __L__:=__L__ xor (PBool(B^.Ptr)^);
             VT_ARR:
-               (L^):=(L^) xor (Not PArr(B^.Ptr)^.Empty);
+               __L__:=__L__ xor (Not PArr(B^.Ptr)^.Empty);
             VT_DIC:
-               (L^):=(L^) xor (Not PDict(B^.Ptr)^.Empty);
-         end end;
+               __L__:=__L__ xor (Not PDict(B^.Ptr)^.Empty);
+         end;
       VT_ARR: ValArith_ArrDict(@ValSub,A,B);
       VT_DIC: ValArith_ArrDict(@ValSub,A,B);
    end end;
 
 
 Procedure ValMul(Const A,B:PValue);
-   Var  I:PQInt; S:PStr; L:PBoolean; F:PFloat; U:PUTF;
-        C,T,O:LongInt;
+   Var C,T,O:LongInt;
    begin
    Case (A^.Typ) of
       VT_INT .. VT_BIN:
-         begin
-         I:=PQInt(A^.Ptr);
          Case (B^.Typ) of
             VT_INT .. VT_BIN: 
-               (I^)*=(PQInt(B^.Ptr)^);
+               __I__*=(PQInt(B^.Ptr)^);
             VT_FLO:
-               (I^):=Trunc((I^)*(PFloat(B^.Ptr)^));
+               __I__:=Trunc(__I__*(PFloat(B^.Ptr)^));
             VT_STR:
-               (I^)*=StrToNum(PStr(B^.Ptr)^,A^.Typ);
+               __I__*=StrToNum(PStr(B^.Ptr)^,A^.Typ);
             VT_UTF:
-               (I^)*=PUTF(B^.Ptr)^.ToInt(IntBase(A^.Typ));
+               __I__*=PUTF(B^.Ptr)^.ToInt(IntBase(A^.Typ));
             VT_BOO:
-               If (Not PBool(B^.Ptr)^) then (I^):=0;
+               If (Not PBool(B^.Ptr)^) then __I__:=0;
             VT_ARR:
-               (I^)*=PArr(B^.Ptr)^.Count;
+               __I__*=PArr(B^.Ptr)^.Count;
             VT_DIC:
-               (I^)*=PDict(B^.Ptr)^.Count;
+               __I__*=PDict(B^.Ptr)^.Count;
             else
-               (I^):=0
-         end end;
+               __I__:=0
+         end;
       VT_FLO:
-         begin
-         F:=PFloat(A^.Ptr);
          Case (B^.Typ) of
             VT_INT .. VT_BIN: 
-               (F^)*=(PQInt(B^.Ptr)^);
+               __F__*=(PQInt(B^.Ptr)^);
             VT_FLO:
-               (F^)*=(PFloat(B^.Ptr)^);
+               __F__*=(PFloat(B^.Ptr)^);
             VT_STR:
-               (F^)*=StrToReal(PStr(B^.Ptr)^);
+               __F__*=StrToReal(PStr(B^.Ptr)^);
             VT_UTF:
-               (F^)*=PUTF(B^.Ptr)^.ToFloat();
+               __F__*=PUTF(B^.Ptr)^.ToFloat();
             VT_BOO:
-               If (Not PBool(B^.Ptr)^) then (F^):=0.0;
+               If (Not PBool(B^.Ptr)^) then __F__:=0.0;
             VT_ARR:
-               (F^)*=PArr(B^.Ptr)^.Count;
+               __F__*=PArr(B^.Ptr)^.Count;
             VT_DIC:
-               (F^)*=PDict(B^.Ptr)^.Count;
+               __F__*=PDict(B^.Ptr)^.Count;
             else
-               (F^):=0.0
-         end end;
+               __F__:=0.0
+         end;
       VT_STR:
          begin
-         S:=PStr(A^.Ptr);
          Case (B^.Typ) of
             VT_INT .. VT_BIN:
                T:=(PQInt(B^.Ptr)^);
@@ -540,13 +513,12 @@ Procedure ValMul(Const A,B:PValue);
             else 
                T:=0
             end;
-         If (T <= 0) then begin S^:=''; Exit() end;
-         O := Length(S^); T *= O; SetLength(S^, T);
-         For C:=(O+1) to T do S^[C] := S^[C-O]
+         If (T <= 0) then begin __S__:=''; Exit() end;
+         O := Length(__S__); T *= O; SetLength(__S__, T);
+         For C:=(O+1) to T do __S__[C] := __S__[C-O]
          end;
       VT_UTF:
          begin
-         U:=PUTF(A^.Ptr);
          Case (B^.Typ) of
             VT_INT .. VT_BIN:
                T:=(PQInt(B^.Ptr)^);
@@ -565,246 +537,229 @@ Procedure ValMul(Const A,B:PValue);
             else 
                T:=0
             end;
-         If (T <= 0) then U^.Clear()
-                     else U^.Multiply(T)
+         If (T <= 0) then __U__.Clear()
+                     else __U__.Multiply(T)
          end;
       VT_BOO:
-         begin
-         L:=PBool(A^.Ptr);
          Case (B^.Typ) of 
             VT_INT .. VT_BIN: 
-               (L^):=(L^) and (PQInt(B^.Ptr)^<>0);
+               __L__:=__L__ and (PQInt(B^.Ptr)^<>0);
             VT_FLO:
-               (L^):=(L^) and (Abs(PFloat(B^.Ptr)^)>=1.0);
+               __L__:=__L__ and (Abs(PFloat(B^.Ptr)^)>=1.0);
             VT_STR:
-               (L^):=(L^) and StrToBoolDef(PStr(B^.Ptr)^,FALSE);
+               __L__:=__L__ and StrToBoolDef(PStr(B^.Ptr)^,FALSE);
             VT_UTF:
-               (L^):=(L^) and StrToBoolDef(PUTF(B^.Ptr)^.ToAnsiString,FALSE);
+               __L__:=__L__ and StrToBoolDef(PUTF(B^.Ptr)^.ToAnsiString,FALSE);
             VT_BOO:
-               (L^):=(L^) and (PBool(B^.Ptr)^);
+               __L__:=__L__ and (PBool(B^.Ptr)^);
             VT_ARR:
-               (L^):=(L^) and (Not PArr(B^.Ptr)^.Empty);
+               __L__:=__L__ and (Not PArr(B^.Ptr)^.Empty);
             VT_DIC:
-               (L^):=(L^) and (Not PDict(B^.Ptr)^.Empty);
-         end end;
+               __L__:=__L__ and (Not PDict(B^.Ptr)^.Empty);
+         end;
       VT_ARR: ValArith_ArrDict(@ValMul,A,B);
       VT_DIC: ValArith_ArrDict(@ValMul,A,B);
    end end;
 
 
 Procedure ValDiv(Const A,B:PValue);
-   Var  I:PQInt; L:PBoolean; F:PFloat; tI:QInt; tF:TFloat;
+   Var  tI:QInt; tF:TFloat;
    begin
    Case (A^.Typ) of
       VT_INT .. VT_BIN:
-         begin
-         I:=PQInt(A^.Ptr);
          Case (B^.Typ) of
             VT_INT .. VT_BIN: 
-               If (PQInt(B^.Ptr)^<>0) then (I^):=I^ div (PQInt(B^.Ptr)^)
-                                      else (I^):=0;
+               If (PQInt(B^.Ptr)^<>0) then __I__:=__I__ div (PQInt(B^.Ptr)^)
+                                      else __I__:=0;
             VT_FLO:
-               If (PFloat(B^.Ptr)^<>0.0) then (I^):=Trunc((I^)/(PFloat(B^.Ptr)^))
-                                         else (I^):=0;
+               If (PFloat(B^.Ptr)^<>0.0) then __I__:=Trunc(__I__/(PFloat(B^.Ptr)^))
+                                         else __I__:=0;
             VT_STR:
                begin
                tI:=StrToNum(PStr(B^.Ptr)^,A^.Typ);
-               If (tI<>0) then (I^):=(I^ div tI) else (I^):=0
+               If (tI<>0) then __I__:=(__I__ div tI) else __I__:=0
                end;
             VT_UTF:
                begin
                tI:=PUTF(B^.Ptr)^.ToInt(IntBase(A^.Typ));
-               If (tI<>0) then (I^):=(I^ div tI) else (I^):=0
+               If (tI<>0) then __I__:=(__I__ div tI) else __I__:=0
                end;
             VT_BOO:
-               If (Not PBool(B^.Ptr)^) then (I^):=0;
+               If (Not PBool(B^.Ptr)^) then __I__:=0;
             VT_ARR:
-               If (Not PArr(B^.Ptr)^.Empty) then (I^):=I^ div PArr(B^.Ptr)^.Count
-                                            else (I^):=0;
+               If (Not PArr(B^.Ptr)^.Empty) then __I__:=__I__ div PArr(B^.Ptr)^.Count
+                                            else __I__:=0;
             VT_DIC:
-               If (Not PDict(B^.Ptr)^.Empty) then (I^):=I^ div PDict(B^.Ptr)^.Count
-                                             else (I^):=0;
+               If (Not PDict(B^.Ptr)^.Empty) then __I__:=__I__ div PDict(B^.Ptr)^.Count
+                                             else __I__:=0;
             else
-               (I^):=0
-         end end;
+               __I__:=0
+         end;
       VT_FLO:
-         begin
-         F:=PFloat(A^.Ptr);
          Case (B^.Typ) of
             VT_INT .. VT_BIN: 
-               If (PQInt(B^.Ptr)^<>0) then (F^)/=(PQInt(B^.Ptr)^)
-                                      else (F^):=0.0;
+               If (PQInt(B^.Ptr)^<>0) then __F__/=(PQInt(B^.Ptr)^)
+                                      else __F__:=0.0;
             VT_FLO:
-               If (PFloat(B^.Ptr)^<>0.0) then (F^)/=(PFloat(B^.Ptr)^)
-                                         else (F^):=0.0;
+               If (PFloat(B^.Ptr)^<>0.0) then __F__/=(PFloat(B^.Ptr)^)
+                                         else __F__:=0.0;
             VT_STR:
                begin
                tF:=StrToReal(PStr(B^.Ptr)^);
-               If (tF<>0.0) then (F^)/=tF else (F^):=0.0
+               If (tF<>0.0) then __F__/=tF else __F__:=0.0
                end;
             VT_UTF:
                begin
                tF:=PUTF(B^.Ptr)^.ToFloat();
-               If (tF<>0.0) then (F^)/=tF else (F^):=0.0
+               If (tF<>0.0) then __F__/=tF else __F__:=0.0
                end;
             VT_BOO:
-               If (Not PBool(B^.Ptr)^) then (F^):=0.0;
+               If (Not PBool(B^.Ptr)^) then __F__:=0.0;
             VT_ARR:
-               If (Not PArr(B^.Ptr)^.Empty) then (F^)/=PArr(B^.Ptr)^.Count
-                                            else (F^):=0;
+               If (Not PArr(B^.Ptr)^.Empty) then __F__/=PArr(B^.Ptr)^.Count
+                                            else __F__:=0;
             VT_DIC:
-               If (Not PDict(B^.Ptr)^.Empty) then (F^)/=PDict(B^.Ptr)^.Count
-                                             else (F^):=0;
+               If (Not PDict(B^.Ptr)^.Empty) then __F__/=PDict(B^.Ptr)^.Count
+                                             else __F__:=0;
             else
-               (F^):=0.0
-         end end;
+               __F__:=0.0
+         end;
       VT_BOO:
-         begin
-         L:=PBool(A^.Ptr);
          Case (B^.Typ) of 
             VT_INT .. VT_BIN: 
-               (L^):=(L^) xor (PQInt(B^.Ptr)^<>0);
+               __L__:=__L__ xor (PQInt(B^.Ptr)^<>0);
             VT_FLO:
-               (L^):=(L^) xor (Abs(PFloat(B^.Ptr)^)>=1.0);
+               __L__:=__L__ xor (Abs(PFloat(B^.Ptr)^)>=1.0);
             VT_STR:
-               (L^):=(L^) xor StrToBoolDef(PStr(B^.Ptr)^,FALSE);
+               __L__:=__L__ xor StrToBoolDef(PStr(B^.Ptr)^,FALSE);
             VT_UTF:
-               (L^):=(L^) xor StrToBoolDef(PUTF(B^.Ptr)^.ToAnsiString(),FALSE);
+               __L__:=__L__ xor StrToBoolDef(PUTF(B^.Ptr)^.ToAnsiString(),FALSE);
             VT_BOO:
-               (L^):=(L^) xor (PBool(B^.Ptr)^);
+               __L__:=__L__ xor (PBool(B^.Ptr)^);
             VT_ARR:
-               (L^):=(L^) xor (Not PArr(B^.Ptr)^.Empty);
+               __L__:=__L__ xor (Not PArr(B^.Ptr)^.Empty);
             VT_DIC:
-               (L^):=(L^) xor (Not PDict(B^.Ptr)^.Empty);
-         end end;
+               __L__:=__L__ xor (Not PDict(B^.Ptr)^.Empty);
+         end;
       VT_ARR: ValArith_ArrDict(@ValDiv,A,B);
       VT_DIC: ValArith_ArrDict(@ValDiv,A,B);
    end end;
 
 
 Procedure ValMod(Const A,B:PValue);
-   Var  I:PQInt; F:PFloat; tF:TFloat; tI:QInt;
+   Var  tF:TFloat; tI:QInt;
    begin
    Case (A^.Typ) of
       VT_INT .. VT_BIN:
-         begin
-         I:=PQInt(A^.Ptr);
          Case (B^.Typ) of
             VT_INT .. VT_BIN: 
                If (PQInt(B^.Ptr)^ <> 0)
-                  then (I^):=I^ mod (PQInt(B^.Ptr)^)
-                  else (I^):=0;
+                  then __I__:=__I__ mod (PQInt(B^.Ptr)^)
+                  else __I__:=0;
             VT_FLO:
                If (PFloat(B^.Ptr)^ <> 0.0)
-                  then (I^):=I^ - Trunc(Trunc(I^ / PFloat(B^.Ptr)^) * PFloat(B^.Ptr)^)
-                  else (I^):=0;
+                  then __I__:=__I__ - Trunc(Trunc(__I__ / PFloat(B^.Ptr)^) * PFloat(B^.Ptr)^)
+                  else __I__:=0;
             VT_STR: begin
                tI:=StrToNum(PStr(B^.Ptr)^,A^.Typ);
-               If (tI <> 0) then (I^):=I^ mod tI
-                            else (I^):=0
+               If (tI <> 0) then __I__:=__I__ mod tI
+                            else __I__:=0
                end;
             VT_UTF: begin
                tI:=PUTF(B^.Ptr)^.ToInt(IntBase(A^.Typ));
-               If (tI <> 0) then (I^):=I^ mod tI
-                            else (I^):=0
+               If (tI <> 0) then __I__:=__I__ mod tI
+                            else __I__:=0
                end;
             VT_ARR:
                If (Not PArr(B^.Ptr)^.Empty)
-                  then (I^):=I^ mod PArr(B^.Ptr)^.Count
-                  else (I^):=0;
+                  then __I__:=__I__ mod PArr(B^.Ptr)^.Count
+                  else __I__:=0;
             VT_DIC:
                If (Not PDict(B^.Ptr)^.Empty)
-                  then (I^):=I^ mod PDict(B^.Ptr)^.Count
-                  else (I^):=0
+                  then __I__:=__I__ mod PDict(B^.Ptr)^.Count
+                  else __I__:=0
             else
-               (I^):=0
-         end end;
+               __I__:=0
+         end;
       VT_FLO:
-         begin
-         F:=PFloat(A^.Ptr);
          Case (B^.Typ) of
             VT_INT .. VT_BIN: 
                If (PQInt(B^.Ptr)^ <> 0) 
-                  then (F^):=(F^) - (Trunc(F^ / PQInt(B^.Ptr)^)*PQInt(B^.Ptr)^)
-                  else (F^):=0.0;
+                  then __F__:=__F__ - (Trunc(__F__ / PQInt(B^.Ptr)^)*PQInt(B^.Ptr)^)
+                  else __F__:=0.0;
             VT_FLO:
                If (PFloat(B^.Ptr)^ <> 0.0)
-                  then (F^):=(F^) - (Trunc(F^ / PFloat(B^.Ptr)^)*PFloat(B^.Ptr)^)
-                  else (F^):=0.0;
+                  then __F__:=__F__ - (Trunc(__F__ / PFloat(B^.Ptr)^)*PFloat(B^.Ptr)^)
+                  else __F__:=0.0;
             VT_STR:
                begin
                tF:=StrToReal(PStr(B^.Ptr)^);
-               If (tF <> 0.0) then (F^):=(F^) - (Trunc(F^ / tF) * tF)
-                              else (F^):=0.0
+               If (tF <> 0.0) then __F__:=__F__ - (Trunc(__F__ / tF) * tF)
+                              else __F__:=0.0
                end;
             VT_UTF:
                begin
                tF:=PUTF(B^.Ptr)^.ToFloat();
-               If (tF <> 0.0) then (F^):=(F^) - (Trunc(F^ / tF) * tF)
-                              else (F^):=0.0
+               If (tF <> 0.0) then __F__:=__F__ - (Trunc(__F__ / tF) * tF)
+                              else __F__:=0.0
                end;
             VT_ARR:
                If (Not PArr(B^.Ptr)^.Empty)
-                  then (F^):=(F^) - (Trunc(F^ / PArr(B^.Ptr)^.Count)*PArr(B^.Ptr)^.Count)
-                  else (F^):=0.0;
+                  then __F__:=__F__ - (Trunc(__F__ / PArr(B^.Ptr)^.Count)*PArr(B^.Ptr)^.Count)
+                  else __F__:=0.0;
             VT_DIC:
                If (Not PDict(B^.Ptr)^.Empty)
-                  then (F^):=(F^) - (Trunc(F^ / PDict(B^.Ptr)^.Count)*PDict(B^.Ptr)^.Count)
-                  else (F^):=0.0
+                  then __F__:=__F__ - (Trunc(__F__ / PDict(B^.Ptr)^.Count)*PDict(B^.Ptr)^.Count)
+                  else __F__:=0.0
             else
-               (F^):=0.0
-         end end;
+               __F__:=0.0
+         end;
       VT_ARR: ValArith_ArrDict(@ValMod,A,B);
       VT_DIC: ValArith_ArrDict(@ValMod,A,B);
    end end;
 
 
 Procedure ValPow(Const A,B:PValue);
-   Var  I:PQInt; F:PFloat; 
    begin
    Case (A^.Typ) of
       VT_INT .. VT_BIN:
-         begin
-         I:=PQInt(A^.Ptr);
          Case (B^.Typ) of
             VT_INT .. VT_BIN: 
-               (I^):=Trunc(IntPower(I^, PQInt(B^.Ptr)^));
+               __I__:=Trunc(IntPower(__I__, PQInt(B^.Ptr)^));
             VT_FLO:
-               (I^):=Trunc(Power(I^, PFloat(B^.Ptr)^));
+               __I__:=Trunc(Power(__I__, PFloat(B^.Ptr)^));
             VT_STR:
-               (I^):=Trunc(IntPower(I^, StrToNum(PStr(B^.Ptr)^,A^.Typ)));
+               __I__:=Trunc(IntPower(__I__, StrToNum(PStr(B^.Ptr)^,A^.Typ)));
             VT_UTF:
-               (I^):=Trunc(IntPower(I^, PUTF(B^.Ptr)^.ToInt(IntBase(A^.Typ))));
+               __I__:=Trunc(IntPower(__I__, PUTF(B^.Ptr)^.ToInt(IntBase(A^.Typ))));
             VT_BOO:
-               If (Not PBool(B^.Ptr)^) then (I^):=1;
+               If (Not PBool(B^.Ptr)^) then __I__:=1;
             VT_ARR:
-               (I^):=Trunc(IntPower(I^, PArr(B^.Ptr)^.Count));
+               __I__:=Trunc(IntPower(__I__, PArr(B^.Ptr)^.Count));
             VT_DIC:
-               (I^):=Trunc(IntPower(I^, PDict(B^.Ptr)^.Count));
+               __I__:=Trunc(IntPower(__I__, PDict(B^.Ptr)^.Count));
             else
-               (I^):=1
-         end end;
+               __I__:=1
+         end;
       VT_FLO:
-         begin
-         F:=PFloat(A^.Ptr);
          Case (B^.Typ) of
             VT_INT .. VT_BIN: 
-               (F^):=IntPower(F^, PQInt(B^.Ptr)^);
+               __F__:=IntPower(__F__, PQInt(B^.Ptr)^);
             VT_FLO:
-               (F^):=Power(F^, PFloat(B^.Ptr)^);
+               __F__:=Power(__F__, PFloat(B^.Ptr)^);
             VT_STR:
-               (F^):=Power(F^, StrToReal(PStr(B^.Ptr)^));
+               __F__:=Power(__F__, StrToReal(PStr(B^.Ptr)^));
             VT_UTF:
-               (F^):=Power(F^, PUTF(B^.Ptr)^.ToFloat());
+               __F__:=Power(__F__, PUTF(B^.Ptr)^.ToFloat());
             VT_BOO:
-               If (Not PBool(B^.Ptr)^) then (F^):=1.0;
+               If (Not PBool(B^.Ptr)^) then __F__:=1.0;
             VT_ARR:
-               (F^):=Power(F^, PArr(B^.Ptr)^.Count);
+               __F__:=Power(__F__, PArr(B^.Ptr)^.Count);
             VT_DIC:
-               (F^):=Power(F^, PDict(B^.Ptr)^.Count);
+               __F__:=Power(__F__, PDict(B^.Ptr)^.Count);
             else
-               (F^):=1.0
-         end end;
+               __F__:=1.0
+         end;
       VT_ARR: ValArith_ArrDict(@ValPow,A,B);
       VT_DIC: ValArith_ArrDict(@ValPow,A,B);
    end end;
