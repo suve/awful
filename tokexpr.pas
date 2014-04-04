@@ -24,10 +24,11 @@ Type TTokenType = (
         end;
      
      TExpr = record
-        //Lin : LongWord;     // Line number
-        Fun : TBuiltIn;       // Pointer to built-in func
-        Ref : Boolean;        // Reference-modifying?
-        Tok : Array of PToken // Array of tokens in expression
+        //Lin : LongWord;      // Line number
+        Fun : TBuiltIn;        // Pointer to built-in func
+        Ref : Boolean;         // Reference-modifying?
+        Tok : Array of PToken; // Array of tokens in expression
+        Arg : Array of PValue  // Array of arguments to pass to function
         end;
      
      TProc = record
@@ -78,7 +79,8 @@ Procedure FreeExpr(Const E:PExpr);
    If (Length(E^.Tok)>0) then
       For C:=Low(E^.Tok) to High(E^.Tok) do
           FreeToken(E^.Tok[C]);
-   {SetLength(E^.Tok, 0);} Dispose(E)
+   {SetLength(E^.Tok, 0); SetLength(E^.Arg,0);}
+   Dispose(E)
    end;
 
 Procedure FreeProc(Var P:TProc);

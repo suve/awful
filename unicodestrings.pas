@@ -17,7 +17,7 @@ Type TUTF8Char = String[4];
         Procedure SetChar(I:LongInt;V:TUTF8Char);
         Procedure SetLength(L:LongWord);
         
-        Type TCharTransformFunc = Function(cIn:TUTF8Char):TUTF8Char;
+        Type TCharTransformFunc = Function(Const cIn:TUTF8Char):TUTF8Char;
         Procedure CaseTransform(Func:TCharTransformFunc);
      
      Public
@@ -75,13 +75,7 @@ Operator + (U: PUTF8String; A : AnsiString) R : PUTF8String;
 
 implementation
    uses Math, SysUtils;
-{
-Type TUTF8CharPair = record
-        Lo, Up : TUTF8Char
-        end;
 
-Var CaseTable : Array of TUTF8CharPair;
-}
 Function IsWhitespace(Chara:TUTF8Char):Boolean;
    begin
    Case Chara of
@@ -96,19 +90,20 @@ Function IsWhitespace(Chara:TUTF8Char):Boolean;
          Exit(False)
    end end;
 
-{$DEFINE _ := : Exit }
-Function CharToUpper(Chara:TUTF8Char):TUTF8Char;
+{$DEFINE v := : Exit( }
+{$DEFINE x := );      }
+Function CharToUpper(Const Chara:TUTF8Char):TUTF8Char;
    begin Case Chara of
       {$INCLUDE unicodestrings-toupper.min.inc}
       else Exit(Chara)
    end end;
 
-Function CharToLower(Chara:TUTF8Char):TUTF8Char;
+Function CharToLower(Const Chara:TUTF8Char):TUTF8Char;
    begin Case Chara of
       {$INCLUDE unicodestrings-tolower.min.inc}
       else Exit(Chara)
    end end;
-{$UNDEF _ }
+{$UNDEF v x }
 
 Procedure TUTF8String.SetLength(L:LongWord);
    Var C:LongWord;

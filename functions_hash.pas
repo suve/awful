@@ -63,8 +63,8 @@ Function HexDigest(Const Dig:Array of Byte):AnsiString;
    Var B:LongWord;
    begin SetLength(Result,Length(Dig)*2);
    For B:=0 to Length(Dig)-1 do begin
-       Result[ B*2   ] := Convert.Sys16Dig[Dig[B] div 16];
-       Result[(B*2)+1] := Convert.Sys16Dig[Dig[B] mod 16]
+       Result[(B*2)+1] := Convert.Sys16Dig[Dig[B] div 16];
+       Result[(B*2)+2] := Convert.Sys16Dig[Dig[B] mod 16]
    end end;
 
 Function RawDigest(Const Dig:Array of Byte):AnsiString;

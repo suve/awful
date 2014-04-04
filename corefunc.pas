@@ -137,42 +137,41 @@ Function Eval(Const Ret:Boolean; Const E:PExpr):PValue;
       Exit(V)
       end;
    
-   Var Arg:TArrPVal; T:LongWord; V:PValue; I,L:LongWord; atk:PArrTk; Tp:TValueType;
+   Var T:LongWord; V:PValue; I,L:LongWord; atk:PArrTk; Tp:TValueType;
    begin
-   L := Length(E^.Tok); SetLength(Arg, L);
-   If (L = 0) then Exit(E^.Fun(Ret, @Arg)); L -= 1;
-   //Writeln('Expr^.Ref = ',E^.Ref);
+   L := Length(E^.Arg); 
+   If (L > 0) then L-=1 else Exit(E^.Fun(Ret, @E^.Arg));
    For T:=L downto 0 do
        Case (E^.Tok[T]^.Typ) of 
           TK_CONS, TK_LITE: begin
              If (E^.Ref = REF_MODIF)
-                then Arg[T]:=CopyVal(PValue(E^.Tok[T]^.Ptr))
-                else Arg[T]:=PValue(E^.Tok[T]^.Ptr)
+                then E^.Arg[T]:=CopyVal(PValue(E^.Tok[T]^.Ptr))
+                else E^.Arg[T]:=PValue(E^.Tok[T]^.Ptr)
              end;
           TK_VARI, TK_REFE: begin
              If (T < L) 
-                then Arg[T]:=GetVar(PStr(E^.Tok[T]^.Ptr),Arg[T+1]^.Typ)
-                else Arg[T]:=GetVar(PStr(E^.Tok[T]^.Ptr),VT_NIL);
+                then E^.Arg[T]:=GetVar(PStr(E^.Tok[T]^.Ptr),E^.Arg[T+1]^.Typ)
+                else E^.Arg[T]:=GetVar(PStr(E^.Tok[T]^.Ptr),VT_NIL);
              If (E^.Tok[T]^.Typ = TK_VARI) and (E^.Ref = REF_MODIF)
-                then Arg[T] := CopyVal(Arg[T])
+                then E^.Arg[T] := CopyVal(E^.Arg[T])
              end;
           TK_AVAL, TK_AREF: begin
-             If (T < L) then Tp:=Arg[T+1]^.Typ else Tp:=VT_NIL;
-             atk := PArrTk(E^.Tok[T]^.Ptr); Arg[T]:=GetVar(PStr(atk^.Ptr), VT_DIC);
-             For I:=Low(atk^.Ind) to High(atk^.Ind) do Arg[T]:=GetArr(Arg[T], atk^.Ind[I], Tp);
+             If (T < L) then Tp:=E^.Arg[T+1]^.Typ else Tp:=VT_NIL;
+             atk := PArrTk(E^.Tok[T]^.Ptr); E^.Arg[T]:=GetVar(PStr(atk^.Ptr), VT_DIC);
+             For I:=Low(atk^.Ind) to High(atk^.Ind) do E^.Arg[T]:=GetArr(E^.Arg[T], atk^.Ind[I], Tp);
              If (E^.Tok[T]^.Typ = TK_AVAL) and (E^.Ref = REF_MODIF)
-                then Arg[T]:=CopyVal(Arg[T])
+                then E^.Arg[T]:=CopyVal(E^.Arg[T])
              end;
           TK_AFLY: begin
-             atk := PArrTk(E^.Tok[T]^.Ptr); V:=Eval(RETURN_VALUE_YES, PExpr(atk^.Ptr)); Arg[T]:=V;
-             For I:=Low(atk^.Ind) to High(atk^.Ind) do Arg[T]:=GetArr(Arg[T], atk^.Ind[I], Tp);
-             Arg[T]:=CopyVal(Arg[T]); FreeVal(V)
+             atk := PArrTk(E^.Tok[T]^.Ptr); V:=Eval(RETURN_VALUE_YES, PExpr(atk^.Ptr)); E^.Arg[T]:=V;
+             For I:=Low(atk^.Ind) to High(atk^.Ind) do E^.Arg[T]:=GetArr(E^.Arg[T], atk^.Ind[I], Tp);
+             E^.Arg[T]:=CopyVal(E^.Arg[T]); FreeVal(V)
              end;
           TK_EXPR: begin
-             Arg[T]:=Eval(RETURN_VALUE_YES, PExpr(E^.Tok[T]^.Ptr))
+             E^.Arg[T]:=Eval(RETURN_VALUE_YES, PExpr(E^.Tok[T]^.Ptr))
              end
           end;
-   Exit(E^.Fun(Ret, @Arg))
+   Exit(E^.Fun(Ret, @E^.Arg))
    end;
 
 Function RunFunc(Const P:LongWord):PValue;

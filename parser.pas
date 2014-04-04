@@ -139,7 +139,7 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
          New(Tok); New(PS); Tok^.Typ:=TK_REFE; Tok^.Ptr:=PS; 
          PS^:=Copy(Tk[Index],2,Length(Tk[Index]))
          end else
-      If (Tk[Index][1]='=') then begin
+      If (Tk[Index][1]='=') then begin // !!! poprawić! dyntrie zwraca NIL, a nie rzuca wyjątek!
          CName:=Copy(Tk[Index],2,Length(Tk[Index]));
          Try    V:=Cons^.GetVal(CName);
          Except Fatal(Ln,'Unknown constant "'+CName+'".') end;
@@ -591,7 +591,9 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
       end else
       Fatal(Ln,'First token in expression ("'+Tk[T]+'") is neither a function call nor a language construct.');
    E^.Fun:=TBuiltIn(FPtr^.Ptr); E^.Ref := FPtr^.Ref;
-   T+=1; If (T >= LeTk) then Exit(E);
+   T+=1; If (T >= LeTk) then begin
+      SetLength(E^.Arg,Length(E^.Tok));
+      Exit(E); end;
    Etk := Length(E^.Tok); If (LeTk > Etk) then SetLength(E^.Tok, LeTk);
    While (T < LeTk) do begin
       If (Length(Tk[T])=0) then Error(Ln,'Empty token (#'+IntToStr(T)+').') else
@@ -609,7 +611,7 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
          If (Nest>0) then Error(Ln,'Un-closed sub-expression. ("(" without a matching ")".)')
          end else
       If (Tk[T][1]=')') then begin
-         SetLength(E^.Tok, Etk); Exit(E)
+         SetLength(E^.Tok, Etk); SetLength(E^.Arg, Etk); Exit(E)
          end else 
       If (Tk[T][1]='[') then begin
          If (Length(E^.Tok)=0) then
@@ -646,13 +648,13 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
          If (Nest>0) then Error(Ln,'Un-closed index expression. ("[" without a matching "]".)')
          end else 
       If (Tk[T][1]=']') then begin
-         SetLength(E^.Tok, Etk); Exit(E)
+         SetLength(E^.Tok, Etk); SetLength(E^.Arg, Etk); Exit(E)
          end else
       If (Tk[T][1]=':') then begin
          sex:=MakeExpr(Tk,Ln,T);
          New(Tok); Tok^.Typ:=TK_EXPR; Tok^.Ptr:=sex;
          AddToken(Tok);
-         SetLength(E^.Tok, Etk); Exit(E)
+         SetLength(E^.Tok, Etk); SetLength(E^.Arg, Etk); Exit(E)
          end else
       If (Tk[T][1]='!') then begin
          Fatal(Ln,'Language construct used as a sub-expression. ("'+Tk[T]+'").')
@@ -664,7 +666,7 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
             Fatal(Ln,'Invalid token ("'+Tk[T]+'").')
          end;
       T+=1 end;
-   SetLength(E^.Tok, Etk); Exit(E)
+   SetLength(E^.Tok, Etk); SetLength(E^.Arg, Etk); Exit(E)
    end;
 
 Procedure ProcessLine(Const L:AnsiString;Const N:LongWord);
@@ -695,6 +697,7 @@ Procedure ProcessLine(Const L:AnsiString;Const N:LongWord);
    If (S > Len) then Exit();
    While (L[Len]=' ') and (Len > 0) do Len -= 1;
    {$ENDIF}
+   //Writeln('ProcessLine: ',L[S..Len]);
    SetLength(Tk,0); {S := 1; Len:=Length(L);} P:=1; Str:=0; Del:=#255; PipeChar:='';
    While (S <= Len) do begin
       //Writeln(N:8,#32,Len:8,#32,S:8,#32,P:8,' "',L[P],'"');

@@ -22,6 +22,9 @@ Function F_DateTime_Break(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 Function F_DateTime_String(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
+Function F_DateTime_ToUnix(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_DateTime_FromUnix(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+
 implementation
    uses SysUtils, Convert, Values_Arith, Values_Typecast,
         EmptyFunc, CoreFunc, Globals;
@@ -37,6 +40,9 @@ Procedure Register(Const FT:PFunTrie);
    FT^.SetVal('dt-encode',MkFunc(@F_DateTime_Encode));
    FT^.SetVal('dt-make',MkFunc(@F_DateTime_Make));
    FT^.SetVal('dt-break',MkFunc(@F_DateTime_Break));
+   FT^.SetVal('dt-to-unix',MkFunc(@F_DateTime_ToUnix));
+   FT^.SetVal('dt-fr-unix',MkFunc(@F_DateTime_FromUnix));
+   FT^.SetVal('dt-from-unix',MkFunc(@F_DateTime_FromUnix));
    FT^.SetVal('dt-str',MkFunc(@F_DateTime_String));
    end;
 
@@ -188,6 +194,31 @@ Function F_DateTime_Break(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    D^.SetVal('s',NewVal(VT_INT,brk[4]));
    D^.SetVal('z',NewVal(VT_INT,brk[5]));
    Exit(V)
+   end;
+
+Const dt_UnixDiff = -62135769600 // Number of seconds between 0001-01-01 and 1970-01-01
+                    +79200;      // Dunno. Const error, probably due to missing days in calendars et cetera
+
+Function F_DateTime_ToUnix(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   Var dt:TDateTime; Stamp:QInt;
+   begin
+   If (Not DoReturn) then Exit(F_(False,Arg));
+   If (Length(Arg^)>0) then dt:=ValAsFlo(Arg^[0])
+                       else dt:=Now();
+   
+   Stamp := Trunc(TimeStampToMSecs(DateTimeToTimeStamp(dt))/1000)+dt_UnixDiff;
+   F_(False,Arg); Exit(NewVal(VT_INT,Stamp))
+   end;
+
+Function F_DateTime_FromUnix(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   Var dt:TDateTime; Stamp:QInt;
+   begin
+   If (Not DoReturn) then Exit(F_(False,Arg));
+   If (Length(Arg^)>0) then Stamp:=ValAsInt(Arg^[0])
+                       else Stamp:=0;
+   
+   dt := TimeStampToDateTime(MSecsToTimeStamp((Stamp-dt_UnixDiff)*1000));
+   F_(False,Arg); Exit(NewVal(VT_FLO,dt))
    end;
 
 Function dtf(Const S:AnsiString):AnsiString;
