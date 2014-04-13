@@ -10,14 +10,15 @@ uses SysUtils,
      
      EmptyFunc, CoreFunc, Functions,
      
-     Functions_Arith,    Functions_ArrDict,
-     Functions_Bitwise,  Functions_Boole,
-     Functions_CGI,      Functions_Compare,
-     Functions_DateTime,
-     Functions_Files,
-     Functions_Hash,
-     Functions_Math,
-     Functions_stdIO,    Functions_Strings, Functions_SysInfo,
+     Functions_Arith,     Functions_ArrDict,
+     Functions_Bitwise,   Functions_Boole,
+     Functions_CGI,       Functions_Compare,
+     Functions_DateTime,  
+     Functions_Encodings, 
+     Functions_Files,     
+     Functions_Hash,      
+     Functions_Math,      
+     Functions_stdIO,     Functions_Strings, Functions_SysInfo,
      Functions_TypeCast;
 // ----- uses
 
@@ -187,23 +188,24 @@ Randomize();
 
 New(Func,Create());
 // Register all built-in functions to the FuncTree
-CoreFunc           . Register(Func);
-EmptyFunc          . Register(Func);
-Functions          . Register(Func);
-Functions_Arith    . Register(Func);
-Functions_ArrDict  . Register(Func);
-Functions_Boole    . Register(Func);
-Functions_Bitwise  . Register(Func);
-Functions_CGI      . Register(Func);
-Functions_Compare  . Register(Func);
-Functions_DateTime . Register(Func);
-Functions_Files    . Register(Func);
-Functions_Hash     . Register(Func);
-Functions_Math     . Register(Func);
-Functions_stdIO    . Register(Func);
-Functions_Strings  . Register(Func);
-Functions_SysInfo  . Register(Func);
-Functions_TypeCast . Register(Func);
+CoreFunc            . Register(Func);
+EmptyFunc           . Register(Func);
+Functions           . Register(Func);
+Functions_Arith     . Register(Func);
+Functions_ArrDict   . Register(Func);
+Functions_Boole     . Register(Func);
+Functions_Bitwise   . Register(Func);
+Functions_CGI       . Register(Func);
+Functions_Compare   . Register(Func);
+Functions_DateTime  . Register(Func);
+Functions_Encodings . Register(Func);
+Functions_Files     . Register(Func);
+Functions_Hash      . Register(Func);
+Functions_Math      . Register(Func);
+Functions_stdIO     . Register(Func);
+Functions_Strings   . Register(Func);
+Functions_SysInfo   . Register(Func);
+Functions_TypeCast  . Register(Func);
 //YukSDL.Register(Func);
 
 AnalyseParams();

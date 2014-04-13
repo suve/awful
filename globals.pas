@@ -7,8 +7,8 @@ interface
 
 const VMAJOR = '0';
       VMINOR = '5';
-      VBUGFX = '1';
-      VREVISION = 37;
+      VBUGFX = '2';
+      VREVISION = 38;
       VERSION = VMAJOR + '.' + VMINOR + '.' + VBUGFX;
 
 Const dtf_def = 'yyyy"-"mm"-"dd" "hh":"nn';

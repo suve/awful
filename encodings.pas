@@ -3,6 +3,7 @@ unit encodings;
 {$INCLUDE defines.inc}
 
 interface
+   uses Values;
 
 Function EncodeURL(Const Str:AnsiString):AnsiString;
 Function DecodeURL(Const Str:AnsiString):AnsiString;
@@ -14,8 +15,13 @@ Function DecodeHex(Const Str:AnsiString):AnsiString;
 Function EncodeBase64(Const Str:AnsiString):AnsiString;
 Function DecodeBase64(Const Str:AnsiString):AnsiString;
 
+Function EncodeJSON(Const V:PValue):AnsiString;
+Function DecodeJSON(Const JSONstring:AnsiString):PValue;
+
 implementation
-   uses Convert, Functions_Strings;
+   uses SysUtils, JSONparser, fpJSON,
+        Convert, FileHandling,
+        Functions_Strings;
 
 Function DecodeURL(Const Str:AnsiString):AnsiString;
    Var Res:AnsiString; P,R:LongWord;
@@ -205,5 +211,107 @@ Function DecodeBase64(Const Str:AnsiString):AnsiString;
          end else SetLength(Result,NL+1);
       Result[NL+1] := Chr((V div 256) mod 256)
    end end;
+
+Function EncodeJSON(Const V:PValue):AnsiString;
+   Var AEA:TArr.TEntryArr; DEA:TDict.TEntryArr;
+       C,H:LongWord;
+   begin Case (V^.Typ) of
+      VT_NIL:
+         Result := 'null';
+      VT_INT, VT_BIN, VT_OCT, VT_HEX:
+         Result := IntToStr(PQInt(V^.Ptr)^);
+      VT_FLO:
+         Result := SysUtils.FloatToStr(PFloat(V^.Ptr)^);
+      VT_STR:
+         Result := '"'+StringToJSONString(PStr(V^.Ptr)^)+'"';
+      VT_UTF:
+         Result := '"'+StringToJSONString(PUTF(V^.Ptr)^.ToAnsiString())+'"';
+      VT_BOO:
+         If (PBool(V^.Ptr)^)
+            then Result := 'true'
+            else Result := 'false';
+      VT_FIL:
+         Result := '{'+
+            '"path":"'+StringToJSONString(PFileHandle(V^.Ptr)^.Pth)+'",'+
+            '"mode":"'+StringToJSONString(PFileHandle(V^.Ptr)^.arw)+
+            '}';
+      VT_ARR: begin
+         Result := '[';
+         If (Not PArr(V^.Ptr)^.Empty) then begin
+            AEA:=PArr(V^.Ptr)^.ToArray();
+            C:=Low(AEA); H:=High(AEA);
+            While (True) do begin
+               Result += EncodeJSON(AEA[C].Val);
+               If (C < H) then begin Result += ','; C += 1 end
+                          else Break
+            end end;
+         Result += ']'
+         end;
+      VT_DIC: begin
+         Result := '{';
+         If (Not PDict(V^.Ptr)^.Empty) then begin
+            DEA:=PDict(V^.Ptr)^.ToArray();
+            C:=Low(DEA); H:=High(DEA);
+            While (True) do begin
+               Result += '"'+StringToJSONString(DEA[C].Key)+'":'+EncodeJSON(DEA[C].Val);
+               If (C < H) then begin Result += ','; C += 1 end
+                          else Break
+            end end;
+         Result += '}'
+         end;
+      else
+         Result := 'null'
+   end end;
+
+Function JSONDataToAwfulValue(Const JSON:TJSONData):PValue;
+   Var C:LongWord;
+   begin
+   Case JSON.JSONType() of
+      jtBoolean:
+         Result := NewVal(VT_BOO, JSON.AsBoolean);
+      jtString:
+         Result := NewVal(VT_STR, JSON.AsString);
+      jtNumber:
+         Case TJSONNumber(JSON).NumberType() of
+            ntFloat:
+               Result := NewVal(VT_FLO, JSON.AsFloat);
+            ntInteger:
+               Result := NewVal(VT_INT, JSON.AsInteger);
+            ntInt64:
+               Result := NewVal(VT_INT, JSON.AsInt64);
+         end;
+      jtArray:
+         begin
+         Result := EmptyVal(VT_ARR);
+         If (JSON.Count > 0) then
+            For C:=0 to (JSON.Count - 1) do
+               PArr(Result^.Ptr)^.SetVal(C,JSONDataToAwfulValue(JSON.Items[C]))
+         end;
+      jtObject:
+         begin
+         Result := EmptyVal(VT_DIC);
+         If (JSON.Count > 0) then
+            For C:=0 to (JSON.Count - 1) do
+               PDict(Result^.Ptr)^.SetVal(TJSONObject(JSON).Names[C],JSONDataToAwfulValue(JSON.Items[C]))
+         end;
+      else
+         Result := NilVal()
+      end
+   end;
+
+Function DecodeJSON(Const JSONstring:AnsiString):PValue;
+   Var JSON:TJSONData; Parser:TJSONParser;
+   begin
+   JSON := NIL; Parser := NIL;
+   Try
+      Parser := TJSONParser.Create(JSONstring);
+      JSON := Parser.Parse();
+      Result := JSONDataToAwfulValue(JSON)
+   Except
+      Result := NilVal()
+      end;
+   If (JSON <> NIL) then JSON.Destroy();
+   If (Parser <> NIL) then Parser.Destroy()
+   end;
 
 end.

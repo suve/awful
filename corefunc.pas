@@ -269,7 +269,7 @@ Function F_Break(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
       Ord(CT_REPEAT): ExLn := RepArr[PQInt(Arg^[1]^.Ptr)^][2];
                  else ;
       end;
-   F_(False, Arg);
+   //F_(False, Arg);
    Exit(NIL)
    end;
 
@@ -280,7 +280,7 @@ Function F_Continue(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
       Ord(CT_REPEAT): ExLn := RepArr[PQInt(Arg^[1]^.Ptr)^][2]-1;
                  else ;
       end;
-   F_(False, Arg);
+   //F_(False, Arg);
    Exit(NIL)
    end;
 

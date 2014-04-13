@@ -30,14 +30,14 @@ Var IfArr : Array of TIf;
 Procedure Fatal(Const Ln:LongWord;Const Msg:AnsiString;Const ErrCode:LongInt = 255);
 Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
 Procedure ProcessLine(Const L:AnsiString;Const N:LongWord);
-Procedure ParseFile(Var I:System.Text);
-Procedure ReadFile(Var I:System.Text);
+Procedure ParseFile(Var InputFile:System.Text);
+Procedure ReadFile(Var InputFile:System.Text);
 
 implementation
    uses Math, SysUtils, 
         Convert, Values_Typecast,
         Globals, EmptyFunc, CoreFunc
-        {$IFDEF CGI} , Encodings {$ENDIF}
+        {$IFDEF CGI} , Encodings, Functions_stdio {$ENDIF}
         ;
 
 Const PREFIX_VAL = '$';
@@ -141,8 +141,8 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
          end else
       If (Tk[Index][1]='=') then begin // !!! poprawić! dyntrie zwraca NIL, a nie rzuca wyjątek!
          CName:=Copy(Tk[Index],2,Length(Tk[Index]));
-         Try    V:=Cons^.GetVal(CName);
-         Except Fatal(Ln,'Unknown constant "'+CName+'".') end;
+         V:=Cons^.GetVal(CName);
+         If (V = NIL) then Fatal(Ln,'Unknown constant "'+CName+'".');
          New(Tok); Tok^.Typ:=TK_CONS; Tok^.Ptr:=V
          end else
       If (Tk[Index][1]='s') then begin
@@ -379,9 +379,11 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
          V:=NewVal(VT_OCT,Convert.StrToOct(Copy(Tk[T+2],2,Length(Tk[T+2])))) else
       If (Tk[T+2][1]='b') then
          V:=NewVal(VT_BIN,Convert.StrToBin(Copy(Tk[T+2],2,Length(Tk[T+2])))) else
-      If (Tk[T+2][1]='=') then
-         Try    V:=CopyVal(Cons^.GetVal(Copy(Tk[T+2],2,Length(Tk[T+2]))))
-         Except Fatal(Ln,'Unknown const "'+Copy(Tk[T+2],2,Length(Tk[T+2]))+'".') end;
+      If (Tk[T+2][1]='=') then begin
+         V:=Cons^.GetVal(Copy(Tk[T+2],2,Length(Tk[T+2])));
+         If (V = NIL) then Fatal(Ln,'Unknown const "'+Copy(Tk[T+2],2,Length(Tk[T+2]))+'".');
+         V := CopyVal(V)
+         end;
       V^.Lev := 0; Cons^.SetVal(CName,V)
       end;
    
@@ -444,8 +446,8 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
          If (Tk[1][1]='f') then Dep := Trunc(Convert.StrToReal(DepStr)) else
          If (Tk[1][1]='l') then Dep := BoolToInt(StrToBoolDef(DepStr,False)) else
          If (Tk[1][1]='=') then begin
-            Try    Constant := Cons^.GetVal(DepStr);
-            Except Fatal(Ln,'Unknown constant "'+DepStr+'".') end;
+            Constant := Cons^.GetVal(DepStr);
+            If (V = NIL) then Fatal(Ln,'Unknown constant "'+DepStr+'".');
             Dep := ValAsInt(Constant)
             end else
             Fatal(Ln,'Arguments for '+cstruName+' must be either value literals or constants.');
@@ -488,8 +490,8 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
       If (Tk[T][1]='f') then FileName:=FloatToStr(Convert.StrToReal(FileName)) else
       If (Tk[T][1]='l') then FileName:=BoolToStr(StrToBoolDef(FileName,False)) else
       If (Tk[T][1]='=') then begin
-         Try    Constant := Cons^.GetVal(FileName);
-         Except Fatal(Ln,'Unknown constant "'+FileName+'".') end;
+         Constant := Cons^.GetVal(FileName);
+         If (Constant = NIL) then Fatal(Ln,'Unknown constant "'+FileName+'".');
          FileName := ValAsStr(Constant)
          end else
          Fatal(Ln,'Arguments for '+Construct+' must be either value literals or constants.');
@@ -672,18 +674,33 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
 Procedure ProcessLine(Const L:AnsiString;Const N:LongWord);
    Var Tk:Array of AnsiString; P,S,Len:LongWord;
        Str:LongInt; Del:Char; PipeChar:AnsiString;
-       Ex:PExpr; HiTk, Rs :LongWord; Utf:Boolean;
+       Ex:PExpr; LeTk,HiTk:LongInt; Utf:Boolean;
    
    Function BreakToken(Const Ch:Char):Boolean; Inline;
       begin Exit(Pos(Ch,' (|)[#]~')<>0) end;
+   
+   Procedure EnsureEmptyPlaces(Len:LongWord); Inline;
+      begin
+      Len := HiTk + 1 + Len;
+      If (Len > LeTk) then begin
+         LeTk := Len + 2; SetLength(Tk,LeTk)
+      end end;
+   
+   Procedure SetHighToken(Const Content:AnsiString); Inline;
+      begin HiTk += 1; Tk[HiTk] := Content end;
+   
+   Procedure RemoveHighToken(); Inline;
+      begin HiTk -= 1 end;
    
    begin
    S:=1; Len := Length(L);
    {$IFDEF CGI}
    If (Len = 0) then begin
       If (Codemode = 0) then begin
-         SetLength(Tk,1); Tk[0]:=':writeln';
-         AddExpr(MakeExpr(Tk, N, 0))
+         New(Ex); Ex^.Ref := REF_CONST;
+         SetLength(Ex^.Tok,0); SetLength(Ex^.Arg,0);
+         Ex^.Fun := @F_Writeln;
+         AddExpr(Ex)
          end;
       Exit()
       end else
@@ -698,7 +715,8 @@ Procedure ProcessLine(Const L:AnsiString;Const N:LongWord);
    While (L[Len]=' ') and (Len > 0) do Len -= 1;
    {$ENDIF}
    //Writeln('ProcessLine: ',L[S..Len]);
-   SetLength(Tk,0); {S := 1; Len:=Length(L);} P:=1; Str:=0; Del:=#255; PipeChar:='';
+   SetLength(Tk,2); LeTk := 2; HiTk := -1; {S := 1; Len:=Length(L);} 
+   P:=1; Str:=0; Del:=#255; PipeChar:='';
    While (S <= Len) do begin
       //Writeln(N:8,#32,Len:8,#32,S:8,#32,P:8,' "',L[P],'"');
       If (mulico > 0) then begin
@@ -713,25 +731,25 @@ Procedure ProcessLine(Const L:AnsiString;Const N:LongWord);
       {$IFDEF CGI}
       If (codemode = 0) then begin
          If (P>Len) then begin
-            If (Length(Tk) > 0) and (Tk[High(Tk)][1] <> '~') then begin
-               SetLength(Tk, Length(Tk)+3); Tk[High(Tk)-2] := '~'
-               end else SetLength(Tk, Length(Tk)+2);
-            Tk[High(Tk)-1] := ':writeln';
-            Tk[High(Tk)] := 's"' + L[S..Len] +'"';
+            If (HiTk >= 0) and (Tk[HiTk][1] <> '~') then begin
+               EnsureEmptyPlaces(3); SetHighToken('~')
+               end else EnsureEmptyPlaces(2);
+            SetHighToken(':writeln');
+            SetHighToken('s"' + L[S..Len] +'"');
             S := Len + 1; P-=1
             end else
          If (L[P] = '?') then begin
             If ((P>1) and (L[P-1] = '<')) and ((P <= Len-3) and (L[P+1..P+3] = 'yuk')) then begin
                If (P > S+1) then begin
-                  If (Length(Tk) > 0) and (Tk[High(Tk)][1]<>'~') then begin
-                     SetLength(Tk, Length(Tk)+4); Tk[High(Tk)-2] := '~'
-                     end else SetLength(Tk, Length(Tk)+3);
-                  Tk[High(Tk)-2] := ':write';
-                  Tk[High(Tk)-1] := 's"' + L[S..P-2] +'"';
-                  Tk[High(Tk)] := '~'
+                  If (HiTk >= 0) and (Tk[HiTk][1]<>'~') then begin
+                     EnsureEmptyPlaces(4); SetHighToken('~')
+                     end else EnsureEmptyPlaces(3);
+                  SetHighToken(':write');
+                  SetHighToken('s"' + L[S..P-2] +'"');
+                  SetHighToken('~')
                   end else
-                  If (Length(Tk)>0) and (Tk[High(Tk)][1] <> '~') then begin
-                     SetLength(Tk, Length(Tk)+1); Tk[High(Tk)] := '~'
+                  If (HiTk >= 0) and (Tk[HiTk][1] <> '~') then begin
+                     EnsureEmptyPlaces(1); SetHighToken('~')
                      end;
                //Writeln(StdErr,ExtractFileName(YukPath),'(',N,'): Entering codemode');
                codemode := 1; S:=P+5; P+=3
@@ -749,16 +767,16 @@ Procedure ProcessLine(Const L:AnsiString;Const N:LongWord);
             //Writeln(StdErr,'Breaking line: "',L,'" at "',L[P],'".');
             If (L[P]=' ') then begin
                If (P>S) then begin
-                  SetLength(Tk,Length(Tk)+1);
-                  Tk[High(Tk)]:=Copy(L,S,P-S)
+                  EnsureEmptyPlaces(1);
+                  SetHighToken(Copy(L,S,P-S))
                   end;
                While (P<Len) and (L[P+1]=#32) do P+=1;
                S := P+1; P+=1
                end else 
             If (L[P]='#') then begin //Comment character! 
-               If (P>S) then begin 
-                  SetLength(Tk,Length(Tk)+1);
-                  Tk[High(Tk)]:=Copy(L,S,P-S)
+               If (P>S) then begin
+                  EnsureEmptyPlaces(1);
+                  SetHighToken(Copy(L,S,P-S))
                   end;
                If (Len>P) and (L[P+1]='~') //begin of multi-line comment
                   then begin S := P+2; P+=2; mulico += 1 end 
@@ -772,32 +790,32 @@ Procedure ProcessLine(Const L:AnsiString;Const N:LongWord);
             {$ENDIF}
                else begin // paren
                If (P>S) then begin
-                  SetLength(Tk, Length(Tk)+1);
-                  Tk[High(Tk)]:=Copy(L,S,P-S)
+                  EnsureEmptyPlaces(1);
+                  SetHighToken(Copy(L,S,P-S))
                   end;
                If (P<=Len) then begin
-                  SetLength(Tk,Length(Tk)+1);
-                  Tk[High(Tk)]:=L[P];
+                  EnsureEmptyPlaces(1);
+                  SetHighToken(L[P]);
                   While (P<Len) and (L[P+1]=#32) do P+=1
                   end;
                S:=P+1; P+=1;
-               If (Tk[High(Tk)]='|') then begin
+               If (Tk[HiTk]='|') then begin
                   If (Length(PipeChar)=0) then begin
-                     SetLength(Tk, Length(Tk)-1);
+                     RemoveHighToken();
                      Error(N, 'Pipe ("|") without matching parentheses or brackets.') 
                      end else begin
-                     SetLength(Tk, Length(Tk)+1);
+                     EnsureEmptyPlaces(1);
                      If (PipeChar[Length(PipeChar)] = '(') then begin
-                        Tk[High(Tk)-1]:=')'; Tk[High(Tk)]:='('
+                        Tk[HiTk]:=')'; SetHighToken('(')
                         end else begin
-                        Tk[High(Tk)-1]:=']'; Tk[High(Tk)]:='['
+                        Tk[HiTk]:=']'; SetHighToken('[')
                         end
                      end
                   end else
-               If (Tk[High(Tk)]='(') or (Tk[High(Tk)] = '[') then
-                  PipeChar += Tk[High(Tk)] else
-               If ((Tk[High(Tk)]=')') or (Tk[High(Tk)] = ']')) and
-                  (Length(PipeChar)>0) and (PipeChar[Length(PipeChar)]=Tk[High(Tk)]) then
+               If (Tk[HiTk]='(') or (Tk[HiTk] = '[') then
+                  PipeChar += Tk[HiTk] else
+               If ((Tk[HiTk]=')') or (Tk[HiTk] = ']')) and
+                  (Length(PipeChar)>0) and (PipeChar[Length(PipeChar)]=Tk[HiTk]) then
                   Delete(PipeChar, Length(PipeChar), 1)
                end;
             P:=S-1; Str:=0
@@ -814,66 +832,62 @@ Procedure ProcessLine(Const L:AnsiString;Const N:LongWord);
       If (Str = 1) then begin
          If (P>Len) then begin
             Error(N,'String prefix found at end of line.');
-            SetLength(Tk,Length(Tk)+1);
-            If (Not Utf) then Tk[High(Tk)]:='s""'
-                         else Tk[High(Tk)]:='u""';
+            EnsureEmptyPlaces(1);
+            If (Not Utf) then SetHighToken('s""')
+                         else SetHighToken('u""');
             S:=Len+1; Str:=0
             end else begin
             Del:=L[P]; Str:=2
          end end else
       If (Str = 2) and ((P>Len) or (L[P]=Del)) then begin
-         SetLength(Tk,Length(Tk)+1);
-         Tk[High(Tk)]:=Copy(L,S,P-S+1);
+         EnsureEmptyPlaces(1);
+         SetHighToken(Copy(L,S,P-S+1));
          If (P<=Len)
             then While (P<Len) and (L[P+1]=#32) do P+=1
             else begin
             Error(N,'String token exceeds line.');
-            Tk[High(Tk)]+=Del
+            Tk[HiTk]+=Del
             end;
          S:=P+1; {P-=1;} Str:=0
          end;
       P+=1
       end;
    //If (N = 11) then for p:=low(tk) to high(tk) do writeln(tk[p]);
-   If (Length(Tk)=0) then Exit();
-   If (Length(Tk)=1) and (Tk[0][1]='~') then Exit();
-   Rs:=0; HiTk := High(Tk); P:=1;
+   If (HiTk < 0) then Exit();
+   If (HiTk = 0) and (Tk[0][1]='~') then Exit();
+   S:=0; {HiTk := High(Tk);} P:=1;
    While (P <= HiTk) do begin
       If (Tk[P][1]='!') then begin //if (n=11) then writeln('makeexpr ',rs,'..',p-1);
-         Ex := MakeExpr(Tk[Rs..P-1], N, 0);
+         Ex := MakeExpr(Tk[S..P-1], N, 0);
          If (Ex<>NIL) then AddExpr(Ex);
-         Rs := P;
+         S := P;
          end else
       If (Tk[P][1]='~') then begin
-         If (Tk[Rs][1]<>'~') then begin //if (n=11) then writeln('makeexpr ',rs,'..',p-1);
-            Ex:=MakeExpr(Tk[Rs..P-1], N, 0);
+         If (Tk[S][1]<>'~') then begin //if (n=11) then writeln('makeexpr ',rs,'..',p-1);
+            Ex:=MakeExpr(Tk[S..P-1], N, 0);
             If (Ex<>NIL) then AddExpr(Ex)
             end;
-         While (P <= HiTk) and (Tk[P][1] = '~') do P += 1; Rs := P;
+         While (P <= HiTk) and (Tk[P][1] = '~') do P += 1; S := P;
          If (P > HiTk) or (Tk[P][1] <> '!') then P -= 1
          end;
       P += 1
       end;
-   If (Rs <= HiTk) and (Tk[Rs][1]<>'~') then begin
-      Ex := MakeExpr(Tk[Rs..HiTk], N, 0); 
+   If (S <= HiTk) and (Tk[S][1]<>'~') then begin
+      Ex := MakeExpr(Tk[S..HiTk], N, 0); 
       If (Ex<>NIL) then AddExpr(Ex)
       end
    end;
 
-Procedure ParseFile(Var I:System.Text);
-   Var L:AnsiString; N:LongWord; 
+Procedure ParseFile(Var InputFile:System.Text);
+   Var Line:AnsiString; Num:LongWord; 
    begin
-   N := 0;
-   While (Not Eof(I)) do begin
-      Readln(I,L); N+=1;
-      //{$IFNDEF CGI} L:=Trim(L); {$ELSE} If (codemode > 0) then L:=TrimLeft(L); {$ENDIF}
-      {$IFNDEF CGI} If (Length(L)>0) then begin {$ENDIF}
-         ProcessLine(L, N)
-         end
-      {$IFNDEF CGI} end {$ENDIF}
-   end;
+   Num := 0;
+   While (Not Eof(InputFile)) do begin
+      Readln(InputFile,Line); Num+=1;
+      ProcessLine(Line, Num)
+   end end;
 
-Procedure ReadFile(Var I:System.Text);
+Procedure ReadFile(Var InputFile:System.Text);
    
    {$IFDEF CGI}{$DEFINE __ISCGI__:=True}{$ELSE}{$DEFINE __ISCGI__:=False}{$ENDIF}
    
@@ -908,7 +922,7 @@ Procedure ReadFile(Var I:System.Text);
    
    SetLength(FCal,1); New(FCal[0].Vars,Create()); FCal[0].Args := NIL; FLev := 0;
    
-   ParseFile(I); // loop moved to other file
+   ParseFile(InputFile); // loop moved to other file
    
    If (mulico > 0) then Writeln(StdErr,YukName,': multi-line comment stretches past end of code.');
    

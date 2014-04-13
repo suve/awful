@@ -1,6 +1,6 @@
 .\" Manpage for awful
 .\" Contact veg@svgames.pl to correct errors or typos.
-.TH man 1 "2014-04-01" "0.5.1" "Scripting language"
+.TH man 1 "2014-04-13" "0.5.2" "Scripting language"
 .SH NAME
 awful - an ugly scripting language
 .SH SYNOPSIS

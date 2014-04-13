@@ -67,7 +67,7 @@ Procedure WriteFile(Var F:Text; Const Arg:PArrPVal; Idx:LongWord);
             VT_ARR: Write(F, 'array(',PArray(Arg^[Idx]^.Ptr)^.Count,')');
             VT_DIC: Write(F, 'dict(',PDict(Arg^[Idx]^.Ptr)^.Count,')');
             VT_FIL: Write(F, 'file(',PFileHandle(Arg^[Idx]^.Ptr)^.Pth,')');
-            else Write(F, '(',Arg^[Idx]^.Typ,')') {$I+}
+            else Write(F, '{',Arg^[Idx]^.Typ,'}') {$I+}
             end;
          If (Arg^[Idx]^.Lev >= CurLev) then FreeVal(Arg^[Idx])
    end end;

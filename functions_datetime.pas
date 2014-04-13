@@ -199,15 +199,17 @@ Function F_DateTime_Break(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Const dt_UnixDiff = -62135769600 // Number of seconds between 0001-01-01 and 1970-01-01
                     +79200;      // Dunno. Const error, probably due to missing days in calendars et cetera
 
+Function dt_ToUnix(Const dt:TDateTime):QInt;
+   begin Result := Trunc(TimeStampToMSecs(DateTimeToTimeStamp(dt))/1000)+dt_UnixDiff end;
+
 Function F_DateTime_ToUnix(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   Var dt:TDateTime; Stamp:QInt;
+   Var dt:TDateTime;
    begin
    If (Not DoReturn) then Exit(F_(False,Arg));
    If (Length(Arg^)>0) then dt:=ValAsFlo(Arg^[0])
                        else dt:=Now();
    
-   Stamp := Trunc(TimeStampToMSecs(DateTimeToTimeStamp(dt))/1000)+dt_UnixDiff;
-   F_(False,Arg); Exit(NewVal(VT_INT,Stamp))
+   F_(False,Arg); Exit(NewVal(VT_INT,dt_ToUnix(dt)))
    end;
 
 Function F_DateTime_FromUnix(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
@@ -222,80 +224,56 @@ Function F_DateTime_FromUnix(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    end;
 
 Function dtf(Const S:AnsiString):AnsiString;
-   Var R:AnsiString; P:LongWord; Q:Boolean;
+   Const dtf_Chr = 'dDaAmMoOyYhHiIsSzZpP';
+   Const fpc_Chr : Array[1..Length(dtf_Chr)] of ShortString = (
+            'd','dd','ddd','dddd','m','mm','mmm','mmmm',
+            'yy','yyyy','h','hh','n','nn','s','ss',
+            'z','zzz','a/p','am/pm'
+            );
+   Var R:AnsiString; P,X:LongWord; Q:Boolean;
    begin
    R:=''; Q:=False;
    If (Length(S)=0) then Exit(dtf_def);
-   For P:=1 to Length(S) do
-       If (S[P]='d') then begin
-          If (Q) then begin Q:=False; R+='"' end;
-          R+='d' end else
-       If (S[P]='D') then begin
-          If (Q) then begin Q:=False; R+='"' end;
-          R+='dd' end else
-       If (S[P]='a') then begin
-          If (Q) then begin Q:=False; R+='"' end;
-          R+='ddd' end else
-       If (S[P]='A') then begin
-          If (Q) then begin Q:=False; R+='"' end;
-          R+='dddd' end else
-       If (S[P]='m') then begin
-          If (Q) then begin Q:=False; R+='"' end;
-          R+='m' end else
-       If (S[P]='M') then begin
-          If (Q) then begin Q:=False; R+='"' end;
-          R+='mm' end else
-       If (S[P]='o') then begin
-          If (Q) then begin Q:=False; R+='"' end;
-          R+='mmm' end else
-       If (S[P]='O') then begin
-          If (Q) then begin Q:=False; R+='"' end;
-          R+='mmmm' end else
-       If (S[P]='y') then begin
-          If (Q) then begin Q:=False; R+='"' end;
-          R+='yy' end else
-       If (S[P]='Y') then begin
-          If (Q) then begin Q:=False; R+='"' end;
-          R+='yyyy' end else
-       If (S[P]='h') then begin
-          If (Q) then begin Q:=False; R+='"' end;
-          R+='h' end else
-       If (S[P]='H') then begin
-          If (Q) then begin Q:=False; R+='"' end;
-          R+='hh' end else
-       If (S[P]='i') then begin
-          If (Q) then begin Q:=False; R+='"' end;
-          R+='n' end else
-       If (S[P]='I') then begin
-          If (Q) then begin Q:=False; R+='"' end;
-          R+='nn' end else
-       If (S[P]='s') then begin
-          If (Q) then begin Q:=False; R+='"' end;
-          R+='s' end else
-       If (S[P]='S') then begin
-          If (Q) then begin Q:=False; R+='"' end;
-          R+='ss' end else
-       If (S[P]='p') then begin
-          If (Q) then begin Q:=False; R+='"' end;
-          R+='a/p' end else
-       If (S[P]='P') then begin
-          If (Q) then begin Q:=False; R+='"' end;
-          R+='am/pm' end else
-       If (S[P]='z') then begin
-          If (Q) then begin Q:=False; R+='"' end;
-          R+='z' end else
-       If (S[P]='Z') then begin
-          If (Q) then begin Q:=False; R+='"' end;
-          R+='zzz' end else
-          begin { else - all non-code chars}
-          If (Not Q) then begin Q:=True; R+='"' end;
-          R+=S[P]
-          end;
+   For P:=1 to Length(S) do begin
+      X := Pos(S[P],dtf_Chr);
+      If (X <> 0) then begin
+         If (Q) then R+='"';
+         R += fpc_Chr[X] + '"'; Q:=True
+         end else begin
+         If (S[P] <> '"') then begin
+            If (Not Q) then begin Q:=True; R+='"' end;
+            R += S[P]
+            end else begin
+            If (Q) then begin Q:=False; R+='"' end;
+            R += '''"'''
+            end
+         end
+      end;
    If (Q) then Exit(R+'"') else Exit(R)
    end;
 
+Function dt_String(Const dt:TDateTime;Const Fmt:AnsiString):AnsiString;
+   Var P,tmp:LongWord; NewFmt,Res:AnsiString;
+   begin
+   NewFmt:= '';
+   For P:=1 to Length(Fmt) do
+      Case (Fmt[P]) of
+         'U':
+            NewFmt += IntToStr(dt_ToUnix(dt));
+         'w': begin
+            tmp := DayOfWeek(dt)-1;
+            If (tmp = 0) then tmp := 7;
+            NewFmt += Chr(48 + tmp)
+            end;
+         else
+            NewFmt += Fmt[P]
+      end;
+   DateTimeToString(Res,NewFmt,dt);
+   Exit(Res)
+   end;
+
 Function F_DateTime_String(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   Var C:LongWord; dt:TDateTime; Str,Format:AnsiString;
+   Var C:LongWord; dt:TDateTime; Format:AnsiString;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
    
@@ -320,8 +298,7 @@ Function F_DateTime_String(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
       dt := SysUtils.Now()
       end;
    
-   DateTimeToString(Str,Format,dt);
-   Exit(NewVal(VT_STR,Str))
+   Exit(NewVal(VT_STR,dt_String(dt,Format)))
    end;
 
 

@@ -9,16 +9,6 @@ Procedure Register(Const FT:PFunTrie);
 
 Function F_Doctype(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
-Function F_EncodeURL(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-Function F_DecodeURL(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-Function F_EncodeHTML(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-Function F_DecodeHTML(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-
-Function F_EncodeHex(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-Function F_DecodeHex(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-Function F_EncodeBase64(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-Function F_DecodeBase64(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-
 {$IFDEF CGI}
 Function F_HTTPheader(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_HTTPcookie(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
@@ -53,21 +43,13 @@ Procedure FreeArrays();
 
 implementation
    uses SysUtils, Math,
-        Convert, Values_Typecast, Encodings, Globals,
-        EmptyFunc, Functions_Strings;
+        Convert, Encodings, Globals,
+        Values_Typecast, EmptyFunc;
 
 Procedure Register(Const FT:PFunTrie);
    begin
-   // String thingies
+   // Utils (encoding moved to functions_encodings)
    FT^.SetVal('doctype',MkFunc(@F_Doctype));
-   FT^.SetVal('url-encode',MkFunc(@F_EncodeURL));       FT^.SetVal('encodeURL',MkFunc(@F_EncodeURL));
-   FT^.SetVal('url-decode',MkFunc(@F_DecodeURL));       FT^.SetVal('decodeURL',MkFunc(@F_DecodeURL));   
-   FT^.SetVal('html-encode',MkFunc(@F_EncodeHTML));     FT^.SetVal('encodeHTML',MkFunc(@F_EncodeHTML));
-   FT^.SetVal('html-decode',MkFunc(@F_DecodeHTML));     FT^.SetVal('decodeHTML',MkFunc(@F_EncodeHTML)); 
-   FT^.SetVal('hex-encode',MkFunc(@F_EncodeHex));       FT^.SetVal('encodeHex',MkFunc(@F_EncodeHex));
-   FT^.SetVal('hex-decode',MkFunc(@F_DecodeHex));       FT^.SetVal('decodeHex',MkFunc(@F_EncodeHex)); 
-   FT^.SetVal('base64-encode',MkFunc(@F_EncodeBase64)); FT^.SetVal('encodeBase64',MkFunc(@F_EncodeBase64));
-   FT^.SetVal('base64-decode',MkFunc(@F_DecodeBase64)); FT^.SetVal('decodeBase64',MkFunc(@F_EncodeBase64)); 
    // GET related functions
    FT^.SetVal('get-is',MkFunc(@F_GetIs_));
    FT^.SetVal('get-val',MkFunc(@F_GetVal));
@@ -116,42 +98,6 @@ Procedure FreeArrays();
    SetLength(GetArr, 0); SetLength(PostArr, 0); SetLength(CakeArr, 0)
    {$IFDEF CGI} ; SetLength(Headers, 0); SetLength(Cookies, 0) {$ENDIF}
    end;
-
-
-Type TStrFunc = Function(Const Str:AnsiString):AnsiString;
-
-Function F_ParseString(Const DoReturn:Boolean; Const Arg:PArrPVal; Const Func:TStrFunc):PValue;
-   Var S:AnsiString;
-   begin
-   If (Not DoReturn) then Exit(F_(False, Arg));
-   If (Length(Arg^) = 0) then Exit(NewVal(VT_STR, ''));
-   S:=ValAsStr(Arg^[0]); F_(False,Arg);
-   Exit(NewVal(VT_STR,Func(S)))
-   end;
-
-Function F_DecodeURL(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_ParseString(DoReturn, Arg, @Encodings.DecodeURL)) end;
-
-Function F_EncodeURL(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_ParseString(DoReturn, Arg, @Encodings.EncodeURL)) end;
-   
-Function F_EncodeHTML(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_ParseString(DoReturn, Arg, @Encodings.EncodeHTML)) end;
-   
-Function F_DecodeHTML(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_ParseString(DoReturn, Arg, @Encodings.DecodeHTML)) end;
-
-Function F_EncodeHex(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_ParseString(DoReturn, Arg, @Encodings.EncodeHex)) end;
-
-Function F_DecodeHex(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_ParseString(DoReturn, Arg, @Encodings.DecodeHex)) end;
-
-Function F_EncodeBase64(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_ParseString(DoReturn, Arg, @Encodings.EncodeBase64)) end;
-
-Function F_DecodeBase64(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_ParseString(DoReturn, Arg, @Encodings.DecodeBase64)) end;
 
 
 {$IFDEF CGI}
@@ -552,6 +498,5 @@ Function F_Doctype(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
    Exit(NewVal(VT_STR,R))
    end;
-
 
 end.

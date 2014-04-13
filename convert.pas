@@ -79,7 +79,7 @@ Function NumToStr(Num:QInt;Tp:TValueType):TStr;
    end end;
 
 Function FloatToStr(Val:TFloat):TStr;
-   begin Exit(FloatToStrF(Val, RealForm, RealPrec, RealPrec)) end;
+   begin Exit(SysUtils.FloatToStrF(Val, RealForm, RealPrec, RealPrec)) end;
 
 Function StrToInt(Const Str:TStr):QInt;
    Var Plus:Boolean; P:LongWord;

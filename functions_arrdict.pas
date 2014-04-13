@@ -32,7 +32,8 @@ Function F_dict_keys(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_dict_values(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 implementation
-   uses Values_Compare, Values_Typecast, Convert,
+   uses Values_Compare, Values_Typecast,
+        Convert, FileHandling,
         EmptyFunc, Globals;
 
 Type TCompareFunc = Function(Const A,B:PValue):Boolean;
@@ -351,55 +352,66 @@ Function F_array_fltSum(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    {$UNDEF __CAST_FUNC__  }
    end;
 
-Function F_array_print(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   Var C,I:LongWord; R:Boolean; S:AnsiString;
-       Arr:PArray; AEA:TArray.TEntryArr;
+Function ValueToPrintable(Const V:PValue):AnsiString;
+   Var Arr:PArray; AEA:TArray.TEntryArr;
        Dic:PDict; DEA:TDict.TEntryArr;
-   begin R:=False;
-   If (Length(Arg^) >= 2) then begin
-      For C:=High(Arg^) downto 2 do
-          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
-      If (Arg^[1]^.Typ = VT_BOO)
-         then R:=PBool(Arg^[1]^.Ptr)^
-         else R:=ValAsBoo(Arg^[1]);
-      If (Arg^[1]^.Lev >= CurLev) then FreeVal(Arg^[1])
+       Idx:LongWord;
+   begin Case (V^.Typ) of
+   VT_ARR: begin
+      Result:='array(';
+      Arr:=PArray(V^.Ptr); 
+      If (Not Arr^.Empty()) then begin
+         AEA:=Arr^.ToArray(); 
+         For Idx:=Low(AEA) to High(AEA) do begin
+             Result += '[' + IntToStr(AEA[Idx].Key) + ']: ';
+             Result += ValueToPrintable(AEA[Idx].Val);
+             If (Idx < High(AEA)) then Result += ', '
+         end end;
+      Result += ')'
       end;
+   VT_DIC: begin
+      Result := 'dict(';
+      Dic:=PDict(V^.Ptr); 
+      If (Not Dic^.Empty()) then begin
+         DEA:=Dic^.ToArray(); 
+         For Idx:=Low(DEA) to High(DEA) do begin
+             Result += '[' + DEA[Idx].Key +']: ';
+             Result += ValueToPrintable(DEA[Idx].Val);
+             If (Idx < High(DEA)) then Result += ', '
+         end end;
+      Result += ')'
+      end;
+   VT_FIL:
+      Result := 'file('+PFileHandle(V^.Ptr)^.Pth+')';
+   VT_NIL:
+      Result := '{NIL}';
+   else
+      Result := ValAsStr(V)
+   end end;
+
+Function F_array_print(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   Var Raw:Boolean; Str:AnsiString;
+   begin 
    If (Length(Arg^) > 0) then begin
-       If (Arg^[0]^.Typ = VT_ARR) then begin
-          S:='array(';
-          Arr:=PArray(Arg^[0]^.Ptr); 
-          If (Not Arr^.Empty()) then begin
-             AEA:=Arr^.ToArray(); 
-             For I:=Low(AEA) to High(AEA) do begin
-                 S += '[' + IntToStr(AEA[I].Key) + ']: ';
-                 If (AEA[I].Val^.Typ = VT_STR)
-                    then S += PStr(AEA[I].Val^.Ptr)^
-                    else S += ValAsStr(AEA[I].Val);
-                 If (I < High(AEA)) then S += ', '
-                 end;
-          S += ')'
-          end end else
-       If (Arg^[0]^.Typ = VT_DIC) then begin
-          S := 'dict(';
-          Dic:=PDict(Arg^[0]^.Ptr); 
-          If (Not Dic^.Empty()) then begin
-             DEA:=Dic^.ToArray(); 
-             For I:=Low(DEA) to High(DEA) do begin
-                 S += '[' + DEA[I].Key +']: ';
-                 If (DEA[I].Val^.Typ <> VT_STR)
-                    then S += PStr(DEA[I].Val^.Ptr)^
-                    else S += ValAsStr(DEA[I].Val);
-                 If (I < High(DEA)) then S += ', '
-                 end;
-          S += ')'
-          end end else WriteStr(S, '{', Arg^[0]^.Typ, '}');
-       If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0])
-       end;
-   If (R) then begin 
-      If (DoReturn) then Exit(NewVal(VT_STR, S)) else Exit(NIL)
+      If (Length(Arg^) >= 2)
+         then Raw := ValAsBoo(Arg^[1])
+         else Raw := False;
+      If (Arg^[0]^.Typ = VT_ARR) or (Arg^[0]^.Typ = VT_DIC)
+         then Str := ValueToPrintable(Arg^[0])
+         else Str := ''
       end else begin
-      Writeln(StdOut, S); If DoReturn then Exit(NilVal()) else Exit(NIL)
-      end
+      Raw := False;
+      Str := ''
+      end;
+   If (Raw) then begin
+      If (DoReturn) then Result := NewVal(VT_STR,Str)
+                    else Result := NIL
+      end else begin
+      If (DoReturn) then Result := NewVal(VT_INT,Length(Str))
+                    else Result := NIL;
+      Writeln(StdOut, Str)
+      end;
+   F_(False,Arg)
    end;
 
 end.

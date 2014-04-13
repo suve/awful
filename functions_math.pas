@@ -21,6 +21,12 @@ Function F_sin(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_tan(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_ctg(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
+Function F_arccos(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_arcsin(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_arctan(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_arcctg(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+//Function F_getAngle(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+
 Function F_sqrt(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_log(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
@@ -40,6 +46,12 @@ Procedure Register(Const FT:PFunTrie);
    FT^.SetVal('sin', MkFunc(@F_sin));
    FT^.SetVal('tan', MkFunc(@F_tan));
    FT^.SetVal('ctg', MkFunc(@F_ctg));
+   // Cyclometry
+   FT^.SetVal('arccos', MkFunc(@F_arccos));
+   FT^.SetVal('arcsin', MkFunc(@F_arcsin));
+   FT^.SetVal('arctan', MkFunc(@F_arctan));
+   FT^.SetVal('arcctg', MkFunc(@F_arcctg));
+//   FT^.SetVal('get-angle', MkFunc(@F_getAngle));
    // Positive-negative
    FT^.SetVal('abs', MkFunc(@F_abs));
    FT^.SetVal('sgn', MkFunc(@F_sgn));
@@ -74,6 +86,18 @@ Function myTan(Const V:TFloat):TFloat; Inline;
    
 Function myCtg(Const V:TFloat):TFloat; Inline;
    begin Exit(Cot(V)) end;
+
+Function myArcCos(Const V:TFloat):TFloat; Inline;
+   begin Exit(ArcCos(V)) end; 
+   
+Function myArcSin(Const V:TFloat):TFloat; Inline;
+   begin Exit(ArcSin(V)) end;
+   
+Function myArcTan(Const V:TFloat):TFloat; Inline;
+   begin Exit(ArcTan(V)) end;
+   
+Function myArcCtg(Const V:TFloat):TFloat; Inline;
+   begin Exit(ArcTan(1 / V)) end;
 
 Function myCeil(Const V:TFloat):QInt;  Inline;
    begin Exit(Ceil(V)) end;
@@ -182,23 +206,21 @@ Function F_sgn(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    end;
 
 Function F_trigonometric(Const DoReturn:Boolean; Const Arg:PArrPVal; Const Func:TFloatToFloatFunc):PValue; 
-   Var C:LongWord; R:PValue;
+   Var Flt:TFloat;
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
-   If (Length(Arg^) = 0) then Exit(EmptyVal(VT_FLO));
-   If (Length(Arg^)>1) then
-      For C:=1 to High(Arg^) do 
-          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
-   If (Arg^[0]^.Typ >= VT_INT) and (Arg^[0]^.Typ <= VT_BIN)
-      then R:=NewVal(VT_FLO, Func(PQInt(Arg^[0]^.Ptr)^ / 180 * Pi)) else
-   If (Arg^[0]^.Typ = VT_FLO)
-      then R:=NewVal(VT_FLO, Func(PFloat(Arg^[0]^.Ptr)^)) else
-      {else} begin
-      R:=ValToFlo(Arg^[0]); PFloat(R^.Ptr)^ := Func(PFloat(R^.Ptr)^)
-      end;
-   If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
-   Exit(R)   
-   end;
+   If (Length(Arg^) > 0) then begin
+      Flt := ValAsFlo(Arg^[0]);
+      If (Arg^[0]^.Typ >= VT_INT) and (Arg^[0]^.Typ <= VT_BIN)
+         then Flt := Flt * Pi / 180;
+      F_(False,Arg)
+      end else Flt := 0.0;
+   Try
+      Flt := Func(Flt);
+      Result := NewVal(VT_FLO, Flt)
+   Except
+      Result := NilVal()
+   end end;
 
 Function F_cos(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_trigonometric(DoReturn, Arg, @myCos)) end;
@@ -211,6 +233,33 @@ Function F_tan(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    
 Function F_ctg(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_trigonometric(DoReturn, Arg, @myCtg)) end;
+
+Function F_cyclometric(Const DoReturn:Boolean; Const Arg:PArrPVal; Const Func:TFloatToFloatFunc):PValue; 
+   Var Flt:TFloat;
+   begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
+   If (Length(Arg^) > 0) then begin
+      Flt := ValAsFlo(Arg^[0]);
+      F_(False,Arg)
+      end else Flt := 0.0;
+   Try
+      Flt := Func(Flt);
+      Result := NewVal(VT_FLO,Flt)
+   Except
+      Result := NilVal()
+   end end;
+
+Function F_arccos(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   begin Exit(F_cyclometric(DoReturn, Arg, @myArcCos)) end;
+
+Function F_arcsin(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   begin Exit(F_cyclometric(DoReturn, Arg, @myArcSin)) end;
+   
+Function F_arctan(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   begin Exit(F_cyclometric(DoReturn, Arg, @myArcTan)) end;
+   
+Function F_arcctg(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   begin Exit(F_cyclometric(DoReturn, Arg, @myArcCtg)) end;
 
 Function F_rounding(Const DoReturn:Boolean; Const Arg:PArrPVal; Const Func:TFloatToIntFunc):PValue;
    Var C:LongWord; R:PValue;
