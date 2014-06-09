@@ -7,9 +7,14 @@ interface
 
 const VMAJOR = '0';
       VMINOR = '5';
-      VBUGFX = '2';
-      VREVISION = 38;
+      VBUGFX = '3';
+      VREVISION = 39;
       VERSION = VMAJOR + '.' + VMINOR + '.' + VBUGFX;
+      
+      FULLNAME = 'awful'
+                 {$IFDEF  CGI}+'-cgi' {$ENDIF}
+                 {$IFDEF FCGI}+'-fcgi'{$ENDIF}
+                 ;
 
 Const dtf_def = 'yyyy"-"mm"-"dd" "hh":"nn';
 

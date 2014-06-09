@@ -76,19 +76,17 @@ Procedure Register(Const FT:PFunTrie);
 
 Function Eval(Const Ret:Boolean; Const E:PExpr):PValue;
    
-   Function GetVar(Name:PStr;Typ:TValueType):PValue;
-      Var R:PValue;
+   Function GetVar(Const Name:PStr;Const Typ:TValueType):PValue;
       begin
-      R:=FCal[FLev].Vars^.GetVal(Name^);
-      If (R <> NIL) then Exit(R);
-      R:=FCal[0].Vars^.GetVal(Name^);
-      If (R <> NIL) then Exit(R);
-      R:=EmptyVal(Typ); R^.Lev -= 1;
-      FCal[FLev].Vars^.SetVal(Name^,R);
-      Exit(R)
+      Result:=FCal[FLev].Vars^.GetVal(Name^);
+      If (Result <> NIL) then Exit();
+      Result:=FCal[0].Vars^.GetVal(Name^);
+      If (Result <> NIL) then Exit();
+      Result:=EmptyVal(Typ); Result^.Lev -= 1;
+      FCal[FLev].Vars^.SetVal(Name^,Result)
       end;
    
-   Function GetArr(A:PValue; Index:PToken; Typ:TValueType):PValue;
+   Function GetArr(Const A:PValue; Const Index:PToken; Const Typ:TValueType):PValue;
       Var V,H:PValue; Arr:PArray; Dic:PDict;
           KeyStr : TStr; KeyInt : QInt;
           atk:PArrTk; C:LongWord;
@@ -148,19 +146,19 @@ Function Eval(Const Ret:Boolean; Const E:PExpr):PValue;
                 then E^.Arg[T]:=CopyVal(PValue(E^.Tok[T]^.Ptr))
                 else E^.Arg[T]:=PValue(E^.Tok[T]^.Ptr)
              end;
-          TK_VARI, TK_REFE: begin
-             If (T < L) 
-                then E^.Arg[T]:=GetVar(PStr(E^.Tok[T]^.Ptr),E^.Arg[T+1]^.Typ)
-                else E^.Arg[T]:=GetVar(PStr(E^.Tok[T]^.Ptr),VT_NIL);
-             If (E^.Tok[T]^.Typ = TK_VARI) and (E^.Ref = REF_MODIF)
-                then E^.Arg[T] := CopyVal(E^.Arg[T])
+          TK_REFE: begin
+             {$INCLUDE corefunc-tkvar.inc }
              end;
-          TK_AVAL, TK_AREF: begin
-             If (T < L) then Tp:=E^.Arg[T+1]^.Typ else Tp:=VT_NIL;
-             atk := PArrTk(E^.Tok[T]^.Ptr); E^.Arg[T]:=GetVar(PStr(atk^.Ptr), VT_DIC);
-             For I:=Low(atk^.Ind) to High(atk^.Ind) do E^.Arg[T]:=GetArr(E^.Arg[T], atk^.Ind[I], Tp);
-             If (E^.Tok[T]^.Typ = TK_AVAL) and (E^.Ref = REF_MODIF)
-                then E^.Arg[T]:=CopyVal(E^.Arg[T])
+          TK_VARI: begin
+             {$INCLUDE corefunc-tkvar.inc }
+             If (E^.Ref = REF_MODIF) then E^.Arg[T] := CopyVal(E^.Arg[T])
+             end;
+          TK_AREF: begin
+             {$INCLUDE corefunc-tkarr.inc }
+             end;
+          TK_AVAL: begin
+             {$INCLUDE corefunc-tkarr.inc }
+             If (E^.Ref = REF_MODIF) then E^.Arg[T]:=CopyVal(E^.Arg[T])
              end;
           TK_AFLY: begin
              atk := PArrTk(E^.Tok[T]^.Ptr); V:=Eval(RETURN_VALUE_YES, PExpr(atk^.Ptr)); E^.Arg[T]:=V;

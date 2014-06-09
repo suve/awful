@@ -217,11 +217,11 @@ Function F_StrPos(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    If (Length(Arg^)>2) then
       For C:=High(Arg^) downto 1 do
           If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
-   If (Arg^[0]^.Typ = VT_UTF) then begin
-      If (Arg^[1]^.Typ = VT_UTF) then P:=PUTF(Arg^[0]^.Ptr)^.Search(PUTF(Arg^[1]^.Ptr))
-                                 else P:=PUTF(Arg^[0]^.Ptr)^.Search(ValAsStr(Arg^[1]))
+   If (Arg^[1]^.Typ = VT_UTF) then begin
+      If (Arg^[0]^.Typ = VT_UTF) then P:=PUTF(Arg^[1]^.Ptr)^.Search(PUTF(Arg^[0]^.Ptr))
+                                 else P:=PUTF(Arg^[1]^.Ptr)^.Search(ValAsStr(Arg^[0]))
       end else
-      P:=Pos(ValAsStr(Arg^[1]),ValAsStr(Arg^[0]));
+      P:=Pos(ValAsStr(Arg^[0]),ValAsStr(Arg^[1]));
    For C:=1 downto 0 do If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
    Exit(NewVal(VT_INT,P))
    end;
@@ -240,7 +240,7 @@ Function F_SubStr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
              then i[C]:=PQInt(Arg^[C]^.Ptr)^
              else i[C]:=ValAsInt(Arg^[C])
           end else
-             If (C=2) then i[C]:=High(QInt) else i[C]:=1;
+             If (C=2) then i[C]:=$7FFFFFFF else i[C]:=1;
    If (Arg^[0]^.Typ = VT_STR) then V:=NewVal(VT_STR,Copy(PStr(Arg^[0]^.Ptr)^,i[1],i[2])) else
    If (Arg^[0]^.Typ = VT_UTF) then V:=NewVal(VT_UTF,PUTF(Arg^[0]^.Ptr)^.SubStr(i[1],i[2])) else
                               {el} V:=NewVal(VT_STR,Copy(ValAsStr(Arg^[0]),i[1],i[2]));

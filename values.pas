@@ -77,17 +77,17 @@ Procedure FreeVal(Const Val:PValue);
 Procedure DestroyVal(Const Val:PValue);
 Procedure AnnihilateVal(Const Val:PValue);
 
-Function  CreateVal(T:TValueType):PValue;
+Function  CreateVal(Const T:TValueType):PValue;
 Function  EmptyVal(Const T:TValueType):PValue;
 Function  NilVal():PValue;
 
 Function  CopyTyp(Const V:PValue):PValue;
 Function  CopyVal(Const V:PValue):PValue;
-Function  CopyVal(Const V:PValue;Lv:LongWord):PValue;
+Function  CopyVal(Const V:PValue;Const Lv:LongWord):PValue;
 
 Procedure SwapPtrs(Const A,B:PValue);
-Procedure SetValLev(Const V:PValue;Lv:LongWord);
-Procedure SetValMaxLev(Const V:PValue;Lv:LongWord);
+Procedure SetValLev(Const V:PValue;Const Lv:LongWord);
+Procedure SetValMaxLev(Const V:PValue;Const Lv:LongWord);
 
 Function NewVal(Const T:TValueType; Const V:Pointer):PValue;
 Function NewVal(Const T:TValueType; Const V:TFloat):PValue;
@@ -120,7 +120,7 @@ Type TSpareArray = record
 
 Var SpareVars : Array[TValueType] of TSpareArray;
 
-Function CreateVal(T:TValueType):PValue;
+Function CreateVal(Const T:TValueType):PValue;
    Var I:PQInt; S:PStr; D:PFloat; B:PBoolean;
        Utf:PUTF; Arr:PArray; Dic:PDict;
    begin
@@ -278,7 +278,7 @@ Function  CopyTyp(Const V:PValue):PValue;
 Function  CopyVal(Const V:PValue):PValue;
    begin Exit(CopyVal(V, CurLev)) end;
 
-Procedure CopyVal_Arr(V,R:PValue;Lv:LongWord);
+Procedure CopyVal_Arr(Const V,R:PValue;Const Lv:LongWord);
    Var NArr, OArr : PArray; AEA : TArray.TEntryArr; 
        C:LongWord;
    begin
@@ -291,7 +291,7 @@ Procedure CopyVal_Arr(V,R:PValue;Lv:LongWord);
               else NArr^.SetVal(AEA[C].Key, AEA[C].Val)
    end end;
 
-Procedure CopyVal_Dict(V,R:PValue;Lv:LongWord);
+Procedure CopyVal_Dict(Const V,R:PValue;Const Lv:LongWord);
    Var NDic, ODic : PDict; DEA : TDict.TEntryArr;
        C:LongWord;
    begin
@@ -304,7 +304,7 @@ Procedure CopyVal_Dict(V,R:PValue;Lv:LongWord);
               else NDic^.SetVal(DEA[C].Key, DEA[C].Val)
    end end;
 
-Function  CopyVal(Const V:PValue;Lv:LongWord):PValue;
+Function  CopyVal(Const V:PValue;Const Lv:LongWord):PValue;
    begin
    Result:=CreateVal(V^.Typ); Result^.Lev:=Lv;
    Case V^.Typ of 
@@ -326,7 +326,7 @@ Function  CopyVal(Const V:PValue;Lv:LongWord):PValue;
          Result^.Ptr := V^.Ptr
    end end;
 
-Procedure SetValLev(Const V:PValue;Lv:LongWord);
+Procedure SetValLev(Const V:PValue;Const Lv:LongWord);
    Var C:LongWord;
        Arr:PArray; AEA:TArray.TEntryArr;
        Dic:PDict; DEA:TDict.TEntryArr;
@@ -346,7 +346,7 @@ Procedure SetValLev(Const V:PValue;Lv:LongWord);
       end
    end;
 
-Procedure SetValMaxLev(Const V:PValue;Lv:LongWord);
+Procedure SetValMaxLev(Const V:PValue;Const Lv:LongWord);
    Var C:LongWord;
        Arr:PArray; AEA:TArray.TEntryArr;
        Dic:PDict; DEA:TDict.TEntryArr;

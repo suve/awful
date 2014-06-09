@@ -13,7 +13,7 @@ Function BinToStr(Int:QInt;Const Digs:LongWord=0):TStr;
 //Function RealToStr(Val:Extended;Prec:LongWord):TStr;
 Function FloatToStr(Val:TFloat):TStr;
 
-Procedure HexCase(Upper:Boolean);
+Procedure HexCase(Const Upper:Boolean);
 Function  HexCase():Boolean;
 
 Function IntBase(Const T:TValueType):LongInt; Inline;
@@ -23,7 +23,7 @@ Function StrToInt(Const Str:TStr):QInt;
 Function StrToHex(Const Str:TStr):QInt;
 Function StrToOct(Const Str:TStr):QInt;
 Function StrToBin(Const Str:TStr):QInt;
-Function StrToNum(Const Str:TStr;Tp:TValueType):QInt;
+Function StrToNum(Const Str:TStr;Const Tp:TValueType):QInt;
 Function StrToReal(Str:TStr):TFloat;
 
 Var Sys16Dig : Array[0..15] of Char = (
@@ -33,7 +33,7 @@ Var Sys16Dig : Array[0..15] of Char = (
 implementation
    uses SysUtils, Math;
 
-Procedure HexCase(Upper:Boolean);
+Procedure HexCase(Const Upper:Boolean);
    Var C,Off:LongWord;
    begin
    If (Upper) then Off := 65 - 10 else Off := 97 - 10;
@@ -70,7 +70,7 @@ Function OctToStr(Int:QInt;Const Digs:LongWord=0):TStr;
 Function BinToStr(Int:QInt;Const Digs:LongWord=0):TStr; 
    begin Exit(NumToStr(Int,2,Digs)) end;
 
-Function NumToStr(Num:QInt;Tp:TValueType):TStr; 
+Function NumToStr(Num:QInt;Const Tp:TValueType):TStr; 
    begin Case Tp of
       VT_INT: Exit(IntToStr(Num));
       VT_HEX: Exit(HexToStr(Num));
@@ -137,7 +137,7 @@ Function StrToBin(Const Str:TStr):QInt;
    If Plus then Exit(Result) else Exit(-Result)
    end;
 
-Function StrToNum(Const Str:TStr;Tp:TValueType):QInt;
+Function StrToNum(Const Str:TStr;Const Tp:TValueType):QInt;
    begin Case Tp of
       VT_INT: Exit(StrToInt(Str));
       VT_HEX: Exit(StrToHex(Str));

@@ -40,6 +40,10 @@ Function F_DirCreate(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_DirForce(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_DirRemove(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
+Function F_FileGetContents(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_FileSize(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_DirList(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+
 implementation
    uses SysUtils, Globals, FileHandling, EmptyFunc,
         Values_Typecast;
@@ -54,21 +58,29 @@ Procedure Register(Const FT:PFunTrie);
    FT^.SetVal('file-exists',MkFunc(@F_FileExists));
    FT^.SetVal('file-unlink',MkFunc(@F_FileUnlink));
    FT^.SetVal('file-rename',MkFunc(@F_FileRename));
+   FT^.SetVal('file-size',MkFunc(@F_FileSize));
+   FT^.SetVal('file-get-contents',MkFunc(@F_FileGetContents));
    // Dir utils
    FT^.SetVal('dir-exists',MkFunc(@F_DirExists));
    FT^.SetVal('dir-create',MkFunc(@F_DirCreate));
    FT^.SetVal('dir-force' ,MkFunc(@F_DirForce ));
    FT^.SetVal('dir-remove',MkFunc(@F_DirCreate));
-   // File handling
+   FT^.SetVal('dir-list',MkFunc(@F_DirList));
+   // Files - opening
    FT^.SetVal('f-append' ,MkFunc(@F_fappend));
    FT^.SetVal('f-reset'  ,MkFunc(@F_freset));
    FT^.SetVal('f-rewrite',MkFunc(@F_frewrite));
    FT^.SetVal('f-open'   ,MkFunc(@F_fopen));
+   // Files - closing
+   FT^.SetVal('f-eof'    ,MkFunc(@F_feof));
    FT^.SetVal('f-close'  ,MkFunc(@F_fclose));
+   // Files - writing
+   FT^.SetVal('f-write'  ,MkFunc(@F_fwrite));
+   FT^.SetVal('f-writeln',MkFunc(@F_fwriteln));
+   // Files - reading
    FT^.SetVal('f-read'   ,MkFunc(@F_fread,REF_MODIF));
    FT^.SetVal('f-readln' ,MkFunc(@F_freadln,REF_MODIF));
-   FT^.SetVal('f-getln'  ,MkFunc(@F_fgetline));
-   FT^.SetVal('f-eof'    ,MkFunc(@F_feof))
+   FT^.SetVal('f-getln'  ,MkFunc(@F_fgetline))
    end;
 
 Function OpenFile(Const Name:AnsiString; Const Mode:Char):LongInt;
@@ -283,5 +295,117 @@ Function F_DirForce(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 Function F_DirRemove(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_DirAction(DoReturn, Arg, @RemoveDir)) end;
+
+Function F_FileGetContents(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   Var F:File of Char; Ch:Char;
+   begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
+   If (Length(Arg^) = 0) then Exit(NilVal());
+   Assign(F,ValAsStr(Arg^[0]));
+   {$I-} Reset(F,1); {$I+}
+   If (IOResult() = 0) then begin
+      Result := EmptyVal(VT_STR);
+      While (Not Eof(F)) do begin
+         Read(F,Ch);
+         PStr(Result^.Ptr)^ += Ch
+         end;
+      Close(F)
+      end else Result:=NilVal();
+   F_(False,Arg)
+   end;
+
+Function F_FileSize(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   Var Sr:TSearchRec;
+   begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
+   If (Length(Arg^) = 0) then Exit(NewVal(VT_INT,-1));
+   If (FindFirst(ValAsStr(Arg^[0]),(faReadOnly or faHidden),Sr) = 0)
+      then Result := NewVal(VT_INT,Sr.Size)
+      else Result := NewVal(VT_INT,-1);
+   FindClose(Sr);
+   F_(False,Arg)
+   end;
+
+{$IFDEF WINDOWS}
+   {$DEFINE DirDelim := '\'}
+{$ELSE}
+{$IFDEF LINUX}
+   {$DEFINE DirDelim:='/'}
+{$ENDIF}{$ENDIF}
+
+Type TAnsiStringArr = Array of AnsiString;
+     PAnsiStringArr = ^TAnsiStringArr;
+
+Procedure ListDir(Const Dir,Pat:AnsiString;Const Attr:LongInt;Const Recurse,Slash:Boolean;Const Arr:PAnsiStringArr);
+   Var S:TSearchRec; L:LongInt;
+   begin
+   L := Length(Arr^);
+   If (FindFirst(Dir+Pat,Attr,S) = 0) then Repeat
+      If (S.Name = '.') or (S.Name = '..') then Continue;
+      SetLength(Arr^,L+1);
+      Arr^[L] := Dir + S.Name;
+      If ((S.Attr and faDirectory)<>0) then begin
+         If (Slash) then Arr^[L] += DirDelim;
+         If (Recurse) then begin
+            ListDir(Dir+S.Name+DirDelim,Pat,Attr,Recurse,Slash,Arr);
+            L := Length(Arr^)
+            end
+         end else L += 1;
+      Until (FindNext(S) <> 0);
+   FindClose(S)
+   end;
+
+Procedure Quicksort(Var Arr:TAnsiStringArr;Const Min,Max:LongInt);
+   Var Piv,Pos:LongInt; PivVal : AnsiString;
+   begin
+   Pos := Min; Piv := Max; PivVal := Arr[Piv];
+   While (Pos < Piv) do
+      If (Arr[Pos] > PivVal) then begin
+         Arr[Piv] := Arr[Pos];
+         Piv -= 1;
+         Arr[Pos] := Arr[Piv];
+         Arr[Piv] := PivVal
+         end else Pos += 1;
+   If ((Pos - Min) > 1) then Quicksort(Arr,Min,Pos-1);
+   If ((Max - Pos) > 1) then Quicksort(Arr,Pos+1,Max)
+   end;
+
+Procedure Quicksort(Var Arr:TAnsiStringArr);
+   begin Quicksort(Arr,Low(Arr),High(Arr)) end;
+
+Function F_DirList(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   Var Dir,Pat,sA:AnsiString; Attr,C : LongInt; Recurse, Sort, Slash : Boolean;
+       StrArr : TAnsiStringArr;
+   begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
+   If (Length(Arg^) = 0) then Exit(NilVal());
+   Pat := '*'; Attr := faReadOnly;
+   Recurse := False; Sort:=False; Slash := False;
+   If (Length(Arg^) > 1) then begin
+      Pat := ValAsStr(Arg^[1]);
+      If (Length(Arg^) > 2) then begin
+         sA := ValAsStr(Arg^[2]);
+         For C:=1 to Length(sA) do Case(sA[C]) of
+            'd': Attr := Attr or faDirectory;
+            'w': Attr := Attr and (Not faReadOnly);
+            'h': Attr := Attr or faHidden;
+            'r': Recurse := True;
+            's': Sort := True;
+            '/': Slash := True;
+      end end end;
+      
+   Dir := ValAsStr(Arg^[0]);
+   If (Length(Dir)>0) then
+      If (Dir[Length(Dir)]<>DirDelim) then Dir += DirDelim;
+      
+   ListDir(Dir,Pat,Attr,Recurse,Slash,@StrArr);
+   If (Sort) then Quicksort(StrArr);
+   
+   Result := EmptyVal(VT_ARR);
+   For C:=0 to High(StrArr) do
+      PArr(Result^.Ptr)^.SetVal(C,NewVal(VT_STR,StrArr[C]))
+   end;
+
+{$UNDEF DirDelim}
 
 end.

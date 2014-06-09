@@ -67,7 +67,7 @@ Procedure AnalyseParams();
          Switch_NoRun := True; ParamNum += 1; Continue
          end else
       If (ParamNow = '--version') then begin
-         Writeln('awful v.',VERSION,' (rev. ',VREVISION,')');
+         Writeln(FULLNAME,' v.',VERSION,' (rev. ',VREVISION,')');
          Writeln('Built by ',{$I %USER%},' at ',{$I %HOSTNAME%},' on ',BuildNum(),
             {$IFDEF FPC}' using FPC ',{$I %FPCVERSION%},{$ENDIF}
             '.');

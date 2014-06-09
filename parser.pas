@@ -28,7 +28,7 @@ Var IfArr : Array of TIf;
     Proc, ExLn : LongWord;
 
 Procedure Fatal(Const Ln:LongWord;Const Msg:AnsiString;Const ErrCode:LongInt = 255);
-Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
+Function MakeExpr(Const ExLo,ExHi,Ln:LongInt; T:LongInt):PExpr;
 Procedure ProcessLine(Const L:AnsiString;Const N:LongWord);
 Procedure ParseFile(Var InputFile:System.Text);
 Procedure ReadFile(Var InputFile:System.Text);
@@ -121,7 +121,11 @@ Procedure AddExpr(Const Ex:PExpr);
    Pr[Proc].Num += 1
    end;
 
-Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
+Var Tk:Array of AnsiString;
+    HiTk, LeTk : LongInt;
+
+Function MakeExpr(Const ExLo,ExHi,Ln:LongInt; T:LongInt):PExpr;
+   Var ExLe : LongInt;
    
    Function ConstPrefix(C:Char):Boolean; Inline;
       begin Exit(Pos(C,'suflihob=')<>0) end;
@@ -179,14 +183,14 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
          end else
          Tok:=NIL;
       // Check if next token is an array index
-      If (Index < High(Tk)) and (Tk[Index+1][1] = '[') then begin
+      If (Index < ExHi) and (Tk[Index+1][1] = '[') then begin
          If (Tok = NIL) then
             Fatal(Ln,'Index token ("[") found, but previous token is neither a variable name nor an expression.');
          otk:=Tok; Index += 1; TkIn := Index + 1; // E^.Tok[High(E^.Tok)];
          If (otk^.Typ = TK_VARI) or (otk^.Typ = TK_REFE) then begin
             Tok:=MakeToken(TkIn);
             If (Tok=NIL) then begin
-               sex:=MakeExpr(Tk, Ln, Index + 1);
+               sex:=MakeExpr(ExLo,ExHi,Ln,Index+1);//MakeExpr(Tk, Ln, Index + 1);
                New(Tok); Tok^.Typ:=TK_EXPR; Tok^.Ptr:=sex
                end;
             CName:=PStr(otk^.Ptr)^; Dispose(PStr(otk^.Ptr)); New(atk);
@@ -198,7 +202,7 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
             end else 
             Fatal(Ln,'Index token ("[") found, but previous token is neither a variable name nor an expression.');
          Nest:=0;
-         While (Index <= High(Tk)) do 
+         While (Index <= ExHi) do 
             //If (Length(Tk[Index])=0) then Index +=1 else
             If (Tk[Index][1]='[') then begin Nest+=1; Index+=1 end else
             If (Tk[Index][1]=']') then begin
@@ -218,7 +222,7 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
       Exit(Tok)
       end;
    
-   Var E:PExpr; FPtr:PFuncInfo; sex:PExpr; A,Etk,LeTk:LongWord;
+   Var E:PExpr; FPtr:PFuncInfo; sex:PExpr; A,Etk:LongWord;
        Tok,otk:PToken; V:PValue; {PS:PStr;} atk : PArrTk;
        Nest:LongWord; CName:TStr; Tmp:LongInt; cstru : TConstructInfo;
    
@@ -264,7 +268,7 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
       If (IfArr[cstru.Idx][1]>=0)
          then Fatal(Ln,'!if from line '+IntToStr(IfArr[cstru.Idx][0])+' has a second !else.');
       
-      If (LeTk - T > 1) then Fatal(Ln,'!else cannot take any arguments.');
+      If (ExLe - T > 1) then Fatal(Ln,'!else cannot take any arguments.');
       
       IfArr[cstru.Idx][1]:=Pr[Proc].Num; // set !else expression number
       
@@ -281,7 +285,7 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
       If (cstru.Typ <> CT_IF)
          then Fatal(Ln,'!fi inside a '+cstruType()+' block.');
       
-      If (LeTk - T > 1) then Fatal(Ln,'!fi cannot take any arguments.');
+      If (ExLe - T > 1) then Fatal(Ln,'!fi cannot take any arguments.');
       
       IfArr[cstru.Idx][2]:=Pr[Proc].Num; // set !fi expr num
       If (IfArr[cstru.Idx][1]<0) then IfArr[cstru.Idx][1]:=Pr[Proc].Num; // if !else expr num is not present, set it to !fi expr num
@@ -313,7 +317,7 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
       If (cstru.Typ <> CT_WHILE)
          then Fatal(Ln,'!done inside a '+cstruType()+' block.');
       
-      If (LeTk - T > 1) then Fatal(Ln,'!done cannot take any arguments.');
+      If (ExLe - T > 1) then Fatal(Ln,'!done cannot take any arguments.');
       
       WhiArr[cstru.Idx][2]:=Pr[Proc].Num; // set !done expr num
       
@@ -324,7 +328,7 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
    
    Procedure Construct_Repeat();
       begin
-      If (LeTk - T > 1) then Fatal(Ln,'!repeat cannot take any arguments.');
+      If (ExLe - T > 1) then Fatal(Ln,'!repeat cannot take any arguments.');
       
       A:=Length(RepArr);
       SetLength(RepArr,(A+1));
@@ -355,7 +359,7 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
    
    Procedure Construct_Const();
       begin
-      If ((LeTk-T)<>3) then Fatal(Ln,'Wrong number of arguments passed to !const.');
+      If (ExLe <> 3) then Fatal(Ln,'Wrong number of arguments passed to !const ('+IntToStr(ExLe)+').');
       If (Length(Tk[T+1])=0) or (Tk[T+1][1]<>'=')
          then Fatal(Ln,'!const names must start with a "=" character.');
       CName:=Copy(Tk[T+1],2,Length(Tk[T+1]));
@@ -394,7 +398,7 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
          Fatal(Ln,'!fun inside a '+cstruType()+'block.')
          end;
       If (Proc<>0) then Fatal(Ln,'Nested function declaration.');
-      If ((LeTk-T)<2) then Fatal(Ln,'No function name specified.');
+      If ((ExLe-T)<2) then Fatal(Ln,'No function name specified.');
       If (Length(Tk[T+1])=0) or (Tk[T+1][1]<>':')
          then Fatal(Ln,'Function names must start with the colon (":") character.');
       CName:=Copy(Tk[T+1],2,Length(Tk[T+1]));
@@ -404,9 +408,9 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
       Proc:=High(Pr); ExLn:=0;
       Pr[Proc].Fil := Length(FileIncludes); Pr[Proc].Lin := Ln;
       Pr[Proc].Num := 0; SetLength(Pr[Proc].Exp,0);
-      SetLength(Pr[Proc].Arg, LeTk - 2); A := 0;
+      SetLength(Pr[Proc].Arg, ExLe - 2); A := 0;
       Func^.SetVal(CName,MkFunc(Proc)); T+=2;
-      While (T < LeTk) do begin
+      While (T < ExLe) do begin
          If (Length(Tk[T])=0) then begin
             Error(Ln,'Empty token (#'+IntToStr(T)+').'); T+=1; Continue
             end;
@@ -434,8 +438,8 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
       If (Brk) then cstruName := '!break' else cstruName := '!continue';
       If (cstruStack^.Empty) then Fatal(Ln,cstruName+' outside a loop block.');
       
-      If (LeTk > 1) then begin
-         If (LeTk > 2) then Fatal(Ln,cstruName+' accepts at most one parameter.');
+      If (ExLe > 1) then begin
+         If (ExLe > 2) then Fatal(Ln,cstruName+' accepts at most one parameter.');
          DepStr := Copy(Tk[1], 2, Length(Tk[T]));
          If (Tk[1][1]='s') then Dep := Convert.StrToInt(Copy(DepStr,2,Length(DepStr)-2)) else
          If (Tk[1][1]='u') then Dep := Convert.StrToInt(Copy(DepStr,2,Length(DepStr)-2)) else
@@ -447,7 +451,7 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
          If (Tk[1][1]='l') then Dep := BoolToInt(StrToBoolDef(DepStr,False)) else
          If (Tk[1][1]='=') then begin
             Constant := Cons^.GetVal(DepStr);
-            If (V = NIL) then Fatal(Ln,'Unknown constant "'+DepStr+'".');
+            If (Constant = NIL) then Fatal(Ln,'Unknown constant "'+DepStr+'".');
             Dep := ValAsInt(Constant)
             end else
             Fatal(Ln,'Arguments for '+cstruName+' must be either value literals or constants.');
@@ -531,7 +535,7 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
       end;
    
    begin
-   New(E); LeTk:=Length(Tk);
+   New(E); ExLe := ExHi - ExLo + 1;
    If (Tk[T][1]=':') then begin
       FPtr := Func^.GetVal(Tk[T][2..Length(Tk[T])]);
       If (FPtr = NIL)
@@ -575,13 +579,13 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
          Dispose(E); Exit(NIL)
          end;
       '!include': begin
-         T += 1; If (T = LeTk) then Error(Ln,'!include without arguments.');
-         Repeat Construct_Include(INCL_INCLUDE); T += 1 until (T = LeTk);
+         T += 1; If (T > ExHi) then Error(Ln,'!include without arguments.');
+         Repeat Construct_Include(INCL_INCLUDE); T += 1 until (T > ExHi);
          Dispose(E); Exit(NIL)
          end;
       '!require': begin
-         T += 1; If (T = LeTk) then Fatal(Ln,'!require without arguments.');
-         Repeat Construct_Include(INCL_REQUIRE); T += 1 until (T = LeTk);
+         T += 1; If (T > ExHi) then Fatal(Ln,'!require without arguments.');
+         Repeat Construct_Include(INCL_REQUIRE); T += 1 until (T > ExHi);
          Dispose(E); Exit(NIL)
          end;
       {'!return': begin
@@ -593,18 +597,18 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
       end else
       Fatal(Ln,'First token in expression ("'+Tk[T]+'") is neither a function call nor a language construct.');
    E^.Fun:=TBuiltIn(FPtr^.Ptr); E^.Ref := FPtr^.Ref;
-   T+=1; If (T >= LeTk) then begin
+   T+=1; If (T > ExHi) then begin
       SetLength(E^.Arg,Length(E^.Tok));
       Exit(E); end;
-   Etk := Length(E^.Tok); If (LeTk > Etk) then SetLength(E^.Tok, LeTk);
-   While (T < LeTk) do begin
+   Etk := Length(E^.Tok); If (ExLe > Etk) then SetLength(E^.Tok, ExLe);
+   While (T <= ExHi) do begin
       If (Length(Tk[T])=0) then Error(Ln,'Empty token (#'+IntToStr(T)+').') else
       If (Tk[T][1]='(') then begin
-         sex:=MakeExpr(Tk,Ln,T+1);
+         sex:=MakeExpr(ExLo,ExHi,Ln,T+1);//MakeExpr(Tk,Ln,T+1);
          New(Tok); Tok^.Typ:=TK_EXPR; Tok^.Ptr:=sex;
          AddToken(Tok);
          Nest:=0;
-         While (T < LeTk) do 
+         While (T <= ExHi) do 
             If (Length(Tk[T])=0) then T+=1 else
             If (Tk[T][1]='(') then begin Nest+=1; T+=1 end else
             If (Tk[T][1]=')') then begin
@@ -622,7 +626,7 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
          If (otk^.Typ = TK_AREF) or (otk^.Typ = TK_AVAL) or (otk^.Typ = TK_AFLY) then begin
             Tok:=MakeToken(Tmp);
             If (Tok=NIL) then begin
-               sex:=MakeExpr(Tk,Ln,T+1);
+               sex:=MakeExpr(ExLo,ExHi,Ln,T+1);//MakeExpr(Tk,Ln,T+1);
                New(Tok); Tok^.Typ:=TK_EXPR; Tok^.Ptr:=sex
                end;
             atk := PArrTk(otk^.Ptr);
@@ -632,7 +636,7 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
          If (otk^.Typ = TK_EXPR) then begin
             Tok:=MakeToken(Tmp);
             If (Tok=NIL) then begin
-               sex:=MakeExpr(Tk,Ln,T+1);
+               sex:=MakeExpr(ExLo,ExHi,Ln,T+1);//MakeExpr(Tk,Ln,T+1);
                New(Tok); Tok^.Typ:=TK_EXPR; Tok^.Ptr:=sex
                end;
             New(atk); atk^.Ptr := otk^.Ptr;
@@ -641,7 +645,7 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
             end else
             Fatal(Ln,'Index token ("[") found, but previous token is neither a variable name nor an expression.');
          Nest:=0;
-         While (T < LeTk) do 
+         While (T <= HiTk) do 
             If (Length(Tk[T])=0) then T+=1 else
             If (Tk[T][1]='[') then begin Nest+=1; T+=1 end else
             If (Tk[T][1]=']') then begin
@@ -653,7 +657,7 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
          SetLength(E^.Tok, Etk); SetLength(E^.Arg, Etk); Exit(E)
          end else
       If (Tk[T][1]=':') then begin
-         sex:=MakeExpr(Tk,Ln,T);
+         sex:=MakeExpr(ExLo,ExHi,Ln,T);//MakeExpr(Tk,Ln,T);
          New(Tok); Tok^.Typ:=TK_EXPR; Tok^.Ptr:=sex;
          AddToken(Tok);
          SetLength(E^.Tok, Etk); SetLength(E^.Arg, Etk); Exit(E)
@@ -672,12 +676,11 @@ Function MakeExpr(Var Tk:Array of AnsiString;Const Ln:LongInt; T:LongInt):PExpr;
    end;
 
 Procedure ProcessLine(Const L:AnsiString;Const N:LongWord);
-   Var Tk:Array of AnsiString; P,S,Len:LongWord;
-       Str:LongInt; Del:Char; PipeChar:AnsiString;
-       Ex:PExpr; LeTk,HiTk:LongInt; Utf:Boolean;
+   Var P,S,Len:LongWord; Str:LongInt; Del:Char;
+       PipeChar:AnsiString; Ex:PExpr; Utf:Boolean;
    
    Function BreakToken(Const Ch:Char):Boolean; Inline;
-      begin Exit(Pos(Ch,' (|)[#]~')<>0) end;
+      begin Exit((Ch <= ' ') or (Ch in ['(','|',')','~','[','#',']'])) end;
    
    Procedure EnsureEmptyPlaces(Len:LongWord); Inline;
       begin
@@ -705,17 +708,17 @@ Procedure ProcessLine(Const L:AnsiString;Const N:LongWord);
       Exit()
       end else
       If (Codemode > 0) then begin
-         While (L[S]=' ') and (S <= Len) do S += 1;
+         While (L[S]<=' ') and (S <= Len) do S += 1;
          If (S > Len) then Exit()
       end;
    {$ELSE}
    If (Len = 0) then Exit();
-   While (L[S]=' ') and (S <= Len) do S += 1;
+   While (L[S]<=' ') and (S <= Len) do S += 1;
    If (S > Len) then Exit();
-   While (L[Len]=' ') and (Len > 0) do Len -= 1;
+   While (L[Len]<=' ') and (Len > 0) do Len -= 1;
    {$ENDIF}
    //Writeln('ProcessLine: ',L[S..Len]);
-   SetLength(Tk,2); LeTk := 2; HiTk := -1; {S := 1; Len:=Length(L);} 
+   {SetLength(Tk,2); LeTk := 2;} HiTk := -1; {S := 1; Len:=Length(L);} 
    P:=1; Str:=0; Del:=#255; PipeChar:='';
    While (S <= Len) do begin
       //Writeln(N:8,#32,Len:8,#32,S:8,#32,P:8,' "',L[P],'"');
@@ -858,13 +861,13 @@ Procedure ProcessLine(Const L:AnsiString;Const N:LongWord);
    S:=0; {HiTk := High(Tk);} P:=1;
    While (P <= HiTk) do begin
       If (Tk[P][1]='!') then begin //if (n=11) then writeln('makeexpr ',rs,'..',p-1);
-         Ex := MakeExpr(Tk[S..P-1], N, 0);
+         Ex := MakeExpr(S,P-1,N,S); //MakeExpr(Tk[S..P-1], N, 0);
          If (Ex<>NIL) then AddExpr(Ex);
          S := P;
          end else
       If (Tk[P][1]='~') then begin
          If (Tk[S][1]<>'~') then begin //if (n=11) then writeln('makeexpr ',rs,'..',p-1);
-            Ex:=MakeExpr(Tk[S..P-1], N, 0);
+            Ex:=MakeExpr(S,P-1,N,S);//MakeExpr(Tk[S..P-1], N, 0);
             If (Ex<>NIL) then AddExpr(Ex)
             end;
          While (P <= HiTk) and (Tk[P][1] = '~') do P += 1; S := P;
@@ -873,7 +876,7 @@ Procedure ProcessLine(Const L:AnsiString;Const N:LongWord);
       P += 1
       end;
    If (S <= HiTk) and (Tk[S][1]<>'~') then begin
-      Ex := MakeExpr(Tk[S..HiTk], N, 0); 
+      Ex := MakeExpr(S,HiTk,N,S);//MakeExpr(Tk[S..HiTk], N, 0); 
       If (Ex<>NIL) then AddExpr(Ex)
       end
    end;
@@ -922,7 +925,9 @@ Procedure ReadFile(Var InputFile:System.Text);
    
    SetLength(FCal,1); New(FCal[0].Vars,Create()); FCal[0].Args := NIL; FLev := 0;
    
+   SetLength(Tk,2); LeTk := 2;
    ParseFile(InputFile); // loop moved to other file
+   SetLength(Tk,0);
    
    If (mulico > 0) then Writeln(StdErr,YukName,': multi-line comment stretches past end of code.');
    

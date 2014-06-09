@@ -5,7 +5,7 @@ unit values_bitwise;
 interface
    uses Values;
 
-Function ValNot(A:PValue):PValue;
+Function ValNot(Const A:PValue):PValue;
 Function ValAnd(Const A,B:PValue):PValue;
 Function ValXor(Const A,B:PValue):PValue;
 Function ValOr(Const A,B:PValue):PValue;
@@ -13,7 +13,7 @@ Function ValOr(Const A,B:PValue):PValue;
 implementation
    uses Convert;
 
-Function ValNot(A:PValue):PValue;
+Function ValNot(Const A:PValue):PValue;
    Var R:PValue; I:PQInt; S:PStr; L:PBoolean; D:PFloat; C:LongWord;
    begin
    New(R); R^.Typ:=A^.Typ; R^.Lev:=CurLev;
