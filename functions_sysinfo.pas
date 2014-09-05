@@ -32,8 +32,8 @@ Function F_SysInfo_System(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_SysInfo_Version(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 implementation
-   uses SysUtils, Process,
-        {$IFDEF LINUX} Unix, Linux, {$ENDIF}
+   uses SysUtils,
+        {$IFDEF LINUX} Unix, Linux, Process, {$ENDIF}
         {$IFDEF WINDOWS} Winsock, {$ENDIF}
         EmptyFunc, Values_Typecast, Convert;
 

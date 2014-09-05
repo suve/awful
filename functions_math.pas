@@ -25,7 +25,7 @@ Function F_arccos(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_arcsin(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_arctan(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_arcctg(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-//Function F_getAngle(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_getAngle(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 Function F_sqrt(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_log(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
@@ -35,9 +35,11 @@ Function F_lcm(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_newt(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_hypotenuse(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
+Function F_convertBase(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+
 
 implementation
-   uses Math, EmptyFunc, Values_Typecast;
+   uses Math, EmptyFunc, Values_Typecast, Convert;
 
 Procedure Register(Const FT:PFunTrie);
    begin
@@ -51,7 +53,7 @@ Procedure Register(Const FT:PFunTrie);
    FT^.SetVal('arcsin', MkFunc(@F_arcsin));
    FT^.SetVal('arctan', MkFunc(@F_arctan));
    FT^.SetVal('arcctg', MkFunc(@F_arcctg));
-//   FT^.SetVal('get-angle', MkFunc(@F_getAngle));
+   FT^.SetVal('get-angle', MkFunc(@F_getAngle));
    // Positive-negative
    FT^.SetVal('abs', MkFunc(@F_abs));
    FT^.SetVal('sgn', MkFunc(@F_sgn));
@@ -68,7 +70,8 @@ Procedure Register(Const FT:PFunTrie);
    FT^.SetVal('gcd', MkFunc(@F_gcd));
    FT^.SetVal('lcm', MkFunc(@F_lcm));
    FT^.SetVal('newt', MkFunc(@F_newt));
-   FT^.SetVal('hypotenuse', MkFunc(@F_hypotenuse))
+   FT^.SetVal('hypotenuse', MkFunc(@F_hypotenuse));
+   FT^.SetVal('convert-base', MkFunc(@F_convertBase))
    end;
 
 Type TFloatToFloatFunc = Function(Const V:TFloat):TFloat;
@@ -261,6 +264,27 @@ Function F_arctan(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_arcctg(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_cyclometric(DoReturn, Arg, @myArcCtg)) end;
 
+Function F_GetAngle(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   Var sinx, cosx, angle : Double;
+   begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
+   If (Length(Arg^) >= 2) then begin
+      sinx := ValAsFlo(Arg^[0]);
+      cosx := ValAsFlo(Arg^[1]);
+      Try
+         If (sinx > 0)
+            then angle:=ArcCos(cosx)
+            else angle:=2*Pi-ArcCos(cosx);
+      Except
+         Angle := -1;
+      end;
+      Result := NewVal(VT_FLO, angle);
+      end else begin
+      Result := NewVal(VT_FLO, -1)
+      end;
+   F_(False, Arg)
+   end;
+
 Function F_rounding(Const DoReturn:Boolean; Const Arg:PArrPVal; Const Func:TFloatToIntFunc):PValue;
    Var C:LongWord; R:PValue;
    begin
@@ -394,6 +418,91 @@ Function F_hypotenuse(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    
    If (Flt[0] = 0.0) then Exit(EmptyVal(VT_FLO));
    Exit(NewVal(VT_FLO, Abs(Flt[0]) * Sqrt(1 + Sqr(Flt[1] / Flt[0]))))
+   end;
+
+Function F_convertBase(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   Var OrgNum : TStr; OrgBase, ResBase : LongInt;
+       Digit : Array of Word; DigNum : LongInt;
+   
+   Procedure LengthenNumber(Chg:LongInt);
+      begin
+      SetLength(Digit, DigNum + Chg);
+      While (Chg > 0) do begin
+         Digit[DigNum] := 0;
+         DigNum += 1;
+         Chg -= 1
+      end end;
+   
+   Procedure AddToNumber(Const Val:LongInt);
+      Var P:LongInt;
+      begin
+      P := 0;
+      Digit[P] += Val;
+      While (P < DigNum) do begin
+         If (Digit[P] >= ResBase) then begin
+            If (P+1 >= DigNum) then LengthenNumber(+8);
+            
+            Digit[P+1] += Digit[P] div ResBase;
+            Digit[P] := Digit[P] mod ResBase
+            end;
+         P += 1
+      end end;
+   
+   Procedure MultiplyNumber(Const Val:LongInt);
+      Var P:LongInt;
+      begin
+      For P:=0 to (DigNum-1) do Digit[P] *= Val
+      end;
+   
+   Function CharToNumber(Const Ch:Char):LongInt;
+      begin
+      If (Ch  <  #48) then Exit(-1);
+      If (Ch <=  #57) then Exit(Ord(Ch)-48);
+      If (Ch  <  #65) then Exit(-1);
+      If (Ch <=  #90) then Exit(Ord(Ch)-65+10);
+      If (Ch  <  #97) then Exit(-1);
+      If (Ch <= #122) then Exit(Ord(Ch)-97+10);
+      Exit(-1)
+      end;
+   
+   Var P,D:LongInt;
+   begin
+   If (Not DoReturn) then Exit(F_(False, Arg));
+   If (Length(Arg^) = 0) then Exit(EmptyVal(VT_STR));
+   OrgNum := ValAsStr(Arg^[0]);
+   If (Length(Arg^) >= 3) then begin
+      OrgBase := ValAsInt(Arg^[1]);
+      ResBase := ValAsInt(Arg^[2])
+      end else begin
+      If (Length(Arg^) >= 2)
+         then OrgBase := ValAsInt(Arg^[1])
+         else OrgBase := 10;
+      ResBase := 10
+      end;
+   
+   If (OrgBase < 2) or (OrgBase > 36) or (ResBase < 2) or (ResBase > 36) then begin
+      F_(False, Arg); Exit(EmptyVal(VT_STR))
+      end;
+   
+   SetLength(Digit,1); Digit[0] := 0; DigNum := 1;
+   For P:=1 to Length(OrgNum) do begin
+      D := CharToNumber(OrgNum[P]);
+      If (D < 0) or (D > OrgBase) then Continue;
+      MultiplyNumber(OrgBase);
+      AddToNumber(D)
+      end;
+   
+   OrgNum := '';
+   P := (DigNum - 1); While (P > 0) and (Digit[P] = 0) do P -= 1;
+   If (P >= 0) then begin
+      For D:=P downto 0 do
+         If (Digit[D] < 10)
+            then OrgNum += Chr(48+Digit[D])
+            else OrgNum += Chr(IfThen(HexCase(),65,97)-10+Digit[D])
+      end else OrgNum := '0';
+   
+   Result := NewVal(VT_STR,OrgNum);
+   F_(False, Arg)
    end;
 
 end.

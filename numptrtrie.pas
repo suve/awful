@@ -28,8 +28,6 @@ Type generic GenericNumPtrTrie<Tp> = NUMPTRTRIETYPE
      
      Private
         Type
-        QWA = Array[0..7] of NativeUInt;
-        
         PNode = ^TNode;
         TNode = record
            Nxt : Array of Pointer;
@@ -42,24 +40,20 @@ Type generic GenericNumPtrTrie<Tp> = NUMPTRTRIETYPE
         MinKey, MaxKey : Int64;
         
         {Method}
-        Procedure SetVal(Const K:QWA; D:LongWord; N:PNode;Const V:Tp);
-        Procedure RemVal(Const K:QWA; D:LongWord; N:PNode);
+        Procedure RemVal(Const K:PByte; Const D:LongWord; Const N:PNode);
         
-        Function  IsVal(Const K:QWA; D:LongWord; N:PNode):Boolean;
-        Function  GetVal(Const K:QWA; D:LongWord; N:PNode):Tp;
-        
-        Procedure ToArray(Var A:TEntryArr; Var I:LongWord; N:PNode; D:LongWord; K:QWord);
+        Procedure ToArray(Var A:TEntryArr; Var I:LongWord; Const N:PNode; Const D:LongWord; K:QWord);
         
         Procedure FreeNode(Const N:PNode; Const D:LongWord);
         Procedure FreeNode(Const N:PNode; Const D:LongWord; Const Proc:TDisposeProc);
         
      Public
         {Method}
-        Procedure SetVal(Key:Int64; Val:Tp);
-        Procedure RemVal(Key:Int64);
+        Procedure SetVal(Const Key:Int64; Const Val:Tp);
+        Procedure RemVal(Const Key:Int64);
         
-        Function  IsVal(Key:Int64):Boolean;
-        Function  GetVal(Key:Int64):Tp;
+        Function  IsVal(Const Key:Int64):Boolean;
+        Function  GetVal(Const Key:Int64):Tp;
         
         Function  ToArray():TEntryArr;
         
@@ -82,111 +76,93 @@ implementation
 {$DEFINE NXTSIZ:=256}
 {$DEFINE DEPTH:=7}
 
-Procedure GenericNumPtrTrie.SetVal(Const K:QWA;D:LongWord;N:PNode;Const V:Tp);
-   Var E:PNode; C:LongWord;
-   begin
-   If (D < DEPTH) then begin
-      If (N^.Nxt[K[D]] = NIL) then begin
-         New(E); SetLength(E^.Nxt,NXTSIZ); E^.Chi:=0;
-         For C:=NXTMIN to NXTMAX do E^.Nxt[C]:=NIL;
-         N^.Nxt[K[D]]:=E; N^.Chi+=1
-         end;
-      SetVal(K, D+1, N^.Nxt[K[D]], V)
-      end else begin
-      If (N^.Nxt[K[D]] = NIL) then begin 
-         N^.Chi += 1; Self.Vals += 1
-         end;
-      Tp(N^.Nxt[K[D]]):=V
-      end
-   end;
+{$IF     DEFINED(ENDIAN_LITTLE)}
+   {$DEFINE OFFSET := DEPTH - D }
+   {$NOTE Using little endian byte offset formula.}
+{$ELSEIF DEFINED(ENDIAN_BIG)   }
+   {$DEFINE OFFSET := D }
+   {$NOTE Using big endian byte offset formula.}
+{$ELSE}
+   {$FATAL The fuck kind of endian is this?}
+{$ENDIF}
 
-Procedure GenericNumPtrTrie.SetVal(Key:Int64;Val:Tp);
-   Var K:QWA; C:LongWord;
+Procedure GenericNumPtrTrie.SetVal(Const Key:Int64;Const Val:Tp);
+   Var D,C:LongInt; N,E:PNode;
    begin
    If (Key > MaxKey) then MaxKey := Key;
    If (Key < MinKey) then MinKey := Key;
-   For C:=7 downto 1 do begin
-       K[C] := QWord(Key) mod 256;
-       Key := QWord(Key) div 256
-       end;
-   K[0] := QWord(Key);
-   SetVal(K, 0, Root, Val)
+   
+   N := Root;
+   D := 0;
+   
+   While (D < DEPTH) do begin
+      If (N^.Nxt[PByte(@Key)[OFFSET]] = NIL) then begin
+         New(E); SetLength(E^.Nxt,NXTSIZ); E^.Chi:=0;
+         For C:=NXTMIN to NXTMAX do E^.Nxt[C]:=NIL;
+         N^.Nxt[PByte(@Key)[OFFSET]]:=E; N^.Chi+=1
+         end;
+      N := N^.Nxt[PByte(@Key)[OFFSET]];
+      D += 1
+      end;
+      
+   If (N^.Nxt[PByte(@Key)[OFFSET]] = NIL) then begin 
+      N^.Chi += 1; Self.Vals += 1
+      end;
+   Tp(N^.Nxt[PByte(@Key)[OFFSET]]):=Val
    end;
 
-Procedure GenericNumPtrTrie.RemVal(Const K:QWA; D:LongWord; N:PNode);
+Procedure GenericNumPtrTrie.RemVal(Const K:PByte; Const D:LongWord; Const N:PNode);
    begin
    If (D < DEPTH) then begin
-      If (N^.Nxt[K[D]] = NIL) then Exit();
-      RemVal(K, D+1, N^.Nxt[K[D]]);
-      If (PNode(N^.Nxt[K[D]])^.Chi = 0) then begin
-         Dispose(PNode(N^.Nxt[K[D]])); N^.Nxt[K[D]]:=NIL;
+      If (N^.Nxt[K[OFFSET]] = NIL) then Exit();
+      RemVal(K, D+1, N^.Nxt[K[OFFSET]]);
+      If (PNode(N^.Nxt[K[OFFSET]])^.Chi = 0) then begin
+         Dispose(PNode(N^.Nxt[K[OFFSET]])); N^.Nxt[K[OFFSET]]:=NIL;
          N^.Chi-=1
          end
       end else begin
-      If (N^.Nxt[K[D]] <> NIL) then begin
+      If (N^.Nxt[K[OFFSET]] <> NIL) then begin
          N^.Chi -= 1; Self.Vals -= 1;
-         N^.Nxt[K[D]]:=NIL
+         N^.Nxt[K[OFFSET]]:=NIL
          end
       end
    end;
 
-Procedure GenericNumPtrTrie.RemVal(Key:Int64);
-   Var K:QWA; C:LongWord;
-   begin
-   For C:=7 downto 1 do begin
-       K[C] := QWord(Key) mod 256;
-       Key := QWord(Key) div 256
-       end;
-   K[0] := QWord(Key);
-   RemVal(K, 0, Root)
-   end;
+Procedure GenericNumPtrTrie.RemVal(Const Key:Int64);
+   begin RemVal(@Key, 0, Root) end;
 
-Function GenericNumPtrTrie.IsVal(Const K:QWA; D:LongWord; N:PNode):Boolean;
+Function GenericNumPtrTrie.IsVal(Const Key:Int64):Boolean;
+   Var D:LongInt; N : PNode;
    begin
-   If (D < DEPTH) then begin
-      If (N^.Nxt[K[D]] = NIL) then Exit(False);
-      Exit(IsVal(K, D+1, N^.Nxt[K[D]]))
-      end else begin
-      Exit(N^.Nxt[K[D]] <> NIL)
+   N := Root;
+   D := 0;
+   
+   While (D < DEPTH) do begin
+      If (N^.Nxt[PByte(@Key)[OFFSET]] = NIL) then Exit(False);
+      N := N^.Nxt[PByte(@Key)[OFFSET]];
+      D += 1
       end;
+   Exit(N^.Nxt[PByte(@Key)[OFFSET]] <> NIL)
    end;
 
-Function GenericNumPtrTrie.IsVal(Key:Int64):Boolean;
-   Var K:QWA; C:LongWord;
+Function GenericNumPtrTrie.GetVal(Const Key:Int64):Tp;
+   Var D:LongInt; N:PNode;
    begin
-   For C:=7 downto 1 do begin
-       K[C] := QWord(Key) mod 256;
-       Key := QWord(Key) div 256
-       end;
-   K[0] := QWord(Key);
-   Exit(IsVal(K, 0, Root))
-   end;
-
-Function GenericNumPtrTrie.GetVal(Const K:QWA; D:LongWord; N:PNode):Tp;
-   begin
-   If (D < DEPTH) then begin
-      If (N^.Nxt[K[D]] <> NIL)
-         then Exit(GetVal(K, D+1, N^.Nxt[K[D]]))
-         else Exit(NIL)
-      end else
-      Exit(Tp(N^.Nxt[K[D]]))
-   end;
-
-Function GenericNumPtrTrie.GetVal(Key:Int64):Tp;
-   Var K:QWA; C:LongWord;
-   begin
-   For C:=7 downto 1 do begin
-       K[C] := QWord(Key) mod 256;
-       Key := QWord(Key) div 256
-       end;
-   K[0] := QWord(Key);
-   Exit(GetVal(K, 0, Root))
+   N := Root;
+   D := 0;
+   
+   While (D < DEPTH) do begin
+      If (N^.Nxt[PByte(@Key)[OFFSET]] = NIL) then Exit(NIL);
+      N := N^.Nxt[PByte(@Key)[OFFSET]];
+      D += 1
+      end;
+   Exit(Tp(N^.Nxt[PByte(@Key)[OFFSET]]))
    end;
 
 Function GenericNumPtrTrie.Empty():Boolean;
    begin Exit(Self.Vals = 0) end;
 
-Procedure GenericNumPtrTrie.ToArray(Var A:TEntryArr; Var I:LongWord; N:PNode; D:LongWord; K:QWord);
+Procedure GenericNumPtrTrie.ToArray(Var A:TEntryArr; Var I:LongWord; Const N:PNode; Const D:LongWord; K:QWord);
    Var C:LongWord;
    begin
    If (N^.Chi = 0) then Exit();

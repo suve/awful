@@ -34,7 +34,7 @@ Type TTokenType = (
      TProc = record
         Fil : LongWord;            // File number
         Lin : LongWord;            // Line number
-        Num : LongWord;            // Numer of expressions
+        Num : LongWord;            // Number of expressions
         Exp : Array of PExpr;      // Array of expressions
         Arg : Array of AnsiString; // Argument name array
         end;

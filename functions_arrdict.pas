@@ -239,7 +239,7 @@ Function F_array_contains(Const DoReturn:Boolean; Const Arg:PArrPVal; Const Cmpr
       Lo:=Low(AEA); Hi:=High(AEA);
       For C:=1 to High(Arg^) do
           For I:=Lo to Hi do 
-              If (ValEq(Arg^[C], AEA[I].Val)) then begin
+              If (Cmpr(Arg^[C], AEA[I].Val)) then begin
                  Cont[C] := True; Break
                  end;
       end else
@@ -248,7 +248,7 @@ Function F_array_contains(Const DoReturn:Boolean; Const Arg:PArrPVal; Const Cmpr
       Lo:=Low(DEA); Hi:=High(DEA);
       For C:=1 to High(Arg^) do
           For I:=Lo to Hi do 
-              If (ValEq(Arg^[C], DEA[I].Val)) then begin
+              If (Cmpr(Arg^[C], DEA[I].Val)) then begin
                  Cont[C] := True; Break
                  end;
       end;
@@ -276,7 +276,7 @@ Function qsort(Var Arr:TArray.TEntryArr; Const Min,Max:QWord):QWord;
          end else Pos += 1;
    
    If ((Pos - Min) > 1) then Result += qsort(Arr,Min,Pos-1);
-   If ((Max - Pos) > 1) then Result -= qsort(Arr,Pos+1,Max)
+   If ((Max - Pos) > 1) then Result += qsort(Arr,Pos+1,Max)
    end;
 
 Function F_array_qsort(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;

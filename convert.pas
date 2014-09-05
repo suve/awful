@@ -5,13 +5,13 @@ unit convert;
 interface
    uses Values;
 
-Function NumToStr(Int:QInt;Const Base:LongWord;Const Digs:LongWord=0):TStr; 
-Function IntToStr(Int:QInt;Const Digs:LongWord=0):TStr; 
-Function HexToStr(Int:QInt;Const Digs:LongWord=0):TStr; 
-Function OctToStr(Int:QInt;Const Digs:LongWord=0):TStr; 
-Function BinToStr(Int:QInt;Const Digs:LongWord=0):TStr; 
+Function NumToStr(Int:QInt;Const Base:LongInt = 10;Const Digs:LongInt = 0):TStr; 
+Function IntToStr(Const Int:QInt;Const Digs:LongInt=0):TStr; 
+Function HexToStr(Const Int:QInt;Const Digs:LongInt=0):TStr; 
+Function OctToStr(Const Int:QInt;Const Digs:LongInt=0):TStr; 
+Function BinToStr(Const Int:QInt;Const Digs:LongInt=0):TStr; 
 //Function RealToStr(Val:Extended;Prec:LongWord):TStr;
-Function FloatToStr(Val:TFloat):TStr;
+Function FloatToStr(Const Val:TFloat):TStr;
 
 Procedure HexCase(Const Upper:Boolean);
 Function  HexCase():Boolean;
@@ -43,7 +43,7 @@ Procedure HexCase(Const Upper:Boolean);
 Function HexCase():Boolean;
    begin Exit(Sys16Dig[10] = 'A') end;
 
-Function NumToStr(Int:QInt;Const Base:LongWord;Const Digs:LongWord=0):TStr; 
+Function NumToStr(Int:QInt;Const Base:LongInt = 10;Const Digs:LongInt = 0):TStr; 
    Var Plus:Boolean;
    Begin
    Result:='';
@@ -58,19 +58,19 @@ Function NumToStr(Int:QInt;Const Base:LongWord;Const Digs:LongWord=0):TStr;
    If (Not Plus) then Result:='-' + Result
    end;
 
-Function IntToStr(Int:QInt;Const Digs:LongWord=0):TStr; 
+Function IntToStr(Const Int:QInt;Const Digs:LongInt=0):TStr; 
    begin Exit(NumToStr(Int,10,Digs)) end;
 
-Function HexToStr(Int:QInt;Const Digs:LongWord=0):TStr; 
+Function HexToStr(Const Int:QInt;Const Digs:LongInt=0):TStr; 
    begin Exit(NumToStr(Int,16,Digs)) end;
 
-Function OctToStr(Int:QInt;Const Digs:LongWord=0):TStr; 
+Function OctToStr(Const Int:QInt;Const Digs:LongInt=0):TStr; 
    begin Exit(NumToStr(Int,8,Digs)) end;
 
-Function BinToStr(Int:QInt;Const Digs:LongWord=0):TStr; 
+Function BinToStr(Const Int:QInt;Const Digs:LongInt=0):TStr; 
    begin Exit(NumToStr(Int,2,Digs)) end;
 
-Function NumToStr(Num:QInt;Const Tp:TValueType):TStr; 
+Function NumToStr(Const Num:QInt;Const Tp:TValueType):TStr; 
    begin Case Tp of
       VT_INT: Exit(IntToStr(Num));
       VT_HEX: Exit(HexToStr(Num));
@@ -78,7 +78,7 @@ Function NumToStr(Num:QInt;Const Tp:TValueType):TStr;
       VT_BIN: Exit(BinToStr(Num));
    end end;
 
-Function FloatToStr(Val:TFloat):TStr;
+Function FloatToStr(Const Val:TFloat):TStr;
    begin Exit(SysUtils.FloatToStrF(Val, RealForm, RealPrec, RealPrec)) end;
 
 Function StrToInt(Const Str:TStr):QInt;

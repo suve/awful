@@ -1,5 +1,7 @@
 unit fileHandling;
 
+{$INCLUDE defines.inc}
+
 interface
    uses Values;
 
@@ -18,7 +20,7 @@ Procedure FillVar(Const V:PValue; Const Buff : PStr; Const Pos : LongWord);
 Procedure WriteFile(Var F:Text; Const Arg:PArrPVal; Idx:LongWord);
 
 implementation
-   uses SysUtils, Convert, Values_Typecast;
+   uses SysUtils, Convert;
 
 Function FillBuffer(Var TheFile:Text; Const Buff:PStr; Const Trim:Boolean):LongWord;
    Var P:LongWord;

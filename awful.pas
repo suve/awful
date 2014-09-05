@@ -1,6 +1,6 @@
-program awful;
-
 {$INCLUDE defines.inc} {$LONGSTRINGS ON} {$PASCALMAINNAME AWFUL_MAIN}
+
+program awful;
 
 uses SysUtils,
      
@@ -31,9 +31,9 @@ Var OrigDir : AnsiString;
     CustomStdErr, CustomStdOut : System.Text;
 
 Procedure AnalyseParams();
-   Var ParMod:TParamMode; ParamLim : LongWord; ParamNow : AnsiString;
+   Var ParMod:TParamMode; ParamLim : LongWord; ParamNow : AnsiString; NoMoreParams : Boolean;
    begin
-   GetDir(0, OrigDir);
+   OrigDir := GetCurrentDir();
       YukPath := '(stdin)';
       YukName := '(stdin)';
    ScriptName := '(stdin)';
@@ -45,35 +45,40 @@ Procedure AnalyseParams();
    ParamLim := ParamCount();
    If (ParamLim = 0) then Exit();
    
-   ParMod:=PAR_SCRIPT; 
+   ParMod:=PAR_SCRIPT; NoMoreParams := False;
    While (ParamNum <= ParamLim) do begin
       ParamNow := ParamStr(ParamNum);
-      If (ParamNow = '-o') then begin
-         ParMod:=PAR_OUT_R; ParamNum += 1; Continue
-         end else
-      If (ParamNow = '-O') then begin
-         ParMod:=PAR_OUT_A; ParamNum += 1; Continue
-         end else
-      If (ParamNow = '-e') then begin
-         ParMod:=PAR_ERR_R; ParamNum += 1; Continue
-         end else
-      If (ParamNow = '-E') then begin
-         ParMod:=PAR_ERR_A; ParamNum += 1; Continue
-         end else
-      If (ParamNow = '-i') then begin
-         ParMod:=PAR_INPUT; ParamNum += 1; Continue
-         end else
-      If (ParamNow = '--norun') then begin
-         Switch_NoRun := True; ParamNum += 1; Continue
-         end else
-      If (ParamNow = '--version') then begin
-         Writeln(FULLNAME,' v.',VERSION,' (rev. ',VREVISION,')');
-         Writeln('Built by ',{$I %USER%},' at ',{$I %HOSTNAME%},' on ',BuildNum(),
-            {$IFDEF FPC}' using FPC ',{$I %FPCVERSION%},{$ENDIF}
-            '.');
-         Writeln('--- svgames.pl ---');
-         Halt(0)
-         end else
+      If (Not NoMoreParams) then begin
+         If (ParamNow = '-o') then begin
+            ParMod:=PAR_OUT_R; ParamNum += 1; Continue
+            end else
+         If (ParamNow = '-O') then begin
+            ParMod:=PAR_OUT_A; ParamNum += 1; Continue
+            end else
+         If (ParamNow = '-e') then begin
+            ParMod:=PAR_ERR_R; ParamNum += 1; Continue
+            end else
+         If (ParamNow = '-E') then begin
+            ParMod:=PAR_ERR_A; ParamNum += 1; Continue
+            end else
+         If (ParamNow = '-i') then begin
+            ParMod:=PAR_INPUT; ParamNum += 1; Continue
+            end else
+         If (ParamNow = '--') then begin
+            NoMoreParams := True; ParamNum += 1; Continue
+            end else
+         If (ParamNow = '--norun') then begin
+            Switch_NoRun := True; ParamNum += 1; Continue
+            end else
+         If (ParamNow = '--version') then begin
+            Writeln(FULLNAME,' v.',VERSION,' (rev. ',VREVISION,')');
+            Writeln('Built by ',{$I %USER%},' at ',{$I %HOSTNAME%},' on ',BuildNum(),
+               {$IFDEF FPC}' using FPC ',{$I %FPCVERSION%},{$ENDIF}
+               '.');
+            Writeln('--- svgames.pl ---');
+            Halt(0)
+            end;
+         end;
       If (ParMod = PAR_SCRIPT) then begin
          ParamNum += 1; New(CustomScript);
          Assign(CustomScript^, ParamNow);
@@ -155,6 +160,7 @@ Procedure Cleanup();
    If (Length(FCal)>0) then
       For C:=High(FCal) downto Low(FCal) do begin
           If (Not FCal[C].Vars^.Empty) then FCal[C].Vars^.Flush(@AnnihilateVal);
+          // SetLength(FCal[C]^.Args,0);
           Dispose(FCal[C].Vars,Destroy());
           end;
    // SetLength(FCal, 0);

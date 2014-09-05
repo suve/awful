@@ -29,6 +29,8 @@ Function F_fwriteln(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_FileExtractName(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_FileExtractPath(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_FileExtractExt(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+
+Function F_FileRelativePath(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_FileExpandName(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 Function F_FileExists(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
@@ -41,6 +43,9 @@ Function F_DirForce(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_DirRemove(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 Function F_FileGetContents(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_FilePutContents(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_FileForceContents(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+
 Function F_FileSize(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_DirList(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
@@ -54,12 +59,16 @@ Procedure Register(Const FT:PFunTrie);
    FT^.SetVal('file-extract-name',MkFunc(@F_FileExtractName));
    FT^.SetVal('file-extract-path',MkFunc(@F_FileExtractPath));
    FT^.SetVal('file-extract-ext',MkFunc(@F_FileExtractExt));
+   FT^.SetVal('file-relative-path',MkFunc(@F_FileRelativePath));
    FT^.SetVal('file-expand-name',MkFunc(@F_FileExpandName));
    FT^.SetVal('file-exists',MkFunc(@F_FileExists));
    FT^.SetVal('file-unlink',MkFunc(@F_FileUnlink));
    FT^.SetVal('file-rename',MkFunc(@F_FileRename));
    FT^.SetVal('file-size',MkFunc(@F_FileSize));
+   // Quick file read / write
    FT^.SetVal('file-get-contents',MkFunc(@F_FileGetContents));
+   FT^.SetVal('file-put-contents',MkFunc(@F_FilePutContents));
+   FT^.SetVal('file-force-contents',MkFunc(@F_FileForceContents));
    // Dir utils
    FT^.SetVal('dir-exists',MkFunc(@F_DirExists));
    FT^.SetVal('dir-create',MkFunc(@F_DirCreate));
@@ -197,10 +206,10 @@ Function F_readfile(Const DoReturn:Boolean; Const Arg:PArrPVal; Const DoTrim:Boo
    end;
 
 Function F_fread(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_readfile(DoReturn, Arg, TRIM_NO)) end;
+   begin Exit(F_readfile(DoReturn, Arg, TRIM_YES)) end;
 
 Function F_freadln(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_readfile(DoReturn, Arg, TRIM_YES)) end;
+   begin Exit(F_readfile(DoReturn, Arg, TRIM_NO)) end;
 
 Function F_fgetline(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var H:PFileHandle; 
@@ -256,6 +265,22 @@ Function F_FileExtractExt(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 Function F_FileExpandName(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_FileUtils(DoReturn, Arg, @ExpandFileName)) end;
+
+Function F_FileRelativePath(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue; 
+   Var RelativeTo:AnsiString;
+   begin
+   If (Not DoReturn) then Exit(F_(False,Arg));
+   If (Length(Arg^) = 0) then Exit(EmptyVal(VT_STR));
+   
+   If (Length(Arg^) >= 2)
+      then RelativeTo := ValAsStr(Arg^[1])
+      else RelativeTo := GetCurrentDir();
+   
+   If (Arg^[0]^.Typ = VT_UTF)
+      then Result := NewVal(VT_UTF,ExtractRelativePath(RelativeTo,ValAsStr(Arg^[0])))
+      else Result := NewVal(VT_STR,ExtractRelativePath(RelativeTo,ValAsStr(Arg^[0])));
+   F_(False, Arg)
+   end;
 
 Function F_FileRename(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var Res:Boolean;
@@ -313,6 +338,53 @@ Function F_FileGetContents(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
       end else Result:=NilVal();
    F_(False,Arg)
    end;
+
+Const ForceDirs_YES = True; ForceDirs_NO = False; 
+
+Function F_FileWriteContents(Const DoReturn:Boolean;Const Arg:PArrPVal;Const ForceDirs:Boolean):PValue;
+   Var FilePath, DirPath, Content : AnsiString; F:File of Text; Written:Int64;
+   begin
+   If (Length(Arg^) < 2) then begin
+      F_(False, Arg);
+      If (DoReturn) then Exit(NewVal(VT_INT, -1));
+      Exit(NIL)
+      end;
+   
+   FilePath := ValAsStr(Arg^[0]);
+   DirPath := ExtractFileDir(FilePath);
+   
+   Content := ValAsStr(Arg^[1]);
+   F_(False, Arg);
+   
+   If (Not DirectoryExists(DirPath)) then
+      If (Not ForceDirs) or (Not ForceDirectories(DirPath)) then begin
+         If (DoReturn) then Exit(NewVal(VT_INT, -1));
+         Exit(NIL)
+         end;
+   
+   Assign(F, FilePath);
+   {$I-} Rewrite(F, 1); {$I+}
+   If (IOResult() <> 0) then begin
+      If (DoReturn) then Exit(NewVal(VT_INT, -1));
+      Exit(NIL)
+      end;
+   
+   Written := -1; 
+   {$I-} BlockWrite(F, Content[1], Length(Content), Written); Close(F); {$I+}
+   If (IOResult() <> 0) then begin
+      If (DoReturn) then Exit(NewVal(VT_INT, -1));
+      Exit(NIL)
+      end;
+   
+   If (DoReturn) then Exit(NewVal(VT_INT, Written));
+   Exit(NIL)
+   end;
+
+Function F_FilePutContents(Const DoReturn:Boolean;Const Arg:PArrPVal):PValue;
+   begin Exit(F_FileWriteContents(DoReturn, Arg, ForceDirs_NO)) end;
+
+Function F_FileForceContents(Const DoReturn:Boolean;Const Arg:PArrPVal):PValue;
+   begin Exit(F_FileWriteContents(DoReturn, Arg, ForceDirs_YES)) end;
 
 Function F_FileSize(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var Sr:TSearchRec;

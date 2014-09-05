@@ -216,7 +216,7 @@ Function F_getenv(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    end;
 
 Function F_sizeof(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   Var C,S:LongWord; 
+   Var C,S:LongInt; 
    begin
    If (Not DoReturn) then Exit(F_(False, Arg));
    If (Length(Arg^)=0) then Exit(NewVal(VT_INT,0));

@@ -7,11 +7,12 @@ interface
 
 Type TCallState = record
         Vars : PValTrie;
-        Args : PArrPVal;
+        Args : Array of PValue;
+        NumA : LongInt
         end;
 
 Var FCal : Array of TCallState;
-    FLev : LongWord;
+    FLev : LongInt;
     DoExit : Boolean;
 
 Var FuncInfo_AutoCall,
@@ -157,7 +158,7 @@ Function Eval(Const Ret:Boolean; Const E:PExpr):PValue;
              {$INCLUDE corefunc-tkarr.inc }
              end;
           TK_AVAL: begin
-             {$INCLUDE corefunc-tkarr.inc }
+             {$INCLUDE corefunc-tkarr.inc } 
              If (E^.Ref = REF_MODIF) then E^.Arg[T]:=CopyVal(E^.Arg[T])
              end;
           TK_AFLY: begin
@@ -307,19 +308,32 @@ Function F_Exit(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    end;
 
 Function F_AutoCall(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   Var P,E:LongWord; A,H,Pass,Want:LongInt; R{,TV,ArrV}:PValue; //Arr:PArray;
+   Var P,E:LongWord; A,H,Pass,Want:LongInt; R:PValue; 
    begin
-   P:=Proc; E:=ExLn; Proc:=PQInt(Arg^[0]^.Ptr)^;
+   // Save procedure and expression number to restore on exit
+   P:=Proc; E:=ExLn;
    
+   // Extract new procedure number from argument and free argument
+   Proc:=PQInt(Arg^[0]^.Ptr)^; 
+   FreeVal(Arg^[0]);
+   
+   // Increase varlevel and function call level.
+   // If there are no callstate entries available, lengthen the array.
    CurLev += 1; FLev += 1;
    If (FLev > High(FCal)) then begin
       SetLength(FCal, FLev + 1);
       New(FCal[FLev].Vars,Create())
       end;
-   FCal[FLev].Args := Arg;
    
-   Want:=Length(Pr[Proc].Arg); Pass:=Length(Arg^)-1; // 1st arg is !fun number
+   // Determine number of wanted and passed arguments
+   Want:=Length(Pr[Proc].Arg); Pass:=Length(Arg^)-1; // -1 because 1st arg is !fun number
    If (Pass>Want) then H:=Want else H:=Pass;
+   
+   // Copy arguments because Eval() could overwrite what's under Arg
+   // if the procedure contains a recursive call
+   If (Length(FCal[FLev].Args) < Pass) then SetLength(FCal[FLev].Args, Pass);
+   For A:=1 to (Pass) do FCal[FLev].Args[A-1] := Arg^[A];
+   FCal[FLev].NumA := Pass;
    
    // Insert passed params into vartrie
    If (H > 0) then For A:=0 to (H-1) do begin
@@ -329,8 +343,9 @@ Function F_AutoCall(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    // Insert missing params into vartie
    If (Want > Pass) then For A:=H to (Want-1) do begin
       FCal[FLev].Vars^.SetVal(Pr[Proc].Arg[A],NilVal())
-      end;
+      end; 
    
+   // Run the proper function
    R:=RunFunc(Proc);
    
    // Remove params from vartie
@@ -339,15 +354,12 @@ Function F_AutoCall(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    
    // Remove user-defined vars from trie
    FCal[FLev].Vars^.Flush(@FreeVal);
-   {While (FCal[FLev].Vars^.Count > 0) do begin
-      TV:=FCal[FLev].Vars^.RemVal();
-      FreeVal(TV)
-      end;}
    
-   // Decrease runlevel and free vals if needed
+   // Decrease runlevel and free args if needed
    FLev -= 1; CurLev -= 1;
-   For A:=Low(Arg^) to High(Arg^) do
-       If (Arg^[A]^.Lev >= CurLev) then FreeVal(Arg^[A]);
+   For A:=0 to (FCal[FLev].NumA-1) do
+      If (FCal[FLev].Args[A]^.Lev >= CurLev) then
+         FreeVal(FCal[FLev].Args[A]);
    
    // Set procedure and expression number back to original values and return value
    Proc:=P; ExLn:=E; 
@@ -361,12 +373,12 @@ Function F_AutoCall(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 
 Function F_FuncArgs(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   Var AV:PValue; Arr:PArray; C:LongWord;
+   Var AV:PValue; Arr:PArray; C:LongInt;
    begin
    If ((Not DoReturn) or (FLev = 0)) then Exit(F_(DoReturn, Arg));
    AV:=NewVal(VT_ARR); Arr:=PArray(AV^.Ptr);
-   For C:=1 to High(FCal[FLev].Args^) do
-       Arr^.SetVal(C-1, FCal[FLev].Args^[C]);
+   For C:=0 to (FCal[FLev].NumA - 1) do
+       Arr^.SetVal(C, FCal[FLev].Args[C]);
    Exit(AV)
    end;
 

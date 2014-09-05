@@ -16,6 +16,12 @@ interface
 {$IFDEF DYNPTRTRIE_OBJECT} {$DEFINE DYNPTRTRIETYPE:=Object}         {$ELSE}
    {$FATAL trie.pas: No OBJECT/CLASS symbol set!} {$ENDIF} {$ENDIF}
 
+Type
+   TNibble = 0..15;
+   TByte = bitpacked record
+      Lo, Hi : TNibble
+   end;
+
 Type generic GenericDynPtrTrie<Tp> = DYNPTRTRIETYPE
      Public
         Type
@@ -42,13 +48,9 @@ Type generic GenericDynPtrTrie<Tp> = DYNPTRTRIETYPE
         Root : PNode;
         
         {Method}
-        Procedure SetVal(Const K:AnsiString;P:LongWord;N:PNode;Const V:Tp);
-        Procedure RemVal(Const K:AnsiString;P:LongWord;N:PNode);
+        Procedure RemVal(Const K:AnsiString;Const P:LongInt;Const N:PNode);
         
-        Function  IsVal(Const K:AnsiString;P:LongWord;N:PNode):Boolean;
-        Function  GetVal(Const K:AnsiString;P:LongWord;N:PNode):Tp;
-        
-        Function  NextKey(N:PNode;C:LongWord;Const K:AnsiString;Var R:AnsiString):Boolean;
+        Function  NextKey(Const N:PNode;Const C:LongWord;Const K:AnsiString;Var R:AnsiString):Boolean;
         
         Function  GetVal(Const N:PNode):Tp;
         Function  RemVal(Const N:PNode):Tp;
@@ -88,36 +90,39 @@ Type generic GenericDynPtrTrie<Tp> = DYNPTRTRIETYPE
 
 implementation
 
-Procedure GenericDynPtrTrie.SetVal(Const K:AnsiString;P:LongWord;N:PNode;Const V:Tp);
-   Var F,I:LongWord; E:PNode; C:LongWord;
-   begin
-   If (P<=Length(K)) then begin
-      F:=Ord(K[P]) div 16; I:=Ord(K[P]) mod 16;
+
+Procedure GenericDynPtrTrie.SetVal(Const Key:AnsiString;Const Val:Tp);
+   Var L,P,F,I,C:LongInt; N,E:PNode; 
+   begin 
+   L:=Length(Key); P := 1; N := Root;
+   While (P <= L) do begin
+      F:=TByte(Key[P]).Hi; I := TByte(Key[P]).Lo;
+      
       If (N^.Fan[F] = NIL) then begin
          New(N^.Fan[F]); N^.Fan[F]^.Cnt := 0;
          For C:=0 to 15 do N^.Fan[F]^.Nod[C]:=NIL;
          N^.Cnt += 1
          end;
+         
       If (N^.Fan[F]^.Nod[I] = NIL) then begin
          New(E); E^.Val:=NIL; E^.Cnt:=0;
          For C:=0 to 15 do E^.Fan[C]:=NIL;
          N^.Fan[F]^.Nod[I]:=E; N^.Fan[F]^.Cnt += 1
          end;
-      SetVal(K,P+1,N^.Fan[F]^.Nod[I],V)
-      end else begin
-      If (N^.Val = NIL) then Self.Vals += 1;
-      N^.Val:=V
-      end
+      
+      N := N^.Fan[F]^.Nod[I];
+      P += 1
+      end;
+      
+   If (N^.Val = NIL) then Self.Vals += 1;
+      N^.Val:=Val
    end;
 
-Procedure GenericDynPtrTrie.SetVal(Const Key:AnsiString;Const Val:Tp);
-   begin SetVal(Key,1,Root,Val) end;
-
-Procedure GenericDynPtrTrie.RemVal(Const K:AnsiString;P:LongWord;N:PNode);
-   Var F,I:LongWord;
+Procedure GenericDynPtrTrie.RemVal(Const K:AnsiString;Const P:LongInt;Const N:PNode);
+   Var F,I:LongInt;
    begin
    If (P<=Length(K)) then begin
-      F:=Ord(K[P]) div 16; I:=Ord(K[P]) mod 16;
+      F:=TByte(K[P]).Hi; I := TByte(K[P]).Lo;
       If (N^.Fan[F] = NIL) then Exit();
       If (N^.Fan[F]^.Nod[I] = NIL) then Exit();
       RemVal(K,P+1,N^.Fan[F]^.Nod[I]);
@@ -139,35 +144,31 @@ Procedure GenericDynPtrTrie.RemVal(Const K:AnsiString;P:LongWord;N:PNode);
 Procedure GenericDynPtrTrie.RemVal(Const Key:AnsiString);
    begin RemVal(Key,1,Root) end;
 
-Function GenericDynPtrTrie.IsVal(Const K:AnsiString;P:LongWord;N:PNode):Boolean;
-   Var F,I:LongWord;
-   begin
-   If (P<=Length(K)) then begin
-      F:=Ord(K[P]) div 16; I:=Ord(K[P]) mod 16;
-      If (N^.Fan[F] = NIL) then Exit(False);
-      If (N^.Fan[F]^.Nod[I] = NIL) then Exit(False);
-      Exit(IsVal(K,P+1,N^.Fan[F]^.Nod[I]))
-      end else begin
-      Exit(N^.Val <> NIL)
-      end;
-   end;
-
 Function GenericDynPtrTrie.IsVal(Const Key:AnsiString):Boolean;
-   begin Exit(IsVal(Key,1,Root)) end;
-
-Function GenericDynPtrTrie.GetVal(Const K:AnsiString;P:LongWord;N:PNode):Tp;
-   Var F,I:LongWord;
+   Var L,P,F,I:LongInt; N:PNode;
    begin
-   If (P<=Length(K)) then begin
-      F:=Ord(K[P]) div 16; I:=Ord(K[P]) mod 16;
-      If (N^.Fan[F] = NIL) or (N^.Fan[F]^.Nod[I] = NIL) then Exit(NIL);
-      Exit(GetVal(K,P+1,N^.Fan[F]^.Nod[I]))
-      end else
-      Exit(N^.Val)
+   L := Length(Key); P := 1; N := Root;
+   While (P <= L) do begin
+      F:=TByte(Key[P]).Hi; I := TByte(Key[P]).Lo;
+      If (N^.Fan[F] = NIL) or (N^.Fan[F]^.Nod[I] = NIL) then Exit(False);
+      N := N^.Fan[F]^.Nod[I];
+      P += 1
+      end;
+   Exit(N^.Val <> NIL)
    end;
 
 Function GenericDynPtrTrie.GetVal(Const Key:AnsiString):Tp;
-   begin Exit(GetVal(Key,1,Root)) end;
+   Var L,P,F,I:LongInt; N:PNode;
+   begin
+   L := Length(Key); P := 1; N := Root;
+   While (P <= L) do begin
+      F:=TByte(Key[P]).Hi; I := TByte(Key[P]).Lo;
+      If (N^.Fan[F] = NIL) or (N^.Fan[F]^.Nod[I] = NIL) then Exit(NIL);
+      N := N^.Fan[F]^.Nod[I];
+      P += 1
+      end;
+   Exit(N^.Val)
+   end;
 
 Function GenericDynPtrTrie.Empty():Boolean;
    begin Exit(Self.Vals = 0) end;
@@ -212,13 +213,13 @@ Function GenericDynPtrTrie.RemVal(Const N:PNode):Tp;
 Function GenericDynPtrTrie.RemVal():Tp;
    begin Exit(RemVal(Root)) end;
 
-Function GenericDynPtrTrie.NextKey(N:PNode;C:LongWord;Const K:AnsiString;Var R:AnsiString):Boolean;
+Function GenericDynPtrTrie.NextKey(Const N:PNode;Const C:LongWord;Const K:AnsiString;Var R:AnsiString):Boolean;
    Var L,F,I,sI,sF:LongWord;
    begin
    If (N^.Cnt = 0) then Exit(False);
    L := Length(K);
    If (L >= C) then begin
-      F:=Ord(K[C]) div 16; I:=Ord(K[C]) mod 16;
+      F:=TByte(K[C]).Hi; I := TByte(K[C]).Lo;
       If (N^.Fan[F]<>NIL) and (N^.Fan[F]^.Nod[I] <> NIL) then begin
          If (NextKey(N^.Fan[F]^.Nod[I],C+1,K,R)) then begin
             R:=Chr(F*16+I)+R; Exit(True)

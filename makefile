@@ -1,5 +1,6 @@
 DEFINES = '{$$MODE OBJFPC} {$$COPERATORS ON} {$$INLINE ON} {$$MACRO ON}'
-FLAGS = -Xs -XX -CX -OG3
+FLAGS = -vewn -Xs -XX -CX -OrG3
+GPROF = -vewnh -gl -pg
 
 normal:
 	echo $(DEFINES) > defines.inc
@@ -8,6 +9,14 @@ normal:
 cgi:
 	echo $(DEFINES) '{$$DEFINE CGI}' > defines.inc
 	fpc $(FLAGS) awful.pas -o'awful-cgi'
+
+gprof: 
+	echo $(DEFINES) > defines.inc
+	fpc $(GPROF) awful.pas
+
+gprof-cgi:
+	echo $(DEFINES) '{$$DEFINE CGI}' > defines.inc
+	fpc $(GPROF) awful.pas -o'awful-cgi'
 
 clean:
 	rm *.o *.ppu *.a || echo 'Already clean!'

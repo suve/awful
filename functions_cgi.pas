@@ -152,7 +152,7 @@ Function F_HTTPcookie(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    end;
 {$ENDIF}
 
-Function FindChar(Const Str:TStr; Chr:Char; Offset:LongWord):LongWord;
+Function FindChar(Const Str:TStr; Const Chr:Char; Offset:LongWord):LongWord;
    begin
    While (Offset <= Length(Str)) do begin
       If (Str[Offset] = Chr) then Exit(Offset);

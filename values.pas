@@ -109,7 +109,6 @@ Procedure SetFuncInfo(Var FuIn:TFuncInfo; Const FuncAddr:TBuiltin; Const RefMod 
 
 
 implementation
-   uses Math, Convert;
 
 Const SpareVarsPerType = SizeOf(NativeInt)*8;
 
@@ -228,11 +227,13 @@ Procedure DestroyVal(Const Val:PValue);
 Procedure FreeVal(Const Val:PValue);
    begin
    If (SpareVars[Val^.Typ].Num < SpareVarsPerType) then begin
+      
       If (Val^.Typ = VT_ARR) then FreeVal_Arr(Val) else
       If (Val^.Typ = VT_DIC) then FreeVal_Dict(Val);
       
       SpareVars[Val^.Typ].Num += 1;
       SpareVars[Val^.Typ].Arr[SpareVars[Val^.Typ].Num] := Val
+      
       end else DestroyVal_INLINE(Val)
    end;
 
@@ -367,7 +368,7 @@ Procedure SetValMaxLev(Const V:PValue;Const Lv:LongWord);
    end;
 
 Procedure SwapPtrs(Const A,B:PValue);
-   Var P:Pointer; T:TValueType; //C:LongWord;
+   Var P:Pointer; T:TValueType; 
    begin
    P:=A^.Ptr; T:=A^.Typ;
    A^.Ptr:=B^.Ptr; A^.Typ:=B^.Typ;
@@ -421,9 +422,11 @@ Procedure SpareVars_Prepare();
 Procedure SpareVars_Destroy();
    Var T:TValueType; i:LongInt;
    begin
-   For T:=Low(TValueType) to High(TValueType) do
-       For i:=1 to SpareVars[T].Num do
-           AnnihilateVal(SpareVars[T].Arr[i])
+   For T:=Low(TValueType) to High(TValueType) do begin
+      For i:=1 to SpareVars[T].Num do
+         AnnihilateVal(SpareVars[T].Arr[i]);
+      SpareVars[T].Num := 0
+      end
    end;
 
 Function MkFunc(Const Fun:TBuiltIn; Const RefMod : Boolean = REF_CONST):PFuncInfo; Inline;

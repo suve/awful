@@ -26,7 +26,7 @@ Function F_DateTime_ToUnix(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_DateTime_FromUnix(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 implementation
-   uses SysUtils, Convert, Values_Arith, Values_Typecast,
+   uses SysUtils, Convert, Values_Typecast,
         EmptyFunc, CoreFunc, Globals;
 
 Procedure Register(Const FT:PFunTrie);

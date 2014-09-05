@@ -7,8 +7,8 @@ interface
 
 const VMAJOR = '0';
       VMINOR = '5';
-      VBUGFX = '3';
-      VREVISION = 39;
+      VBUGFX = '4';
+      VREVISION = 40;
       VERSION = VMAJOR + '.' + VMINOR + '.' + VBUGFX;
       
       FULLNAME = 'awful'
