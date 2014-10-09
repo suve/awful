@@ -3,7 +3,7 @@ unit parser;
 {$INCLUDE defines.inc} {$LONGSTRINGS ON}
 
 interface
-   uses Stack, TokExpr, Values;
+   uses Stack, FuncInfo, TokExpr, Values;
 
 Type TLineInfo = LongInt; //This will probably become a record when functions get implemented // LOL NOPE
      TIf = Array[0..2] of TLineInfo;
@@ -87,9 +87,9 @@ Procedure DupeFuncFatal(Const Ln:LongWord; Const Name:AnsiString);
    begin
    Fn := Func^.GetVal(Name);
    If (Fn^.Usr) then begin
-      If (Pr[Fn^.Ptr].Fil = 0)
-         then Fatal(Ln,'duplicate function name "'+Name+'", originally declared in '+ScriptName+' on line '+IntToStr(Pr[Fn^.Ptr].Lin)+'.') 
-         else Fatal(Ln,'duplicate function name "'+Name+'", originally declared in '+FileIncludes[Pr[Fn^.Ptr].Fil].Name+' on line '+IntToStr(Pr[Fn^.Ptr].Lin)+'.')
+      If (Pr[Fn^.uid].Fil = 0)
+         then Fatal(Ln,'duplicate function name "'+Name+'", originally declared in '+ScriptName+' on line '+IntToStr(Pr[Fn^.uid].Lin)+'.') 
+         else Fatal(Ln,'duplicate function name "'+Name+'", originally declared in '+FileIncludes[Pr[Fn^.uid].Fil].Name+' on line '+IntToStr(Pr[Fn^.uid].Lin)+'.')
       end else Fatal(Ln,'function name "'+Name+'" collides with built-in function.')
    end;
 
@@ -543,7 +543,7 @@ Function MakeExpr(Const ExLo,ExHi,Ln:LongInt; T:LongInt):PExpr;
       
       If (FPtr^.Usr) then begin
          SetLength(E^.Tok, 1);
-         E^.Tok[0] := NewToken(VT_INT, FPtr^.Ptr);
+         E^.Tok[0] := NewToken(VT_INT, FPtr^.uid);
          FPtr := @FuncInfo_AutoCall
          end
       end else
@@ -596,9 +596,10 @@ Function MakeExpr(Const ExLo,ExHi,Ln:LongInt; T:LongInt):PExpr;
          Fatal(Ln,'Unknown language construct: "'+Tk[T]+'".')
       end else
       Fatal(Ln,'First token in expression ("'+Tk[T]+'") is neither a function call nor a language construct.');
-   E^.Fun:=TBuiltIn(FPtr^.Ptr); E^.Ref := FPtr^.Ref;
+   E^.Fun:=FPtr^.Ptr; E^.Ref := FPtr^.Ref;
    T+=1; If (T > ExHi) then begin
-      SetLength(E^.Arg,Length(E^.Tok));
+      E^.Num := Length(E^.Tok) - 1;
+      SetLength(E^.Arg,E^.Num+1);
       Exit(E); end;
    Etk := Length(E^.Tok); If (ExLe > Etk) then SetLength(E^.Tok, ExLe);
    While (T <= ExHi) do begin
@@ -617,7 +618,8 @@ Function MakeExpr(Const ExLo,ExHi,Ln:LongInt; T:LongInt):PExpr;
          If (Nest>0) then Error(Ln,'Un-closed sub-expression. ("(" without a matching ")".)')
          end else
       If (Tk[T][1]=')') then begin
-         SetLength(E^.Tok, Etk); SetLength(E^.Arg, Etk); Exit(E)
+         SetLength(E^.Tok, Etk); SetLength(E^.Arg, Etk); 
+         E^.Num := Etk-1; Exit(E)
          end else 
       If (Tk[T][1]='[') then begin
          If (Length(E^.Tok)=0) then
@@ -654,13 +656,15 @@ Function MakeExpr(Const ExLo,ExHi,Ln:LongInt; T:LongInt):PExpr;
          If (Nest>0) then Error(Ln,'Un-closed index expression. ("[" without a matching "]".)')
          end else 
       If (Tk[T][1]=']') then begin
-         SetLength(E^.Tok, Etk); SetLength(E^.Arg, Etk); Exit(E)
+         SetLength(E^.Tok, Etk); SetLength(E^.Arg, Etk); 
+         E^.Num := Etk-1; Exit(E)
          end else
       If (Tk[T][1]=':') then begin
          sex:=MakeExpr(ExLo,ExHi,Ln,T);//MakeExpr(Tk,Ln,T);
          New(Tok); Tok^.Typ:=TK_EXPR; Tok^.Ptr:=sex;
          AddToken(Tok);
-         SetLength(E^.Tok, Etk); SetLength(E^.Arg, Etk); Exit(E)
+         SetLength(E^.Tok, Etk); SetLength(E^.Arg, Etk); 
+         E^.Num := Etk-1; Exit(E)
          end else
       If (Tk[T][1]='!') then begin
          Fatal(Ln,'Language construct used as a sub-expression. ("'+Tk[T]+'").')
@@ -672,7 +676,8 @@ Function MakeExpr(Const ExLo,ExHi,Ln:LongInt; T:LongInt):PExpr;
             Fatal(Ln,'Invalid token ("'+Tk[T]+'").')
          end;
       T+=1 end;
-   SetLength(E^.Tok, Etk); SetLength(E^.Arg, Etk); Exit(E)
+   SetLength(E^.Tok, Etk); SetLength(E^.Arg, Etk);
+   E^.Num := Etk-1; Exit(E)
    end;
 
 Procedure ProcessLine(Const L:AnsiString;Const N:LongWord);

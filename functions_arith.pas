@@ -3,7 +3,7 @@ unit functions_arith;
 {$INCLUDE defines.inc} 
 
 interface
-   uses Values;
+   uses FuncInfo, Values;
 
 Procedure Register(Const FT:PFunTrie);
 
@@ -21,34 +21,50 @@ implementation
 
 Procedure Register(Const FT:PFunTrie);
    begin
-   FT^.SetVal('set',MkFunc(@F_Set,REF_MODIF));   FT^.SetVal('=',MkFunc(@F_Set,REF_MODIF));
-   FT^.SetVal('add',MkFunc(@F_Add,REF_MODIF));   FT^.SetVal('+',MkFunc(@F_Add,REF_MODIF));
-   FT^.SetVal('sub',MkFunc(@F_Sub,REF_MODIF));   FT^.SetVal('-',MkFunc(@F_Sub,REF_MODIF));
-   FT^.SetVal('mul',MkFunc(@F_Mul,REF_MODIF));   FT^.SetVal('*',MkFunc(@F_Mul,REF_MODIF));
-   FT^.SetVal('div',MkFunc(@F_Div,REF_MODIF));   FT^.SetVal('/',MkFunc(@F_Div,REF_MODIF));
-   FT^.SetVal('mod',MkFunc(@F_Mod,REF_MODIF));   FT^.SetVal('%',MkFunc(@F_Mod,REF_MODIF));
-   FT^.SetVal('pow',MkFunc(@F_Pow,REF_MODIF));   FT^.SetVal('^',MkFunc(@F_Pow,REF_MODIF))
+      FT^.SetVal('set',MkFunc(@F_Set,REF_MODIF));   FT^.SetVal('=',MkFunc(@F_Set,REF_MODIF));
+      FT^.SetVal('add',MkFunc(@F_Add,REF_MODIF));   FT^.SetVal('+',MkFunc(@F_Add,REF_MODIF));
+      FT^.SetVal('sub',MkFunc(@F_Sub,REF_MODIF));   FT^.SetVal('-',MkFunc(@F_Sub,REF_MODIF));
+      FT^.SetVal('mul',MkFunc(@F_Mul,REF_MODIF));   FT^.SetVal('*',MkFunc(@F_Mul,REF_MODIF));
+      FT^.SetVal('div',MkFunc(@F_Div,REF_MODIF));   FT^.SetVal('/',MkFunc(@F_Div,REF_MODIF));
+      FT^.SetVal('mod',MkFunc(@F_Mod,REF_MODIF));   FT^.SetVal('%',MkFunc(@F_Mod,REF_MODIF));
+      FT^.SetVal('pow',MkFunc(@F_Pow,REF_MODIF));   FT^.SetVal('^',MkFunc(@F_Pow,REF_MODIF))
    end;
 
+// Pointer to arithmetic procedure
 Type TArithProc = Procedure(Const A,B:PValue);
 
 Function F_Arith(Const DoReturn:Boolean; Const Arg:PArrPVal; Const Arith:TArithProc):PValue; 
    Var C:LongWord; 
    begin
-   If (Length(Arg^)=0) then begin
-      If (DoReturn) then Exit(NilVal()) else Exit(NIL) end;
-   If (Length(Arg^)>1) then
-      For C:=High(Arg^) downto 1 do begin
-          Arith(Arg^[C-1],Arg^[C]);
-          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
-          end;
-   If (DoReturn) then begin
-      If (Arg^[0]^.Lev >= CurLev)
-         then Exit(Arg^[0])
-         else Exit(CopyVal(Arg^[0]))
+      // If no args, return NIL (or nothing, if not DoReturn)
+      If (Length(Arg^)=0) then begin
+         If (DoReturn) then Exit(NilVal()) else Exit(NIL) end;
+       
+      (* If more than one arg provided, go through args pairs      *
+       * starting from the rightmost, to the leftmost.             *
+       *                                                           *
+       * Perform arith on arg pair, then free right arg if needed. *)
+      If (Length(Arg^)>1) then
+         For C:=High(Arg^) downto 1 do begin
+            Arith(Arg^[C-1],Arg^[C]);
+            If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
+         end;
+      
+      // Check if we should return value
+      If (DoReturn) then begin
+         
+         // Check if leftmost arg was a temporary value.
+         If (Arg^[0]^.Lev >= CurLev)
+            then Exit(Arg^[0])          // If yes, reuse it.
+            else Exit(CopyVal(Arg^[0])) // Otherwise, return a temporary copy.
+         
       end else begin 
-      If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
-      Exit(NIL)
+         
+         // Not returning a value. Check if leftmost arg should be freed.
+         If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
+         
+         // Return nothing
+         Exit(NIL)
       end
    end;
 

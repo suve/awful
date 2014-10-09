@@ -3,7 +3,7 @@ unit functions_sysinfo;
 {$INCLUDE defines.inc}
 
 interface
-   uses Values;
+   uses FuncInfo, Values;
 
 Procedure Register(Const FT:PFunTrie);
 
@@ -362,7 +362,7 @@ Function F_SysInfo_Hostname(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin
    If (Length(Arg^)>0) then F_(False, Arg);
    If (Not DoReturn) then Exit(NIL);
-   If (GetHostName(@Buf, 256) = 0)
+   If (GetHostName(PChar(@Buf), 256) = 0)
       then Exit(NewVal(VT_STR, Buf))
       else Exit(EmptyVal(VT_STR))
    end;

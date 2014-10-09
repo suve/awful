@@ -16,89 +16,103 @@ interface
 {$IFDEF STACK_OBJECT} {$DEFINE STACKTYPE:=Object}         {$ELSE}
    {$FATAL No OBJECT/CLASS symbol set!} {$ENDIF} {$ENDIF}
 
-Type ExEmptyStack = class(Exception);
+Type
+   ExEmptyStack = class(Exception);
 
-     Generic GenericStack<Tp> = STACKTYPE
-     Private
-        Type
-        PNode = ^TNode;
-        TNode = record
-           Val : Tp;
-           Nxt : PNode
-           end;
-        Var
-        Ptr : PNode;
-        Size : LongWord;
-     Public
-        Procedure Push(Const Val:Tp);
-        Function  Peek(Depth:LongInt):Tp;
-        Function  Peek():Tp;
-        Function  Pop():Tp;
-        Procedure Flush();
-     
-        Property Count:LongWord read Size;
-        Function Empty():Boolean;
-     
-        Constructor Create();
-        Destructor  Destroy; {$IFDEF STACK_CLASS} Override; {$ENDIF}
-     end;
+   Generic GenericStack<Tp> = STACKTYPE
+      Private
+         Type
+            PNode = ^TNode;
+            TNode = record
+               Val : Tp;
+               Nxt : PNode
+            end;
+         
+         Var
+            Ptr : PNode;
+            Size : LongWord;
+      
+      Public
+         Procedure Push(Const Val:Tp);
+         
+         Function  Peek(Depth:LongInt):Tp;
+         Function  Peek():Tp;
+         
+         Function  Pop():Tp;
+         Procedure Purge();
+        
+         Property Count:LongWord read Size;
+         Function Empty():Boolean;
+        
+         Constructor Create();
+         Destructor  Destroy; {$IFDEF STACK_CLASS} Override; {$ENDIF}
+   end;
 
 implementation
 
 Procedure GenericStack.Push(Const Val:Tp);
    Var N:PNode;
    begin
-   New(N); N^.Val:=Val; N^.Nxt:=Ptr;
-   Ptr:=N; Size+=1
+      New(N); N^.Val:=Val; N^.Nxt:=Ptr;
+      Ptr:=N; Size+=1
    end;
 
 Function  GenericStack.Peek(Depth:LongInt):Tp;
    Var Node : PNode;
    begin
-   Node := Self.Ptr;
-   While (Depth > 0) and (Node <> NIL) do begin
-      Node := Node^.Nxt;
-      Depth -= 1
+      Node := Self.Ptr;
+      
+      While (Depth > 0) and (Node <> NIL) do begin
+         Node := Node^.Nxt;
+         Depth -= 1
       end;
-   If (Node <> NIL)
-      then Exit(Node^.Val)
-      else Raise ExEmptyStack.Create('Called GenericStack.Peek(Depth) on an empty stack!')
+      
+      If (Node <> NIL)
+         then Exit(Node^.Val)
+         else Raise ExEmptyStack.Create('Called GenericStack.Peek(Depth) on a shallow stack!')
    end;
 
 Function  GenericStack.Peek():Tp;
    begin
-   If (Ptr<>NIL)
-      then Exit(Ptr^.Val)
-      else Raise ExEmptyStack.Create('Called GenericStack.Peek() on an empty stack!')
+      If (Ptr<>NIL)
+         then Exit(Ptr^.Val)
+         else Raise ExEmptyStack.Create('Called GenericStack.Peek() on an empty stack!')
    end;
 
 Function  GenericStack.Pop():Tp;
-   Var V:Tp; M:PNode;
+   Var Val:Tp; Mem:PNode;
    begin
-   If (Ptr<>NIL)
-      then begin
-      M:=Ptr; Ptr:=Ptr^.Nxt;
-      V:=M^.Val; Dispose(M);
-      Size-=1; Exit(V)
-      end else Raise ExEmptyStack.Create('Called GenericStack.Pop() on an empty stack!')
+      If (Ptr <> NIL) then begin
+         Mem := Ptr; Ptr := Ptr^.Nxt;
+         Val := Mem^.Val; Dispose(Mem);
+         Size-=1; Exit(Val)
+      end else
+         Raise ExEmptyStack.Create('Called GenericStack.Pop() on an empty stack!')
    end;
 
-Procedure GenericStack.Flush();
-   begin While (Size>0) do Pop() end;
+Procedure GenericStack.Purge();
+   Var Mem:PNode;
+   begin
+      While (Ptr <> NIL) do begin
+         Mem := Ptr; Ptr := Ptr^.Nxt;
+         Dispose(Mem)
+      end;
+      Size := 0
+   end;
 
 Function GenericStack.Empty():Boolean;
-   begin Exit(Size=0) end;
+   begin Exit(Size = 0) end;
 
 Constructor GenericStack.Create();
    begin
-   {$IFDEF STACK_CLASS} Inherited Create(); {$ENDIF}
-   Ptr:=NIL; Size:=0
+      {$IFDEF STACK_CLASS} Inherited Create(); {$ENDIF}
+      Ptr:=NIL; Size:=0
    end;
 
 Destructor  GenericStack.Destroy;
    begin
-   Flush();
-   {$IFDEF STACK_CLASS} Inherited Destroy() {$ENDIF}
+      Purge();
+      {$IFDEF STACK_CLASS} Inherited Destroy() {$ENDIF}
    end;
 
 end.

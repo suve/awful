@@ -3,7 +3,7 @@ unit functions_strings;
 {$INCLUDE defines.inc}
 
 interface
-   uses Values;
+   uses FuncInfo, Values;
 
 Procedure Register(Const FT:PFunTrie);
 
@@ -46,7 +46,7 @@ Function UTF8_Ord(Const Chr:ShortString):LongInt;
 
 implementation
    uses SysUtils, StrUtils, StringUtils,
-        FileHandling, EmptyFunc,
+        EmptyFunc,
         Values_Arith, Values_Typecast, Convert;
 
 

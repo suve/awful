@@ -17,23 +17,53 @@ Function ValLe(Const A,B:PValue):Boolean;
 implementation
    uses SysUtils, Convert;
 
+Type TCompareFunc = Function(Const A,B:PValue):Boolean;
+
+Function CompareArrays(Const A,B:PArray; Const CompFunc:TCompareFunc):Boolean;
+   {$DEFINE __TYPE__ := TArray }
+   {$INCLUDE values_compare-arrdict.inc}
+   {$UNDEF __TYPE__ }
+   end;
+
+Function CompareDicts(Const A,B:PDict; Const CompFunc:TCompareFunc):Boolean;
+   {$DEFINE __TYPE__ := TDict }
+   {$INCLUDE values_compare-arrdict.inc}
+   {$UNDEF __TYPE__ }
+   end;
+
 Function ValSeq(Const A,B:PValue):Boolean;
    begin
-   If (A^.Typ <> B^.Typ) then Exit(False);
-   Case (A^.Typ) of
-      VT_INT .. VT_BIN:
-         Exit((PQInt(A^.Ptr)^) = (PQInt(B^.Ptr)^));
-      VT_FLO:
-         Exit((PFloat(A^.Ptr)^) = (PFloat(B^.Ptr)^));
-      VT_STR:
-         Exit((PStr(A^.Ptr)^) = (PStr(B^.Ptr)^));
-      VT_UTF:
-         Exit(PUTF(A^.Ptr)^.Compare(PUTF(B^.Ptr)) = 0);
-      VT_BOO:
-         Exit((PBool(A^.Ptr)^) = (PBool(B^.Ptr)^));
-      VT_NIL: 
-         Exit(B^.Typ = VT_NIL)
-      else Exit(False)
+      If (A^.Typ <> B^.Typ) then Exit(False);
+      Case (A^.Typ) of
+         VT_INT .. VT_BIN:
+            Exit(A^.Int^ = B^.Int^);
+         
+         VT_FLO:
+            Exit(A^.Flo^ = B^.Flo^);
+         
+         VT_STR:
+            Exit(A^.Str^ = B^.Str^);
+         
+         VT_UTF:
+            Exit(A^.Utf^.Compare(B^.Utf) = 0);
+         
+         VT_BOO:
+            Exit(A^.Boo^ = B^.Boo^);
+         
+         VT_ARR:
+            Exit(CompareArrays(A^.Arr, B^.Arr, @Values_Compare.ValSeq));
+         
+         VT_DIC:
+            Exit(CompareDicts(A^.Dic, B^.Dic, @Values_Compare.ValSeq));
+         
+         VT_FIL:
+            Exit(A^.Fil = B^.Fil);
+         
+         VT_NIL: 
+            Exit(True)
+         
+         else
+            Exit(False)
    end end;
 
 Function ValSNeq(Const A,B:PValue):Boolean;
@@ -41,99 +71,113 @@ Function ValSNeq(Const A,B:PValue):Boolean;
 
 Function ValEq(Const A,B:PValue):Boolean;
    begin
-   Case (A^.Typ) of
-      VT_INT .. VT_BIN:
-         Case (B^.Typ) of
-            VT_INT.. VT_BIN:
-               Exit((PQInt(A^.Ptr)^) = (PQInt(B^.Ptr)^));
-            VT_FLO:
-               Exit((PQInt(A^.Ptr)^) = Trunc(PFloat(B^.Ptr)^));
-            VT_STR:
-               Exit((PQInt(A^.Ptr)^) = StrToNum(PStr(B^.Ptr)^,A^.Typ));
-            VT_UTF:
-               Exit((PQInt(A^.Ptr)^) = PUTF(B^.Ptr)^.ToInt(IntBase(A^.Typ)));
-            VT_BOO:
-               Exit((PQInt(A^.Ptr)^) = BoolToInt(PBool(B^.Ptr)^));
-            else
-               Exit(False)
-         end;
-      VT_FLO:
-         Case (B^.Typ) of
-            VT_INT .. VT_BIN:
-               Exit(Trunc(PFloat(A^.Ptr)^) = (PQInt(B^.Ptr)^));
-            VT_FLO:
-               Exit((PFloat(A^.Ptr)^) = (PFloat(B^.Ptr)^));
-            VT_STR:
-               Exit((PFloat(A^.Ptr)^) = StrToReal(PStr(B^.Ptr)^));
-            VT_UTF:
-               Exit((PFloat(A^.Ptr)^) = PUTF(B^.Ptr)^.ToFloat());
-            VT_BOO:
-               Exit(Trunc(PFloat(A^.Ptr)^) = BoolToInt(PBool(B^.Ptr)^));
-            else
-               Exit(False)
-         end;
-      VT_STR:
-         Case  (B^.Typ) of
-            VT_INT .. VT_BIN:
-               Exit(StrToNum(PStr(A^.Ptr)^,B^.Typ) = (PQInt(B^.Ptr)^));
-            VT_FLO:
-               Exit(StrToReal(PStr(A^.Ptr)^) = (PFloat(B^.Ptr)^));
-            VT_STR:
-               Exit((PStr(A^.Ptr)^) = (PStr(B^.Ptr)^));
-            VT_UTF:
-               Exit(PUTF(B^.Ptr)^.Equals(PStr(A^.Ptr)^));
-            VT_BOO:
-               Exit(StrToBoolDef(PStr(A^.Ptr)^,FALSE) = (PBool(B^.Ptr)^));
-            else
-               Exit(False)
-         end;
-      VT_UTF:
-         Case  (B^.Typ) of
-            VT_INT .. VT_BIN:
-               Exit(PUTF(A^.Ptr)^.ToInt(IntBase(B^.Typ)) = (PQInt(B^.Ptr)^));
-            VT_FLO:
-               Exit(PUTF(A^.Ptr)^.ToFloat() = (PFloat(B^.Ptr)^));
-            VT_STR:
-               Exit(PUTF(A^.Ptr)^.Equals(PStr(B^.Ptr)^));
-            VT_UTF:
-               Exit(PUTF(A^.Ptr)^.Equals(PUTF(B^.Ptr)));
-            VT_BOO:
-               Exit(StrToBoolDef(PUTF(A^.Ptr)^.ToAnsiString(),FALSE) = (PBool(B^.Ptr)^));
-            else
-               Exit(False)
-         end;
-      VT_BOO:
-         Case (B^.Typ) of
-            VT_INT .. VT_BIN:
-               Exit((PBool(A^.Ptr)^) = (PQInt(B^.Ptr)^ <> 0));
-            VT_FLO:
-               Exit((PBool(A^.Ptr)^) = (Abs(PFloat(B^.Ptr)^) >= 1.0));
-            VT_STR:
-               Exit((PBool(A^.Ptr)^) = StrToBoolDef(PStr(B^.Ptr)^,FALSE));
-            VT_UTF:
-               Exit((PBool(A^.Ptr)^) = StrToBoolDef(PUTF(B^.Ptr)^.ToAnsiString(),FALSE));
-            VT_BOO:
-               Exit((PBool(A^.Ptr)^) = (PBool(B^.Ptr)^));
-            else
-               Exit(False)
-         end;
-      VT_NIL:
-         Exit(B^.Typ = VT_NIL)
-      else
-         Exit(False)
-   end end;
+      Case (A^.Typ) of
+         VT_INT .. VT_BIN:
+            Case (B^.Typ) of
+               VT_INT.. VT_BIN:
+                  Exit(A^.Int^ = B^.Int^);
+               
+               VT_FLO:
+                  Exit(A^.Int^ = Trunc(B^.Flo^));
+                  
+               VT_STR:
+                  Exit(A^.Int^ = StrToNum(B^.Str^,A^.Typ));
+               
+               VT_UTF:
+                  Exit(A^.Int^ = B^.Utf^.ToInt(IntBase(A^.Typ)));
+               
+               VT_BOO:
+                  Exit(A^.Int^ = BoolToInt(B^.Boo^));
+            end;
+         
+         VT_FLO:
+            Case (B^.Typ) of
+               VT_INT .. VT_BIN:
+                  Exit(Trunc(A^.Flo^) = B^.Int^);
+                  
+               VT_FLO:
+                  Exit(A^.Flo^ = B^.Flo^);
+               
+               VT_STR:
+                  Exit(A^.Flo^ = StrToReal(B^.Str^));
+               
+               VT_UTF:
+                  Exit(A^.Flo^ = B^.Utf^.ToFloat());
+               
+               VT_BOO:
+                  Exit(Trunc(A^.Flo^) = BoolToInt(B^.Boo^));
+            end;
+         
+         VT_STR:
+            Case  (B^.Typ) of
+               VT_INT .. VT_BIN:
+                  Exit(StrToNum(A^.Str^,B^.Typ) = B^.Int^);
+               
+               VT_FLO:
+                  Exit(StrToReal(A^.Str^) = B^.Flo^);
+               
+               VT_STR:
+                  Exit(A^.Str^ = B^.Str^);
+               
+               VT_UTF:
+                  Exit(B^.Utf^.Equals(A^.Str^));
+               
+               VT_BOO:
+                  Exit(StrToBoolDef(A^.Str^,FALSE) = B^.Boo^);
+            end;
+         
+         VT_UTF:
+            Case  (B^.Typ) of
+               VT_INT .. VT_BIN:
+                  Exit(A^.Utf^.ToInt(IntBase(B^.Typ)) = B^.Int^);
+               
+               VT_FLO:
+                  Exit(A^.Utf^.ToFloat() = B^.Flo^);
+               
+               VT_STR:
+                  Exit(A^.Utf^.Equals(B^.Str^));
+               
+               VT_UTF:
+                  Exit(A^.Utf^.Equals(B^.Utf));
+               
+               VT_BOO:
+                  Exit(StrToBoolDef(A^.Utf^.ToAnsiString(),FALSE) = B^.Boo^);
+            end;
+         
+         VT_BOO:
+            Case (B^.Typ) of
+               VT_INT .. VT_BIN:
+                  Exit(A^.Boo^ = (B^.Int^ <> 0));
+               
+               VT_FLO:
+                  Exit(A^.Boo^ = (Abs(B^.Flo^) >= 1.0));
+               
+               VT_STR:
+                  Exit(A^.Boo^ = StrToBoolDef(B^.Str^,FALSE));
+               
+               VT_UTF:
+                  Exit(A^.Boo^ = StrToBoolDef(B^.Utf^.ToAnsiString(),FALSE));
+               
+               VT_BOO:
+                  Exit(A^.Boo^ = B^.Boo^);
+            end;
+         
+         VT_NIL:
+            Exit(B^.Typ = VT_NIL)
+      end;
+      Exit(False)
+   end;
 
 Function ValNeq(Const A,B:PValue):Boolean;
    begin Exit(Not ValEq(A,B)) end;
 
 Function ValGt(Const A,B:PValue):Boolean;
-   begin
    {$DEFINE __OPERATOR__ := > }
    {$DEFINE __STR_UTF__  := = -1}
    {$DEFINE __UTF_STR__  := = +1}
    {$DEFINE __UTF_UTF__  := = +1}
    
-   {$INCLUDE values_comparefunc.inc}
+   {$INCLUDE values_compare-compfunc.inc}
    
    {$UNDEF __OPERATOR__}
    {$UNDEF __STR_UTF__}
@@ -142,13 +186,12 @@ Function ValGt(Const A,B:PValue):Boolean;
    end;
 
 Function ValGe(Const A,B:PValue):Boolean;
-   begin
    {$DEFINE __OPERATOR__ := >= }
    {$DEFINE __STR_UTF__  := <= 0}
    {$DEFINE __UTF_STR__  := >= 0}
    {$DEFINE __UTF_UTF__  := >= 0}
    
-   {$INCLUDE values_comparefunc.inc}
+   {$INCLUDE values_compare-compfunc.inc}
    
    {$UNDEF __OPERATOR__}
    {$UNDEF __STR_UTF__}
@@ -157,13 +200,12 @@ Function ValGe(Const A,B:PValue):Boolean;
    end;
 
 Function ValLt(Const A,B:PValue):Boolean;
-   begin
    {$DEFINE __OPERATOR__ := < }
    {$DEFINE __STR_UTF__  := = +1}
    {$DEFINE __UTF_STR__  := = -1}
    {$DEFINE __UTF_UTF__  := = -1}
    
-   {$INCLUDE values_comparefunc.inc}
+   {$INCLUDE values_compare-compfunc.inc}
    
    {$UNDEF __OPERATOR__}
    {$UNDEF __STR_UTF__}
@@ -172,13 +214,12 @@ Function ValLt(Const A,B:PValue):Boolean;
    end;
 
 Function ValLe(Const A,B:PValue):Boolean;
-   begin
    {$DEFINE __OPERATOR__ := <= }
    {$DEFINE __STR_UTF__  := >= 0}
    {$DEFINE __UTF_STR__  := <= 0}
    {$DEFINE __UTF_UTF__  := <= 0}
    
-   {$INCLUDE values_comparefunc.inc}
+   {$INCLUDE values_compare-compfunc.inc}
    
    {$UNDEF __OPERATOR__}
    {$UNDEF __STR_UTF__}

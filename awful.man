@@ -1,6 +1,6 @@
 .\" Manpage for awful
 .\" Contact veg@svgames.pl to correct errors or typos.
-.TH man 1 "2014-09-06" "0.5.4" "Scripting language"
+.TH man 1 "2014-10-10" "0.5.5" "Scripting language"
 .SH NAME
 awful - an ugly scripting language
 .SH SYNOPSIS
@@ -11,7 +11,8 @@ awful - an ugly scripting language
 .SH DESCRIPTION
 \fBawful\fR is a multi-purpose, ugly scripting language.
 .SH OPTIONS
-When reading script from a file, option parsing stops at the filename. The remaining options are treated as arguments to be forwarded to the script.
+When reading script from a file, option parsing stops at the filename.
+The remaining options are treated as arguments to be forwarded to the script. 
 .TP 3
 .BR \-o \ \fIoutfile\fR
 Redirects all output to \fIoutfile\fR. If the file exists, it is overwritten.
@@ -33,6 +34,8 @@ Do not run the script; simply perform a syntax check and exit.
 .TP
 .B \-\-version
 Print interpreter version and build information and exit.
+.TP 0
+You can use \-\- to explicitly specify end of options; all remaining arguments will be treated as parameters to be forwarded to the script.
 .SH "EXIT STATUS"
 .TP
 .B 0
@@ -47,9 +50,19 @@ Parse error.
 .B Other
 Runtime error. Please consider writing a bug report.
 .SH TIPS
-Because \fBawful\fR uses the \fB#\fR character for comments, you can use a shebang (\fB#!\fR) to automatically invoke scripts.
+Because \fBawful\fR uses the \fB#\fR character for comments, you can use a shebang (\fB#!\fR) to execute files in a manner similar to shell scripts.
+.SH SOURCE
+\fBawful\fR's source code can be obtained in two ways:
+.TP 3
+.B GitHub
+Public repository available at https://github.com/suve/awful/
+.TP
+.B SV Games
+Tarball available at author's homepage. http://svgames.pl/.yuk/down/
+.TP 0
+Note that the tarball is updated only when a stable version is released. For in-dev versions, clone from the repository.
 .SH BUGS
-None known. If you found one, please report it at https://bitbucket.org/suve/awful/issues
+None known at time of release. If you found one, please report it using the issue tracker on GitHub.
 .SH DOCUMENTATION
 For complete language documentation, consult http://svgames.pl/wiki/awful/
 .SH AUTHOR

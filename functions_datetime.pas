@@ -3,7 +3,7 @@ unit functions_datetime;
 {$INCLUDE defines.inc}
 
 interface
-   uses Values;
+   uses FuncInfo, Values;
 
 Procedure Register(Const FT:PFunTrie);
 

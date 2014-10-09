@@ -1,3 +1,4 @@
+(* Minimised case list code for HTML entity to Unicode codepoint conversion. *)
 'quot'_$0022;'amp'_$0026;'apos'_$0027;'lt'_$003C;'gt'_$003E;'nbsp'_$00A0;'iexcl'_$00A1;'cent'_$00A2;'pound'_$00A3;'curren'_$00A4;'yen'_$00A5;'brvbar'_$00A6;'sect'_$00A7;'uml'_$00A8;'copy'_$00A9;'ordf'_$00AA;'laquo'_$00AB;'not'_$00AC;'shy'_$00AD;'reg'_$00AE;'macr'_$00AF;
 'deg'_$00B0;'plusmn'_$00B1;'sup2'_$00B2;'sup3'_$00B3;'acute'_$00B4;'micro'_$00B5;'para'_$00B6;'middot'_$00B7;'cedil'_$00B8;'sup1'_$00B9;'ordm'_$00BA;'raquo'_$00BB;'frac14'_$00BC;'frac12'_$00BD;'frac34'_$00BE;'iquest'_$00BF;'Agrave'_$00C0;'Aacute'_$00C1;'Acirc'_$00C2;
 'Atilde'_$00C3;'Auml'_$00C4;'Aring'_$00C5;'AElig'_$00C6;'Ccedil'_$00C7;'Egrave'_$00C8;'Eacute'_$00C9;'Ecirc'_$00CA;'Euml'_$00CB;'Igrave'_$00CC;'Iacute'_$00CD;'Icirc'_$00CE;'Iuml'_$00CF;'ETH'_$00D0;'Ntilde'_$00D1;'Ograve'_$00D2;'Oacute'_$00D3;'Ocirc'_$00D4;

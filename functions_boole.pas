@@ -3,7 +3,7 @@ unit functions_boole;
 {$INCLUDE defines.inc}
 
 interface
-   uses Values;
+   uses FuncInfo, Values;
 
 Procedure Register(Const FT:PFunTrie);
 
@@ -15,97 +15,109 @@ Function F_Impl(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 
 implementation
-   uses Values_Typecast;
+   uses EmptyFunc, Values_Typecast;
 
 Procedure Register(Const FT:PFunTrie);
-   begin
-   FT^.SetVal('not',MkFunc(@F_not));    FT^.SetVal('!',MkFunc(@F_Not));
-   FT^.SetVal('and',MkFunc(@F_and));    FT^.SetVal('&&',MkFunc(@F_and));
-   FT^.SetVal('xor',MkFunc(@F_xor));    FT^.SetVal('^^',MkFunc(@F_xor));
-   FT^.SetVal('or' ,MkFunc(@F_or));     FT^.SetVal('??',MkFunc(@F_or));
-   FT^.SetVal('impl',MkFunc(@F_impl));  FT^.SetVal('->',MkFunc(@F_impl));
+      begin
+      FT^.SetVal('not',MkFunc(@F_not));    FT^.SetVal('!',MkFunc(@F_Not));
+      FT^.SetVal('and',MkFunc(@F_and));    FT^.SetVal('&&',MkFunc(@F_and));
+      FT^.SetVal('xor',MkFunc(@F_xor));    FT^.SetVal('^^',MkFunc(@F_xor));
+      FT^.SetVal('or' ,MkFunc(@F_or));     FT^.SetVal('??',MkFunc(@F_or));
+      FT^.SetVal('impl',MkFunc(@F_impl));  FT^.SetVal('->',MkFunc(@F_impl));
    end;
 
 Function F_Not(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   Var C:LongWord; B:Boolean;
+   Var C:LongWord;
    begin
-   If (Length(Arg^)=0) then begin
-      If (DoReturn) then Exit(NewVal(VT_BOO, True)) else Exit(NIL) end;
-   If (Length(Arg^)>1) then 
-       For C:=High(Arg^) downto 1 do
-          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
-   If (Arg^[0]^.Typ = VT_BOO)
-      then B:=PBool(Arg^[0]^.Ptr)^
-      else B:=ValAsBoo(Arg^[0]);
-   If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
-   If (DoReturn) then Exit(NewVal(VT_BOO,Not B)) else Exit(NIL)
+      // If no retval expected, bail out
+      If (Not DoReturn) then Exit(F_(False, Arg));
+      
+      // If no args, return TRUE
+      If (Length(Arg^) = 0) then Exit(NewVal(VT_BOO, True));
+      
+      // Free all the excessive args
+      If (Length(Arg^)>1) then 
+          For C:=High(Arg^) downto 1 do
+             If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
+      
+      // Create result value
+      If (Arg^[0]^.Typ = VT_BOO)
+         then Result := NewVal(VT_BOO, Not Arg^[0]^.Boo^)
+         else Result := NewVal(VT_BOO, Not ValAsBoo(Arg^[0]));
+      
+      // Free arg0 if needed
+      If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0])
+   end;
+
+Type TBooleanFunc = Function(Const A,B:Boolean):Boolean;
+
+Function AND_func(Const A,B:Boolean):Boolean; Inline; begin Result:=A and B end;
+Function XOR_func(Const A,B:Boolean):Boolean; Inline; begin Result:=A xor B end;
+Function OR_func(Const A,B:Boolean):Boolean; Inline; begin Result:=A or B end;
+
+Function F_Boolean(Const DoReturn:Boolean; Const Arg:PArrPVal; Const BoolFunc:TBooleanFunc):PValue;
+   Var C:LongWord;
+   begin 
+      // If no retval expected, bail out
+      If (Not DoReturn) then Exit(F_(False, Arg));
+      
+      // If no args, return FALSE 
+      If (Length(Arg^) = 0) then Exit(NewVal(VT_BOO, False));
+      
+      Result := NewVal(VT_BOO, True); // Set initial result to TRUE
+      If (Length(Arg^) >= 1) then 
+         For C:=High(Arg^) downto Low(Arg^) do begin
+            
+            // Perform boolean opeartion on argument and temporary value
+            If (Arg^[C]^.Typ = VT_BOO)
+               then Result^.Boo^ := BoolFunc(Result^.Boo^, PBool(Arg^[C]^.Ptr)^)
+               else Result^.Boo^ := BoolFunc(Result^.Boo^, ValAsBoo(Arg^[C]));
+            
+            // Free arg if needed
+            If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
+         end;
    end;
 
 Function F_And(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   Var C:LongWord; B:Boolean;
-   begin B:=True;
-   If (Length(Arg^)=0) then begin
-      If (DoReturn) then Exit(NewVal(VT_BOO, False)) else Exit(NIL) end;
-   If (Length(Arg^)>=1) then 
-      For C:=High(Arg^) downto Low(Arg^) do begin
-          If (Arg^[C]^.Typ = VT_BOO)
-             then B:=(B) and (PBool(Arg^[C]^.Ptr)^)
-             else B:=(B) and (ValAsBoo(Arg^[C]));
-          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
-          end;
-   If (DoReturn) then Exit(NewVal(VT_BOO,B)) else Exit(NilVal)
-   end;
+   begin Exit(F_Boolean(DoReturn, Arg, @AND_func)) end;
 
 Function F_Xor(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   Var C:LongWord; B:Boolean;
-   begin B:=False;
-   If (Length(Arg^)=0) then begin
-      If (DoReturn) then Exit(NewVal(VT_BOO, False)) else Exit(NIL) end;
-   If (Length(Arg^)>=1) then 
-      For C:=High(Arg^) downto Low(Arg^) do begin
-          If (Arg^[C]^.Typ = VT_BOO)
-             then B:=(B) xor (PBool(Arg^[C]^.Ptr)^)
-             else B:=(B) xor (ValAsBoo(Arg^[C]));
-          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
-          end;
-   If (DoReturn) then Exit(NewVal(VT_BOO,B)) else Exit(NilVal)
-   end;
+   begin Exit(F_Boolean(DoReturn, Arg, @XOR_func)) end;
 
 Function F_Or(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   Var C:LongWord; B:Boolean;
-   begin B:=False;
-   If (Length(Arg^)=0) then begin
-      If (DoReturn) then Exit(NewVal(VT_BOO, False)) else Exit(NIL) end;
-   If (Length(Arg^)>=1) then 
-      For C:=High(Arg^) downto Low(Arg^) do begin
-          If (Arg^[C]^.Typ = VT_BOO)
-             then B:=(B) or (PBool(Arg^[C]^.Ptr)^)
-             else B:=(B) or (ValAsBoo(Arg^[C]));
-          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
-          end;
-   If (DoReturn) then Exit(NewVal(VT_BOO,B)) else Exit(NilVal)
-   end;
+   begin Exit(F_Boolean(DoReturn, Arg, @OR_func)) end;
 
+// Logical implication. Why did I even implement this?
 Function F_Impl(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C:LongWord; p,q:Boolean;
    begin
-   If (Length(Arg^)=0) then begin
-      If (DoReturn) then Exit(NewVal(VT_BOO, False)) else Exit(NIL) end;
-   If (Length(Arg^)>=1) then 
+      // If no retval expected, bail out
+      If (Not DoReturn) then Exit(F_(False, Arg));
+      
+      // If no args, return FALSE 
+      If (Length(Arg^) = 0) then Exit(NewVal(VT_BOO, False));
+      
+      // Assign boolcast of rightmost arg to p
       C := High(Arg^);
       If (Arg^[C]^.Typ = VT_BOO)
-          then p:=(PBool(Arg^[C]^.Ptr)^)
-          else p:=ValAsBoo(Arg^[C]);
+         then p:=Arg^[C]^.Boo^
+         else p:=ValAsBoo(Arg^[C]);
+      
+      // Free arg if needed
       If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
+      
+      // Go through rest of args and perform implications on the way
       For C:=High(Arg^)-1 downto Low(Arg^) do begin
-          q := p;
-          If (Arg^[C]^.Typ = VT_BOO)
-             then p:=(PBool(Arg^[C]^.Ptr)^)
-             else p:=(ValAsBoo(Arg^[C]));
-          p := (not p) or q;
-          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
-          end;
-   If (DoReturn) then Exit(NewVal(VT_BOO,p)) else Exit(NilVal)
+         q := p;
+         If (Arg^[C]^.Typ = VT_BOO)
+            then p:=Arg^[C]^.Boo^
+            else p:=ValAsBoo(Arg^[C]);
+         p := (not p) or q;
+         If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
+      end;
+      
+      // Return value
+      Exit(NewVal(VT_BOO,p))
    end;
 
 end.

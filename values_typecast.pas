@@ -22,157 +22,291 @@ Function ValToBoo(Const V:PValue):PValue;
 Function ValToStr(Const V:PValue):PValue;
 Function ValToUTF(Const V:PValue):PValue;
 
+
 implementation
-   uses SysUtils, FileHandling, Convert;
+   uses SysUtils, Convert;
 
 Function ValAsInt(Const V:PValue):QInt;
    begin
-   Case V^.Typ of
-      VT_INT .. VT_BIN: Exit(PQInt(V^.Ptr)^);
-      VT_FLO: Exit(Trunc(PFloat(V^.Ptr)^));
-      VT_BOO: Exit(BoolToInt(PBool(V^.Ptr)^));
-      VT_STR: Exit(StrToInt(PStr(V^.Ptr)^));
-      VT_UTF: Exit(PUTF(V^.Ptr)^.ToInt(10));
-      VT_ARR: Exit(PArray(V^.Ptr)^.Count);
-      VT_DIC: Exit(PDict(V^.Ptr)^.Count);
-      VT_FIL: Exit(BoolToInt(PFileHandle(V^.Ptr)^.arw in ['a','r','w']))
-      else Exit(0)
+      Case V^.Typ of
+      
+         VT_INT .. VT_BIN:
+            Exit(V^.Int^);
+         
+         VT_FLO:
+            Exit(Trunc(V^.Flo^));
+         
+         VT_BOO:
+            Exit(BoolToInt(V^.Boo^));
+         
+         VT_STR:
+            Exit(StrToInt(V^.Str^));
+         
+         VT_UTF:
+            Exit(V^.Utf^.ToInt(10));
+         
+         VT_ARR:
+            Exit(V^.Arr^.Count);
+         
+         VT_DIC:
+            Exit(V^.Dic^.Count);
+         
+         VT_FIL:
+            Exit(BoolToInt(V^.Fil^.arw in ['a','r','w']))
+            
+         else
+            Exit(0)
    end end;
 
 Function ValAsHex(Const V:PValue):QInt;
    begin
-   Case V^.Typ of
-      VT_INT .. VT_BIN: Exit(PQInt(V^.Ptr)^);
-      VT_FLO: Exit(Trunc(PFloat(V^.Ptr)^));
-      VT_BOO: Exit(BoolToInt(PBool(V^.Ptr)^));
-      VT_STR: Exit(StrToHex(PStr(V^.Ptr)^));
-      VT_UTF: Exit(PUTF(V^.Ptr)^.ToInt(16));
-      VT_ARR: Exit(PArray(V^.Ptr)^.Count);
-      VT_DIC: Exit(PDict(V^.Ptr)^.Count);
-      VT_FIL: Exit(BoolToInt(PFileHandle(V^.Ptr)^.arw in ['a','r','w']))
-      else Exit(0)
+      Case V^.Typ of
+      
+         VT_INT .. VT_BIN: 
+            Exit(V^.Int^);
+            
+         VT_FLO: 
+            Exit(Trunc(V^.Flo^));
+            
+         VT_BOO: 
+            Exit(BoolToInt(V^.Boo^));
+            
+         VT_STR: 
+            Exit(StrToHex(V^.Str^));
+            
+         VT_UTF: 
+            Exit(V^.Utf^.ToInt(16));
+            
+         VT_ARR: 
+            Exit(V^.Arr^.Count);
+            
+         VT_DIC: 
+            Exit(V^.Dic^.Count);
+            
+         VT_FIL: 
+            Exit(BoolToInt(V^.Fil^.arw in ['a','r','w']))
+         
+         else
+         Exit(0)
    end end;
 
 Function ValAsOct(Const V:PValue):QInt;
    begin
-   Case V^.Typ of
-      VT_INT .. VT_BIN: Exit(PQInt(V^.Ptr)^);
-      VT_FLO: Exit(Trunc(PFloat(V^.Ptr)^));
-      VT_BOO: Exit(BoolToInt(PBool(V^.Ptr)^));
-      VT_STR: Exit(StrToOct(PStr(V^.Ptr)^));
-      VT_UTF: Exit(PUTF(V^.Ptr)^.ToInt(8));
-      VT_ARR: Exit(PArray(V^.Ptr)^.Count);
-      VT_DIC: Exit(PDict(V^.Ptr)^.Count);
-      VT_FIL: Exit(BoolToInt(PFileHandle(V^.Ptr)^.arw in ['a','r','w']))
-      else Exit(0)
+      Case V^.Typ of
+      
+         VT_INT .. VT_BIN: 
+            Exit(V^.Int^);
+         
+         VT_FLO:
+            Exit(Trunc(V^.Flo^));
+         
+         VT_BOO:
+            Exit(BoolToInt(V^.Boo^));
+         
+         VT_STR:
+            Exit(StrToOct(V^.Str^));
+         
+         VT_UTF:
+            Exit(V^.Utf^.ToInt(8));
+         
+         VT_ARR:
+            Exit(V^.Arr^.Count);
+         
+         VT_DIC:
+            Exit(V^.Dic^.Count);
+         
+         VT_FIL:
+            Exit(BoolToInt(V^.Fil^.arw in ['a','r','w']))
+         
+         else
+            Exit(0)
    end end;
 
 Function ValAsBin(Const V:PValue):QInt;
    begin
-   Case V^.Typ of
-      VT_INT .. VT_BIN: Exit(PQInt(V^.Ptr)^);
-      VT_FLO: Exit(Trunc(PFloat(V^.Ptr)^));
-      VT_BOO: Exit(BoolToInt(PBool(V^.Ptr)^));
-      VT_STR: Exit(StrToBin(PStr(V^.Ptr)^));
-      VT_UTF: Exit(PUTF(V^.Ptr)^.ToInt(2));
-      VT_ARR: Exit(PArray(V^.Ptr)^.Count);
-      VT_DIC: Exit(PDict(V^.Ptr)^.Count);
-      VT_FIL: Exit(BoolToInt(PFileHandle(V^.Ptr)^.arw in ['a','r','w']))
-      else Exit(0)
+      Case V^.Typ of
+   
+         VT_INT .. VT_BIN:
+            Exit(V^.Int^);
+         
+         VT_FLO:
+            Exit(Trunc(V^.Flo^));
+         
+         VT_BOO: 
+            Exit(BoolToInt(V^.Boo^));
+         
+         VT_STR: 
+            Exit(StrToBin(V^.Str^));
+         
+         VT_UTF: 
+            Exit(V^.Utf^.ToInt(2));
+         
+         VT_ARR: 
+            Exit(V^.Arr^.Count);
+         
+         VT_DIC: 
+            Exit(V^.Dic^.Count);
+         
+         VT_FIL: 
+            Exit(BoolToInt(V^.Fil^.arw in ['a','r','w']))
+         
+         else
+         Exit(0)
    end end;
 
 Function ValAsFlo(Const V:PValue):TFloat;
    begin
-   Case V^.Typ of
-      VT_INT .. VT_BIN: Exit(PQInt(V^.Ptr)^);
-      VT_FLO: Exit(PFloat(V^.Ptr)^);
-      VT_BOO: Exit(BoolToInt(PBool(V^.Ptr)^));
-      VT_STR: Exit(StrToReal(PStr(V^.Ptr)^));
-      VT_UTF: Exit(PUTF(V^.Ptr)^.ToFloat());
-      VT_ARR: Exit(PArray(V^.Ptr)^.Count);
-      VT_DIC: Exit(PDict(V^.Ptr)^.Count);
-      VT_FIL: Exit(BoolToInt(PFileHandle(V^.Ptr)^.arw in ['a','r','w']))
-      else Exit(0.0)
+      Case V^.Typ of
+         
+         VT_INT .. VT_BIN: 
+            Exit(V^.Int^);
+         
+         VT_FLO: 
+            Exit(V^.Flo^);
+         
+         VT_BOO: 
+            Exit(BoolToInt(V^.Boo^));
+         
+         VT_STR: 
+            Exit(StrToReal(V^.Str^));
+         
+         VT_UTF: 
+            Exit(V^.Utf^.ToFloat());
+         
+         VT_ARR: 
+            Exit(V^.Arr^.Count);
+         
+         VT_DIC: 
+            Exit(V^.Dic^.Count);
+         
+         VT_FIL: 
+            Exit(BoolToInt(V^.Fil^.arw in ['a','r','w']))
+         
+         else
+            Exit(0.0)
    end end;
 
 Function ValAsBoo(Const V:PValue):TBool;
    begin
-   Case V^.Typ of
-      VT_INT .. VT_BIN: Exit((PQInt(V^.Ptr)^)<>0);
-      VT_FLO: Exit(Abs(PFloat(V^.Ptr)^)>=1.0);
-      VT_BOO: Exit(PBoolean(V^.Ptr)^);
-      VT_STR: Exit(StrToBoolDef(PStr(V^.Ptr)^,FALSE));
-      VT_UTF: Exit(StrToBoolDef(PUTF(V^.Ptr)^.ToAnsiString,FALSE));
-      VT_ARR: Exit(Not PArray(V^.Ptr)^.Empty());
-      VT_DIC: Exit(Not PDict(V^.Ptr)^.Empty());
-      VT_FIL: Exit(PFileHandle(V^.Ptr)^.arw in ['a','r','w'])
-      else Exit(False)
+      Case V^.Typ of
+   
+         VT_INT .. VT_BIN:
+            Exit((V^.Int^)<>0);
+         
+         VT_FLO:
+            Exit(Abs(V^.Flo^)>=1.0);
+         
+         VT_BOO: 
+            Exit(V^.Boo^);
+         
+         VT_STR: 
+            Exit(StrToBoolDef(V^.Str^,FALSE));
+         
+         VT_UTF: 
+            Exit(StrToBoolDef(V^.Utf^.ToAnsiString,FALSE));
+         
+         VT_ARR: 
+            Exit(Not V^.Arr^.Empty());
+         
+         VT_DIC: 
+            Exit(Not V^.Dic^.Empty());
+         
+         VT_FIL: 
+            Exit(V^.Fil^.arw in ['a','r','w'])
+         
+         else
+            Exit(False)
    end end;
 
 Function ValAsStr(Const V:PValue):TStr;
    begin
-   Case V^.Typ of
-      VT_INT: Exit(IntToStr(PQInt(V^.Ptr)^));
-      VT_HEX: Exit(HexToStr(PQInt(V^.Ptr)^));
-      VT_OCT: Exit(OctToStr(PQInt(V^.Ptr)^));
-      VT_BIN: Exit(BinToStr(PQInt(V^.Ptr)^));
-      VT_FLO: Exit(FloatToStr(PFloat(V^.Ptr)^));
-      VT_BOO: If (PBoolean(V^.Ptr)^ = TRUE)
-                 then Exit('TRUE') else Exit('FALSE');
-      VT_STR: Exit(PStr(V^.Ptr)^);
-      VT_UTF: Exit(PUTF(V^.Ptr)^.ToAnsiString);
-      VT_ARR: Exit('array('+IntToStr(PArray(V^.Ptr)^.Count)+')');
-      VT_DIC: Exit('dict('+IntToStr(PDict(V^.Ptr)^.Count)+')');
-      VT_FIL: Exit('file('+PFileHandle(V^.Ptr)^.Pth+')')
-      else Exit('')
+      Case V^.Typ of
+         
+         VT_INT:
+            Exit(IntToStr(V^.Int^));
+         
+         VT_HEX:
+            Exit(HexToStr(V^.Int^));
+         
+         VT_OCT: 
+            Exit(OctToStr(V^.Int^));
+         
+         VT_BIN:
+            Exit(BinToStr(V^.Int^));
+         
+         VT_FLO:
+            Exit(FloatToStr(V^.Flo^));
+         
+         VT_BOO:
+            If (V^.Boo^ = TRUE)
+               then Exit('TRUE')
+               else Exit('FALSE');
+         
+         VT_STR:
+            Exit(V^.Str^);
+         
+         VT_UTF: 
+            Exit(V^.Utf^.ToAnsiString);
+         
+         VT_ARR:
+            Exit('array('+IntToStr(V^.Arr^.Count)+')');
+         
+         VT_DIC: 
+            Exit('dict('+IntToStr(V^.Dic^.Count)+')');
+         
+         VT_FIL:
+            Exit('file('+V^.Fil^.Pth+')')
+         
+         else
+            Exit('')
    end end;
 
 Function ValToInt(Const V:PValue):PValue;
    begin
-   Result:=CreateVal(VT_INT); Result^.Lev:=CurLev;
-   PQInt(Result^.Ptr)^:=ValAsInt(V); 
+      Result:=CreateVal(VT_INT); Result^.Lev:=CurLev;
+      Result^.Int^ := ValAsInt(V); 
    end;
 
 Function ValToHex(Const V:PValue):PValue;
    begin
-   Result:=CreateVal(VT_HEX); Result^.Lev:=CurLev;
-   PQInt(Result^.Ptr)^:=ValAsHex(V)
+      Result:=CreateVal(VT_HEX); Result^.Lev:=CurLev;
+      Result^.Int^ := ValAsHex(V)
    end;
 
 Function ValToOct(Const V:PValue):PValue;
    begin
-   Result:=CreateVal(VT_OCT); Result^.Lev:=CurLev;
-   PQInt(Result^.Ptr)^:=ValAsOct(V)
+      Result:=CreateVal(VT_OCT); Result^.Lev:=CurLev;
+      Result^.Int^ := ValAsOct(V)
    end;
 
 Function ValToBin(Const V:PValue):PValue;
    begin
-   Result:=CreateVal(VT_BIN); Result^.Lev:=CurLev;
-   PQInt(Result^.Ptr)^:=ValAsBin(V)
+      Result:=CreateVal(VT_BIN); Result^.Lev:=CurLev;
+      Result^.Int^ := ValAsBin(V)
    end;
 
 Function ValToFlo(Const V:PValue):PValue;
    begin
-   Result:=CreateVal(VT_FLO); Result^.Lev:=CurLev;
-   PFloat(Result^.Ptr)^:=ValAsFlo(V);
+      Result:=CreateVal(VT_FLO); Result^.Lev:=CurLev;
+      Result^.Flo^ := ValAsFlo(V);
    end;
 
 Function ValToBoo(Const V:PValue):PValue;
    begin
-   Result:=CreateVal(VT_BOO); Result^.Lev:=CurLev;
-   PBool(Result^.Ptr)^:=ValAsBoo(V)
+      Result:=CreateVal(VT_BOO); Result^.Lev:=CurLev;
+      Result^.Boo^ := ValAsBoo(V)
    end;
 
 Function ValToStr(Const V:PValue):PValue;
    begin
-   Result:=CreateVal(VT_STR); Result^.Lev:=CurLev;
-   PStr(Result^.Ptr)^:=ValAsStr(V)
+      Result:=CreateVal(VT_STR); Result^.Lev:=CurLev;
+      Result^.Str^ := ValAsStr(V)
    end;
 
 Function ValToUTF(Const V:PValue):PValue;
    begin
-   Result:=CreateVal(VT_UTF); Result^.Lev:=CurLev;
-   PUTF(Result^.Ptr)^.SetTo(ValAsStr(V))
+      Result:=CreateVal(VT_UTF); Result^.Lev:=CurLev;
+      Result^.Utf^.SetTo(ValAsStr(V))
    end;
 
 end.

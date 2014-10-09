@@ -3,7 +3,7 @@ unit functions_hash;
 {$INCLUDE defines.inc}
 
 interface
-   uses Values;
+   uses FuncInfo, Values;
 
 Procedure Register(Const FT:PFunTrie);
 
@@ -26,10 +26,10 @@ implementation
 
 Procedure Register(Const FT:PFunTrie);
    begin
-   FT^.SetVal( 'md2',MkFunc(@F_MD2));    FT^.SetVal( 'md2-file',MkFunc(@F_MD2_File));
-   FT^.SetVal( 'md4',MkFunc(@F_MD4));    FT^.SetVal( 'md4-file',MkFunc(@F_MD4_File));
-   FT^.SetVal( 'md5',MkFunc(@F_MD5));    FT^.SetVal( 'md5-file',MkFunc(@F_MD5_File));
-   FT^.SetVal('sha1',MkFunc(@F_SHA1));   FT^.SetVal('sha1-file',MkFunc(@F_SHA1_File));
+      FT^.SetVal( 'md2',MkFunc(@F_MD2));    FT^.SetVal( 'md2-file',MkFunc(@F_MD2_File));
+      FT^.SetVal( 'md4',MkFunc(@F_MD4));    FT^.SetVal( 'md4-file',MkFunc(@F_MD4_File));
+      FT^.SetVal( 'md5',MkFunc(@F_MD5));    FT^.SetVal( 'md5-file',MkFunc(@F_MD5_File));
+      FT^.SetVal('sha1',MkFunc(@F_SHA1));   FT^.SetVal('sha1-file',MkFunc(@F_SHA1_File));
    end;
 
 Type TByteArray = Array of Byte;
@@ -59,39 +59,55 @@ Function _SHA1string(Const Str:AnsiString):TByteArray; Inline;
 Function _SHA1file(Const Str:AnsiString):TByteArray; Inline;
    begin Exit(SHA1file(Str)) end;
 
+// Return hex digest from array of bytes
 Function HexDigest(Const Dig:Array of Byte):AnsiString;
    Var B:LongWord;
-   begin SetLength(Result,Length(Dig)*2);
-   For B:=0 to Length(Dig)-1 do begin
-       Result[(B*2)+1] := Convert.Sys16Dig[Dig[B] div 16];
-       Result[(B*2)+2] := Convert.Sys16Dig[Dig[B] mod 16]
+   begin
+      SetLength(Result,Length(Dig)*2);
+      For B:=0 to Length(Dig)-1 do begin
+         Result[(B*2)+1] := Convert.Sys16Dig[Dig[B] div 16];
+         Result[(B*2)+2] := Convert.Sys16Dig[Dig[B] mod 16]
    end end;
 
+// Return raw digest from array of bytes
 Function RawDigest(Const Dig:Array of Byte):AnsiString;
    Var B:LongWord;
    begin
-   SetLength(Result, Length(Dig));
-   For B:=0 to Length(Dig)-1 do
-       Result[B+1] := Chr(Dig[B])
+      SetLength(Result, Length(Dig));
+      For B:=0 to Length(Dig)-1 do
+         Result[B+1] := Chr(Dig[B])
    end;
 
 Function F_Hashing(Const DoReturn:Boolean; Const Arg:PArrPVal; Const Hash:THashFunc):PValue; 
-   Var V:PValue; Raw:Boolean;
+   Var Raw:Boolean;
    begin
-   If (Not DoReturn) then Exit(F_(False,Arg)); 
-   If (Length(Arg^) > 0) then begin 
-      V:=ValToStr(Arg^[0]);
-      If (Length(Arg^) > 1)
-         then Raw := ValAsBoo(Arg^[1])
-         else Raw := False
+      // If not returning a value, free args and bail 
+      If (Not DoReturn) then Exit(F_(False,Arg)); 
+      
+      // Check if argument is present
+      If (Length(Arg^) > 0) then begin 
+         
+         // Create resulting PValue
+         Result := ValToStr(Arg^[0]);
+         
+         // If two or more args, check second arg to determine RAW
+         If (Length(Arg^) > 1)
+            then Raw := ValAsBoo(Arg^[1])
+            else Raw := False
+         
       end else begin
-      V:=EmptyVal(VT_STR);
-      Raw := False
+         // No args, use default values
+         Result := EmptyVal(VT_STR);
+         Raw := False
       end;
-   F_(False, Arg);
-   If (Not Raw) then PStr(V^.Ptr)^ := HexDigest(Hash(PStr(V^.Ptr)^))
-                else PStr(V^.Ptr)^ := RawDigest(Hash(PStr(V^.Ptr)^));
-   Exit(V)
+      
+      // Free args
+      F_(False, Arg);
+      
+      // Insert hex/raw digest into PValue
+      If (Not Raw)
+         then Result^.Str^ := HexDigest(Hash(Result^.Str^))
+         else Result^.Str^ := RawDigest(Hash(Result^.Str^))
    end;
 
 Function F_MD2(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
