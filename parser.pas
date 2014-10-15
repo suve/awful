@@ -681,7 +681,9 @@ Function MakeExpr(Const ExLo,ExHi,Ln:LongInt; T:LongInt):PExpr;
    end;
 
 Procedure ProcessLine(Const L:AnsiString;Const N:LongWord);
-   Var P,S,Len,Str:LongInt; Del:Char;
+   Type TStrSearch = (STR_NOPE, STR_MAYBE, STR_START, STR_INSIDE);
+   
+   Var P,S,Len:LongInt; Str : TStrSearch; Delim:Char;
        PipeChar:AnsiString; Ex:PExpr; Utf:Boolean;
    
    Function BreakToken(Const Ch:Char):Boolean; Inline;
@@ -689,9 +691,9 @@ Procedure ProcessLine(Const L:AnsiString;Const N:LongWord);
    
    Procedure EnsureEmptyPlaces(Len:LongInt); Inline;
       begin
-      Len := HiTk + 1 + Len;
-      If (Len > LeTk) then begin
-         LeTk := Len + 2; SetLength(Tk,LeTk)
+         Len := HiTk + 1 + Len;
+         If (Len > LeTk) then begin
+            LeTk := Len + 2; SetLength(Tk,LeTk)
       end end;
    
    Procedure SetHighToken(Const Content:AnsiString); Inline;
@@ -701,197 +703,315 @@ Procedure ProcessLine(Const L:AnsiString;Const N:LongWord);
       begin HiTk -= 1 end;
    
    begin
-   S:=1; Len := Length(L);
-   {$IFDEF CGI}
-   If (Len = 0) then begin
-      If (Codemode = 0) then begin
-         New(Ex); Ex^.Ref := REF_CONST;
-         SetLength(Ex^.Tok,0); SetLength(Ex^.Arg,0);
-         Ex^.Fun := @F_Writeln;
-         AddExpr(Ex)
-         end;
-      Exit()
-      end else
-      If (Codemode > 0) then begin
-         While (L[S]<=' ') and (S <= Len) do S += 1;
-         If (S > Len) then Exit()
-      end;
-   {$ELSE}
-   If (Len = 0) then Exit();
-   While (L[S]<=#$20) and (S <= Len) do S += 1;
-   If (S > Len) then Exit();
-   While (L[Len]<=#$20) and (Len > 0) do Len -= 1;
-   {$ENDIF}
-   {SetLength(Tk,2); LeTk := 2;} HiTk := -1; {S := 1; Len:=Length(L);} 
-   P:=1; Str:=0; Del:=#255; PipeChar:='';
-   While (S <= Len) do begin
-      //Writeln(N:8,#32,Len:8,#32,S:8,#32,P:8,' "',L[P],'"');
-      If (mulico > 0) then begin
-         If (P>Len) then S := Len+1 else
-         If (L[P]='#') then
-            If (Len>P) and (L[P+1]='~') then mulico+=1 else
-            If (P>1) and (L[P-1]='~') then begin
-               If (mulico > 1) then mulico-=1 else begin
-                  S:=P+1; {P-=1;} mulico:=0
-               end end
-         end else
+      S:=1; Len := Length(L); // Remember script line length and set Startpos to 0
+      
       {$IFDEF CGI}
-      If (codemode = 0) then begin
-         If (P>Len) then begin
-            If (HiTk >= 0) and (Tk[HiTk][1] <> '~') then begin
-               EnsureEmptyPlaces(3); SetHighToken('~')
-               end else EnsureEmptyPlaces(2);
-            SetHighToken(':writeln');
-            SetHighToken('s"' + L[S..Len] +'"');
-            S := Len + 1; P-=1
-            end else
-         If (L[P] = '?') then begin
-            If ((P>1) and (L[P-1] = '<')) and ((P <= Len-3) and (L[P+1..P+3] = 'yuk')) then begin
-               If (P > S+1) then begin
-                  If (HiTk >= 0) and (Tk[HiTk][1]<>'~') then begin
-                     EnsureEmptyPlaces(4); SetHighToken('~')
-                     end else EnsureEmptyPlaces(3);
-                  SetHighToken(':write');
-                  SetHighToken('s"' + L[S..P-2] +'"');
-                  SetHighToken('~')
-                  end else
-                  If (HiTk >= 0) and (Tk[HiTk][1] <> '~') then begin
-                     EnsureEmptyPlaces(1); SetHighToken('~')
-                     end;
-               //Writeln(StdErr,ExtractFileName(YukPath),'(',N,'): Entering codemode');
-               codemode := 1; S:=P+5; P+=3
+         If (Len = 0) then begin 
+            // Empty line. If not in codemode, add expression outputting a blank line.
+            If (Codemode = 0) then begin 
+               New(Ex); Ex^.Ref := REF_CONST; Ex^.Len := -1;
+               SetLength(Ex^.Tok,0); SetLength(Ex^.Arg,0);
+               Ex^.Fun := @F_Writeln;
+               AddExpr(Ex)
+            end;
+            Exit()
+         end else
+            // Non-empty line. If in codemode, skip whitespace on left side.
+            If (Codemode > 0) then begin
+               While (L[S]<=' ') and (S <= Len) do S += 1;
+               If (S > Len) then Exit()
+         end;
+      {$ELSE}
+      
+         If (Len = 0) then Exit(); // Bail out if empty line
+         While (L[S]<=#$20) and (S <= Len) do S += 1; // Skip whitespace on left side
+         
+         If (S > Len) then Exit(); // Line consists only of whitespace, nothing to do
+         While (L[Len]<=#$20) and (Len > 0) do Len -= 1; // Skip whitespace on right side
+      {$ENDIF}
+      
+      HiTk := -1;                  // HighToken = -1 (no tokens) 
+      Str:=STR_MAYBE; Delim:=#255; // Stringmode = "possible to enocunter a string literal", delimiter = #255
+      PipeChar:='';                // Pipe "|" matching char (either "(" or "[")
+      P:=1;                        // Current position in text
+      
+      // Go through loop as long as S (token start) is inside linestring
+      While (S <= Len) do begin
+         
+         // Inside multi-line comment
+         If (mulico > 0) then begin
+            If (P>Len) then S := Len+1 else
+            If (L[P]='#') then
+               If (Len>P) and (L[P+1]='~') then mulico+=1 else
+               If (P>1) and (L[P-1]='~') then begin
+                  If (mulico > 1)
+                     then mulico-=1 
+                     else begin
+                        S:=P+1; {P-=1;} mulico:=0
+                     end 
+               end
+         end else
+         {$IFDEF CGI}
+         
+         // If not in codemode 
+         If (codemode = 0) then begin
+         
+            // If current P position greater than string length, we are at end of line
+            If (P > Len) then begin
+               
+               // If previous expression didn't end with ~terminator, add it.
+               // Oterwise, just ensure we have enough place to put :writeln <line content>.
+               If (HiTk >= 0) and (Tk[HiTk][1] <> '~') then begin
+                  EnsureEmptyPlaces(3); SetHighToken('~')
                end else
-            If (P<Len) and (L[P+1] = '>') and (codemode = 0) then begin
-               Fatal(N, 'Unexpected codemode close tag ("?>").') end;
+                  EnsureEmptyPlaces(2);
+               
+               SetHighToken(':writeln');
+               SetHighToken('s"' + L[S..Len] +'"');
+               S := Len + 1; P-=1
+            end else // else = we are not at end of line
+            
+            // Check if character is ? - we may have encountered a <?yuk tag
+            If (L[P] = '?') then begin
+               
+               // Check if this really is a <?yuk tag
+               If ((P>1) and (L[P-1] = '<')) and ((P <= Len-3) and (L[P+1..P+3] = 'yuk')) then begin
+                  
+                  // Check if tag is not on line start
+                  If (P > S+1) then begin
+                     
+                     // If previous expression didn't end with ~terminator, add it.
+                     // Oterwise, just ensure we have enough place to put :write <line content> ~.
+                     If (HiTk >= 0) and (Tk[HiTk][1]<>'~') then begin
+                        EnsureEmptyPlaces(4); SetHighToken('~')
+                     end else
+                        EnsureEmptyPlaces(3);
+                     
+                     SetHighToken(':write');
+                     SetHighToken('s"' + L[S..P-2] +'"');
+                     SetHighToken('~')
+                  end else
+                  // We are on line start. Just in case, check if there are any tokens and add ~terminator if needed.
+                     If (HiTk >= 0) and (Tk[HiTk][1] <> '~') then begin
+                        EnsureEmptyPlaces(1); SetHighToken('~')
+                     end;
+                  
+                  // Mark we are inside codemode. Move S and P positions
+                  codemode += 1; S:=P+5; P+=3
+               end else
+               // Not a <?yuk tag, but maybe a ?> tag?
+               If (P < Len) and (L[P+1] = '>') and (codemode = 0) then 
+                  Fatal(N, 'Unexpected codemode close tag ("?>").')
+                  
             end else
-         If (N = 1) and (P = 1) and (L[1]='#') then begin
-            If (Len>1) and (L[2]='!') then S:=Len+1 // #!shebang
+            // Character is not '?'. Check if first line and character is '#' - if so, may be shebang.
+            If (N = 1) and (P = 1) and (L[1]='#') then begin
+               If (Len>1) and (L[2]='!') then S:=Len+1 // #!shebang
             end
          end else
-      {$ENDIF}
-      If (Str<=0) then begin
-         If (P>Len) or (BreakToken(L[P])) then begin
-            //Writeln(StdErr,'Breaking line: "',L,'" at "',L[P],'".');
-            If (L[P] <= #$20) then begin
-               If (P>S) then begin
-                  EnsureEmptyPlaces(1);
-                  SetHighToken(Copy(L,S,P-S))
-                  end;
-               While (P<Len) and (L[P+1] <= #$20) do P+=1;
-               S := P+1; P+=1
-               end else 
-            If (L[P]='#') then begin //Comment character! 
-               If (P>S) then begin
-                  EnsureEmptyPlaces(1);
-                  SetHighToken(Copy(L,S,P-S))
-                  end;
-               If (Len>P) and (L[P+1]='~') //begin of multi-line comment
-                  then begin S := P+2; P+=2; mulico += 1 end 
-                  else S:=Len+1 {normal comment}
-               end
-            {$IFDEF CGI}
-               else
-            If (P >= 3) and (L[P-2..P-1] = '?>') then begin
-               codemode -= 1; S:=P; P+=1 //Delete(L, 1, 2)
-               end
-            {$ENDIF}
-               else begin // paren
-               If (P>S) then begin
-                  EnsureEmptyPlaces(1);
-                  SetHighToken(Copy(L,S,P-S))
-                  end;
-               If (P<=Len) then begin
-                  EnsureEmptyPlaces(1);
-                  SetHighToken(L[P]);
-                  While (P<Len) and (L[P+1] <= #$20) do P+=1
-                  end;
-               S:=P+1; P+=1;
-               If (Tk[HiTk]='|') then begin
-                  If (Length(PipeChar)=0) then begin
-                     RemoveHighToken();
-                     Error(N, 'Pipe ("|") without matching parentheses or brackets.') 
-                     end else begin
+         {$ENDIF}
+         
+         // Not inside a string literal
+         If (Str < STR_START) then begin
+            
+            // If at end of line, or current char is a token breaker
+            If (P > Len) or (BreakToken(L[P])) then begin
+               
+               // If current char is whitespace
+               If (L[P] <= #$20) then begin
+                  
+                  // If P has moved from S, add S to P substring as new token
+                  If (P > S) then begin
                      EnsureEmptyPlaces(1);
-                     If (PipeChar[Length(PipeChar)] = '(') then begin
-                        Tk[HiTk]:=')'; SetHighToken('(')
+                     SetHighToken(Copy(L,S,P-S))
+                  end;
+                  
+                  // Skip any additional whitespace bytes after this one
+                  While (P < Len) and (L[P+1] <= #$20) do P+=1;
+                  S := P+1; P+=1
+               end else 
+               
+               // If current char is '#', we have encountered a comment
+               If (L[P]='#') then begin
+                  
+                  // If P has moved from S, add S to P substring as new token
+                  If (P > S) then begin
+                     EnsureEmptyPlaces(1);
+                     SetHighToken(Copy(L,S,P-S))
+                  end;
+                  
+                  // Check if multi-line comment
+                  If (Len > P) and (L[P+1]='~') 
+                     then begin S := P+2; P+=2; mulico += 1 end // Yes, move S and P and mark multi-line-comment flag
+                     else S:=Len+1                              // Nope, just mark line as read fully
+               end
+               
+               {$IFDEF CGI}
+               // Check if codemode close tag ('?>') encountered
+               else If (P >= 3) and (L[P-2..P-1] = '?>') then begin
+                  codemode -= 1; S:=P; P+=1 
+               end
+               {$ENDIF}
+               
+               // Character is token breaker, but not whitespace nor pound. This means it must be (|)[#].
+               else begin
+                  
+                  // P has moved from S, add S to P substring as token
+                  If (P > S) then begin
+                     EnsureEmptyPlaces(1);
+                     SetHighToken(Copy(L,S,P-S))
+                  end;
+                  
+                  // P is inside string. Add L[P] as token and skip any following whitespace.
+                  If (P <= Len) then begin
+                     EnsureEmptyPlaces(1);
+                     SetHighToken(L[P]);
+                     While (P<Len) and (L[P+1] <= #$20) do P+=1
+                  end;
+                  
+                  // Move S to new position (which should be after token breaker + skipped whitespace)
+                  S := P + 1; P += 1;
+                  
+                  // Check if token is '|' pipechar
+                  If (Tk[HiTk]='|') then begin
+                     
+                     // If PipeChar length is 0, means there is no ( or [ to match
+                     If (Length(PipeChar)=0) then begin
+                     
+                        // Remove '|' token and emit error
+                        RemoveHighToken();
+                        Error(N, 'Pipe ("|") without matching parentheses or brackets.') 
+                     
+                     end else begin
+                        
+                        // Make sure we have place for new token
+                        EnsureEmptyPlaces(1);
+                        
+                        // Morph '|' into appropriate closing paren/bracket and add opening paren/bracket
+                        If (PipeChar[Length(PipeChar)] = '(') then begin
+                           Tk[HiTk]:=')'; SetHighToken('(')
                         end else begin
-                        Tk[HiTk]:=']'; SetHighToken('[')
+                           Tk[HiTk]:=']'; SetHighToken('[')
                         end
                      end
-                  end else
-               If (Tk[HiTk]='(') or (Tk[HiTk] = '[') then
-                  PipeChar += Tk[HiTk] else
-               If ((Tk[HiTk]=')') or (Tk[HiTk] = ']')) and
-                  (Length(PipeChar)>0) and (PipeChar[Length(PipeChar)]=Tk[HiTk]) then
-                  Delete(PipeChar, Length(PipeChar), 1)
+                  end else // Token is not pipechar
+                  
+                  // Check if token is paren/bracket opening - if yes, add it to PipeChar stringstack
+                  If (Tk[HiTk]='(') or (Tk[HiTk] = '[') then
+                     PipeChar += Tk[HiTk]
+                  else
+                  
+                  // Check if token is paren/bracket close and previous PipeChar matches this
+                  If ((Tk[HiTk]=')') or (Tk[HiTk] = ']')) and
+                     (Length(PipeChar)>0) and (PipeChar[Length(PipeChar)]=Tk[HiTk])
+                     then
+                        Delete(PipeChar, Length(PipeChar), 1)
                end;
-            P:=S-1; Str:=0
+               P:=S-1; Str:=STR_MAYBE // Move P to new startpos and set string search to none
+            end else // Not at string-end or token breaker
+            
+            {$IFDEF CGI}
+            // Check if ?> tag encountered - if yes, get out of codemode
+            If (L[P]='?') and (P<Len) and (L[P+1]='>') then begin
+               codemode -= 1; S:=P+2; P+=1
             end else
-         {$IFDEF CGI}
-         If (L[P]='?') and (P<Len) and (L[P+1]='>') then begin
-            codemode -= 1; S:=P+2; P+=1 //Delete(L, 1, P+1); P:=0;
+            {$ENDIF}
+            
+            // If not in string literal and 's' or 'u' encountered, we just came across a string literal
+            If (Str = STR_MAYBE) and ((L[P]='s') or (L[P]='u')) then begin
+               Str:=STR_START; Utf:=(L[P] = 'u') // Mark string-search and set UTF flag
             end else
-         {$ENDIF}
-         If (Str=0) and ((L[P]='s') or (L[P]='u'))
-            then begin Str:=+1; Utf:=L[P]='u' end
-            else Str:=-1
-         end else
-      If (Str = 1) then begin
-         If (P>Len) then begin
-            Error(N,'String prefix found at end of line.');
-            EnsureEmptyPlaces(1);
-            If (Not Utf) then SetHighToken('s""')
-                         else SetHighToken('u""');
-            S:=Len+1; Str:=0
+               Str:=STR_NOPE // Mark string-search as "we are inside token, 's' and 'u' are not string literal initializers"
+               
+         end else // Str if not STR_NONE
+         
+         // We have just encountered string prefix and are looking for delimiter
+         If (Str = STR_START) then begin
+            
+            // If P is outside string, then welp, string prefix at end of line!
+            If (P > Len) then begin
+               Error(N,'String prefix found at end of line.');
+               
+               // Add emptystring token
+               EnsureEmptyPlaces(1);
+               If (Not Utf)
+                  then SetHighToken('s""')
+                  else SetHighToken('u""');
+                  
+               S:=Len+1; Str:=STR_MAYBE // Mark stringsearch as done
             end else begin
-            Del:=L[P]; Str:=2
-         end end else
-      If (Str = 2) and ((P>Len) or (L[P]=Del)) then begin
-         EnsureEmptyPlaces(1);
-         SetHighToken(Copy(L,S,P-S+1));
-         If (P<=Len)
-            then While (P<Len) and (L[P+1] <= #$20) do P+=1
-            else begin
-            Error(N,'String token exceeds line.');
-            Tk[HiTk]+=Del
-            end;
-         S:=P+1; {P-=1;} Str:=0
-         end;
-      P+=1
-      end;
-   //If (N = 11) then for p:=low(tk) to high(tk) do writeln(tk[p]);
-   If (HiTk < 0) then Exit();
-   If (HiTk = 0) and (Tk[0][1]='~') then Exit();
-   S:=0; {HiTk := High(Tk);} P:=1;
-   While (P <= HiTk) do begin
-      If (Tk[P][1]='!') then begin //if (n=11) then writeln('makeexpr ',rs,'..',p-1);
-         Ex := MakeExpr(S,P-1,N,S); //MakeExpr(Tk[S..P-1], N, 0);
-         If (Ex<>NIL) then AddExpr(Ex);
-         S := P;
+            // Not outside string. Save delimiter byte and mark "inside string literal" flag
+               Delim := L[P]; Str := STR_INSIDE
+            end
          end else
-      If (Tk[P][1]='~') then begin
-         If (Tk[S][1]<>'~') then begin //if (n=11) then writeln('makeexpr ',rs,'..',p-1);
-            Ex:=MakeExpr(S,P-1,N,S);//MakeExpr(Tk[S..P-1], N, 0);
-            If (Ex<>NIL) then AddExpr(Ex)
+         
+         // We are inside string literal and have either reached end of line or encountered the delimiter
+         If (Str = STR_INSIDE) and ((P > Len) or (L[P] = Delim)) then begin
+            
+            // Add string token
+            EnsureEmptyPlaces(1);
+            SetHighToken(Copy(L,S,P-S+1));
+            
+            // Check if still inside linestring. If yes, skip whitespace.
+            // If not, emit error and add delimiter to token end.
+            If (P <= Len) then
+               While (P<Len) and (L[P+1] <= #$20) do P+=1
+            else begin
+               Error(N,'String token exceeds line.');
+               Tk[HiTk]+=Delim
             end;
-         While (P <= HiTk) and (Tk[P][1] = '~') do P += 1; S := P;
-         If (P > HiTk) or (Tk[P][1] <> '!') then P -= 1
+            
+            S := P+1; Str:=STR_MAYBE // Move startpos and set sting search flag
          end;
-      P += 1
+         P += 1 // Advance current char pos
       end;
-   If (S <= HiTk) and (Tk[S][1]<>'~') then begin
-      Ex := MakeExpr(S,HiTk,N,S);//MakeExpr(Tk[S..HiTk], N, 0); 
-      If (Ex<>NIL) then AddExpr(Ex)
+      
+      (* Line parsing ends here.                                         *
+       * Now we need to check if we have actually extracted any tokens.  *
+       * If no, do nothing and exit.                                     *)
+      
+      If (HiTk < 0) then Exit();
+      If (HiTk = 0) and (Tk[0][1]='~') then Exit();
+      
+      (* If yes, seek out '~' and '!' tokens to determine individual expressions. *
+       * Call MakeExpr() with proper token ranges to construct expressions.       *)
+      
+      S:=0; P:=1; // P holds current token, 0 holds starting token
+      While (P <= HiTk) do begin
+         
+         // Token is a !construct - make an expression from things before this token
+         If (Tk[P][1]='!') then begin 
+            Ex := MakeExpr(S,P-1,N,S); 
+            If (Ex<>NIL) then AddExpr(Ex);
+            S := P; 
+         end else
+         // Token is an ~expression terminator
+         If (Tk[P][1]='~') then begin
+            // If starting token is not a ~terminator, try to make an expression from the intermediate tokens
+            If (Tk[S][1]<>'~') then begin 
+               Ex:=MakeExpr(S,P-1,N,S);
+               If (Ex<>NIL) then AddExpr(Ex)
+            end;
+            While (P <= HiTk) and (Tk[P][1] = '~') do P += 1; S := P; // Skip ~terminators
+            If (P > HiTk) or (Tk[P][1] <> '!') then P -= 1
+         end;
+         P += 1
+      end;
+      
+      // If any tokens remaining, try to make an expression out of them
+      If (S <= HiTk) and (Tk[S][1]<>'~') then begin
+         Ex := MakeExpr(S,HiTk,N,S);
+         If (Ex<>NIL) then AddExpr(Ex)
       end
    end;
 
 Procedure ParseFile(Var InputFile:System.Text);
    Var Line:AnsiString; Num:LongWord; 
    begin
-   Num := 0;
-   While (Not Eof(InputFile)) do begin
-      Readln(InputFile,Line); Num+=1;
-      ProcessLine(Line, Num)
+      Num := 0;
+      While (Not Eof(InputFile)) do begin
+         Readln(InputFile,Line); Num+=1;
+         ProcessLine(Line, Num)
    end end;
 
 Procedure ReadFile(Var InputFile:System.Text);
@@ -900,48 +1020,48 @@ Procedure ReadFile(Var InputFile:System.Text);
    
    Var V:PValue; PTV:PValue; 
    begin
-   SetLength(Pr,1); Proc:=0; ExLn:=0; mulico:=0; {$IFDEF CGI} codemode:=0; {$ENDIF}
-   SetLength(Pr[0].Arg,0); SetLength(Pr[0].Exp,0); Pr[0].Num:=0;
-   
-   New(cstruStack, Create());
-   SetLength(IfArr,0); SetLength(WhiArr,0); SetLength(RepArr,0);
-   SetLength(FileIncludes, 0);
-   
-   New(Cons,Create());
-   SpareVars_Prepare();
-   
-   V:=NilVal(); V^.Lev := 0; Cons^.SetVal('NIL', V);
-   
-   {$IFDEF CGI} V:=NewVal(VT_STR, GetEnvironmentVariable('REQUEST_METHOD')); V^.Lev:=0; Cons^.SetVal('REQUEST-METHOD', V); {$ENDIF}
-   
-   V:=NewVal(VT_STR,YukPath); V^.Lev := 0; Cons^.SetVal('FILE-PATH',V);
-   V:=NewVal(VT_STR,YukName); V^.Lev := 0; Cons^.SetVal('FILE-NAME',V);
-   
-   V:=NewVal(VT_BOO,__ISCGI__);   V^.Lev := 0; Cons^.SetVal('AWFUL-CGI',V);
-   V:=NewVal(VT_STR,ParamStr(0)); V^.Lev := 0; Cons^.SetVal('AWFUL-PATH',V);
-   V:=NewVal(VT_STR,BuildNum());  V^.Lev := 0; Cons^.SetVal('AWFUL-BUILD',V);
-   V:=NewVal(VT_STR,VERSION);     V^.Lev := 0; Cons^.SetVal('AWFUL-VERSION',V);
-   V:=NewVal(VT_INT,VREVISION);   V^.Lev := 0; Cons^.SetVal('AWFUL-REVISION',V);
-   PTV:=EmptyVal(VT_INT);       PTV^.Lev := 0; Cons^.SetVal('AWFUL-PARSETIME',PTV);
-   
-   V:=NewVal(VT_FLO,2.71828182845904523536); V^.Lev := 0; Cons^.SetVal('e',  V);
-   V:=NewVal(VT_FLO,3.14159265358979323846); V^.Lev := 0; Cons^.SetVal('pi', V);
-   
-   SetLength(FCal,1); New(FCal[0].Vars,Create()); FCal[0].NumA := 0; FLev := 0;
-   
-   SetLength(Tk,2); LeTk := 2;
-   ParseFile(InputFile); // loop moved to other file
-   SetLength(Tk,0);
-   
-   If (mulico > 0) then Writeln(StdErr,YukName,': multi-line comment stretches past end of code.');
-   
-   If (Not cstruStack^.Empty) then cstruFatal(0);
-   Dispose(cstruStack, Destroy());
-   
-   If (Proc <> 0) then Fatal(0,'!fun block stretches past end of code.');
-   SetLength(Pr[0].Exp, Pr[0].Num); // truncate array of main function
-   
-   PQInt(PTV^.Ptr)^ := Ceil(TimeStampToMSecs(DateTimeToTimeStamp(Now()))-GLOB_ms)
+      SetLength(Pr,1); Proc:=0; ExLn:=0; mulico:=0; {$IFDEF CGI} codemode:=0; {$ENDIF}
+      SetLength(Pr[0].Arg,0); SetLength(Pr[0].Exp,0); Pr[0].Num:=0;
+      
+      New(cstruStack, Create());
+      SetLength(IfArr,0); SetLength(WhiArr,0); SetLength(RepArr,0);
+      SetLength(FileIncludes, 0);
+      
+      New(Cons,Create());
+      SpareVars_Prepare();
+      
+      V:=NilVal(); V^.Lev := 0; Cons^.SetVal('NIL', V);
+      
+      {$IFDEF CGI} V:=NewVal(VT_STR, GetEnvironmentVariable('REQUEST_METHOD')); V^.Lev:=0; Cons^.SetVal('REQUEST-METHOD', V); {$ENDIF}
+      
+      V:=NewVal(VT_STR,YukPath); V^.Lev := 0; Cons^.SetVal('FILE-PATH',V);
+      V:=NewVal(VT_STR,YukName); V^.Lev := 0; Cons^.SetVal('FILE-NAME',V);
+      
+      V:=NewVal(VT_BOO,__ISCGI__);   V^.Lev := 0; Cons^.SetVal('AWFUL-CGI',V);
+      V:=NewVal(VT_STR,ParamStr(0)); V^.Lev := 0; Cons^.SetVal('AWFUL-PATH',V);
+      V:=NewVal(VT_STR,BuildNum());  V^.Lev := 0; Cons^.SetVal('AWFUL-BUILD',V);
+      V:=NewVal(VT_STR,VERSION);     V^.Lev := 0; Cons^.SetVal('AWFUL-VERSION',V);
+      V:=NewVal(VT_INT,VREVISION);   V^.Lev := 0; Cons^.SetVal('AWFUL-REVISION',V);
+      PTV:=EmptyVal(VT_INT);       PTV^.Lev := 0; Cons^.SetVal('AWFUL-PARSETIME',PTV);
+      
+      V:=NewVal(VT_FLO,2.71828182845904523536); V^.Lev := 0; Cons^.SetVal('e',  V);
+      V:=NewVal(VT_FLO,3.14159265358979323846); V^.Lev := 0; Cons^.SetVal('pi', V);
+      
+      SetLength(FCal,1); New(FCal[0].Vars,Create()); FCal[0].NumA := 0; FLev := 0;
+      
+      SetLength(Tk,2); LeTk := 2;
+      ParseFile(InputFile); // loop moved to other file
+      SetLength(Tk,0);
+      
+      If (mulico > 0) then Writeln(StdErr,YukName,': multi-line comment stretches past end of code.');
+      
+      If (Not cstruStack^.Empty) then cstruFatal(0);
+      Dispose(cstruStack, Destroy());
+      
+      If (Proc <> 0) then Fatal(0,'!fun block stretches past end of code.');
+      SetLength(Pr[0].Exp, Pr[0].Num); // truncate array of main function
+      
+      PQInt(PTV^.Ptr)^ := Ceil(TimeStampToMSecs(DateTimeToTimeStamp(Now()))-GLOB_ms)
    end;
 
 end.

@@ -20,19 +20,18 @@ Type
    ExEmptyStack = class(Exception);
 
    Generic GenericStack<Tp> = STACKTYPE
-      Private
-         Type
-            PNode = ^TNode;
-            TNode = record
-               Val : Tp;
-               Nxt : PNode
-            end;
+      Protected Type
+         PNode = ^TNode;
+         TNode = record
+            Val : Tp;
+            Nxt : PNode
+         end;
          
-         Var
-            Ptr : PNode;
-            Size : LongWord;
+      Protected Var
+         Ptr : PNode;
+         Size : LongWord;
       
-      Public
+      Public {Method}
          Procedure Push(Const Val:Tp);
          
          Function  Peek(Depth:LongInt):Tp;

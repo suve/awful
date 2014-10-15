@@ -10,7 +10,7 @@ const
 
 Function  FillBuffer(Var TheFile:Text; Const Buff:PStr; Const Trim:Boolean):LongWord;
 Procedure FillVar(Const V:PValue; Const Buff : PStr; Const Pos : LongWord);
-Procedure WriteFile(Var F:Text; Const Arg:PArrPVal; Idx:LongWord);
+Procedure WriteFile(Var F:Text; Const Arg:PArrPVal; Idx:LongInt);
 
 
 implementation
@@ -63,11 +63,11 @@ Procedure FillVar(Const V:PValue; Const Buff : PStr; Const Pos : LongWord);
       Delete(Buff^, 1, Pos+1)
    end;
 
-Procedure WriteFile(Var F:Text; Const Arg:PArrPVal; Idx:LongWord);
+Procedure WriteFile(Var F:Text; Const Arg:PArrPVal; Idx:LongInt);
    begin
       If (Length(Arg^) > 0) then
          For Idx:=Idx to High(Arg^) do begin
-            Case Arg^[Idx]^.Typ of {$I-}
+            Case (Arg^[Idx]^.Typ) of {$I-}
                
                VT_NIL:
                   Write(F, '{NIL}');
@@ -94,13 +94,13 @@ Procedure WriteFile(Var F:Text; Const Arg:PArrPVal; Idx:LongWord);
                   Write(F, Convert.FloatToStr(Arg^[Idx]^.Flo^));
                
                VT_BOO:
-                  Write(F, PBoolean(Arg^[Idx]^.Ptr)^);
+                  Write(F, Arg^[Idx]^.Boo^);
                
                VT_STR:
-                  Write(F, PStr(Arg^[Idx]^.Ptr)^);
+                  Write(F, Arg^[Idx]^.Str^);
                
                VT_UTF:
-                  PUTF(Arg^[Idx]^.Ptr)^.Print(F);
+                  Arg^[Idx]^.Utf^.Print(F);
                
                VT_ARR:
                   Write(F, 'array(',Arg^[Idx]^.Arr^.Count,')');

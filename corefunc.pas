@@ -92,37 +92,31 @@ Function Eval(Const Ret:Boolean; Const E:PExpr):PValue;
       end;
    
    Function GetArr(Const ArrV:PValue; Const Index:PToken; Const Typ:TValueType):PValue;
-      Var Fly:PValue; atk:PArrTk; C:LongWord;
-          KeyStr : TStr; KeyInt : QInt;
+      Var C:LongWord; Fly:PValue; KeyStr : TStr; KeyInt : QInt;
       begin
          If (ArrV^.Typ = VT_ARR) or (ArrV^.Typ = VT_DIC) then begin
             Case (Index^.Typ) of
                TK_EXPR:
-                  Result:=Eval(RETURN_VALUE_YES, PExpr(Index^.Ptr));
+                  Result := Eval(RETURN_VALUE_YES, Index^.Exp);
                
-               TK_CONS:
-                  Result:=PValue(Index^.Ptr);
-               
-               TK_LITE:
-                  Result:=PValue(Index^.Ptr);
+               TK_CONS, TK_LITE:
+                  Result := Index^.Val;
                
                TK_VARI, TK_REFE:
-                  Result:=GetVar(PStr(Index^.Ptr), VT_INT);
+                  Result := GetVar(Index^.Nam, VT_INT);
                
                TK_AREF, TK_AVAL: begin
-                  atk := PArrTk(Index^.Ptr);
-                  Result:=GetVar(PStr(atk^.Ptr), VT_INT);
-                  For C:=Low(atk^.Ind) to High(atk^.Ind) do
-                     Result:=GetArr(Result, atk^.Ind[C], VT_INT)
+                  Result:=GetVar(Index^.atk^.Nam, VT_INT);
+                  For C:=Low(Index^.atk^.Ind) to High(Index^.atk^.Ind) do
+                     Result:=GetArr(Result, Index^.atk^.Ind[C], VT_INT)
                end;
                
                TK_AFLY: begin
-                  atk := PArrTk(Index^.Ptr);
-                  Fly:=Eval(RETURN_VALUE_YES, PExpr(atk^.Ptr));
+                  Fly:=Eval(RETURN_VALUE_YES, Index^.atk^.Exp);
                   
                   Result:=Fly;
-                  For C:=Low(atk^.Ind) to High(atk^.Ind) do
-                     Result:=GetArr(Result, atk^.Ind[C], Typ);
+                  For C:=Low(Index^.atk^.Ind) to High(Index^.atk^.Ind) do
+                     Result:=GetArr(Result, Index^.atk^.Ind[C], Typ);
                   
                   Result:=CopyVal(Result);
                   FreeVal(Fly)
@@ -162,16 +156,16 @@ Function Eval(Const Ret:Boolean; Const E:PExpr):PValue;
             else Result:=NilVal()
       end;
    
-   Var T:LongWord; V:PValue; I:LongWord; atk:PArrTk; Tp:TValueType;
+   Var T:LongWord; V:PValue; I:LongWord; Tp:TValueType;
    begin
-      If (E^.Num < 0) then Exit(E^.Fun(Ret, @E^.Arg));
-      
-      If (E^.Ref = REF_CONST) then begin
-         {$INCLUDE corefunc-eval.inc}
-      end else begin
-         {$DEFINE REF_MODIF}
-         {$INCLUDE corefunc-eval.inc}
-         {$UNDEF REF_MODIF}
+      If (E^.Num >= 0) then begin
+         If (E^.Ref = REF_CONST) then begin
+            {$INCLUDE corefunc-eval.inc}
+         end else begin
+            {$DEFINE REF_MODIF}
+            {$INCLUDE corefunc-eval.inc}
+            {$UNDEF REF_MODIF}
+         end
       end;
       
       Exit(E^.Fun(Ret, @E^.Arg))

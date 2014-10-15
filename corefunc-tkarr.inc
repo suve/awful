@@ -2,8 +2,7 @@ If (T < E^.Num)
    then Tp:=E^.Arg[T+1]^.Typ
    else Tp:=VT_NIL;
 
-atk := PArrTk(E^.Tok[T]^.Ptr);
-E^.Arg[T]:=GetVar(PStr(atk^.Ptr), VT_DIC);
+E^.Arg[T]:=GetVar(E^.Tok[T]^.atk^.Nam, VT_DIC);
 
-For I:=Low(atk^.Ind) to High(atk^.Ind) do
-   E^.Arg[T]:=GetArr(E^.Arg[T], atk^.Ind[I], Tp);
+For I:=Low(E^.Tok[T]^.atk^.Ind) to High(E^.Tok[T]^.atk^.Ind) do
+   E^.Arg[T]:=GetArr(E^.Arg[T], E^.Tok[T]^.atk^.Ind[I], Tp);

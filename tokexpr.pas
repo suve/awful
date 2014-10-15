@@ -20,13 +20,30 @@ Type
      
    PArrTk = ^TArrTk;
    TArrTk = record
-      Ptr : Pointer;        // Token to be indexed
-      Ind : Array of PToken // Array of indexing tokens
+      Ind : Array of PToken; // Array of indexing tokens
+      Case TTokenType of
+         TK_AVAL .. TK_AREF: 
+            (Nam : PStr);
+         
+         TK_AFLY:
+            (Exp : PExpr);
+         
+         TK_BADT:
+            (Ptr : Pointer); // For compatibility
    end;
      
    TToken = record
-      Typ : TTokenType; // Token type
-      Ptr : Pointer     // Pointer to actual data, needs to be typecasted
+      Case Typ : TTokenType of
+         TK_EXPR:
+            (Exp : PExpr);
+         TK_CONS, TK_LITE:
+            (Val : PValue);
+         TK_VARI, TK_REFE:
+            (Nam : PStr);
+         TK_AVAL, TK_AREF, TK_AFLY:
+            (atk : PArrTk);
+         TK_BADT: // Unused
+            (Ptr : Pointer); // Left for compatibility
    end;
      
     TExpr = record
@@ -50,36 +67,37 @@ Procedure FreeToken(Const T:PToken);
 Procedure FreeExpr(Const E:PExpr);
 Procedure FreeProc(Var P:TProc);
 
+
 implementation
 
 Procedure FreeToken(Const T:PToken);
-   Var atk:PArrTk; C:LongWord;
+   Var C:LongWord;
    begin
       Case (T^.Typ) of
          TK_EXPR: 
-            FreeExpr(PExpr(T^.Ptr));
+            FreeExpr(T^.Exp);
             
          TK_CONS: 
             ; // Pointer to a value in const trie. Value will be freed when flushing consts
             
          TK_LITE:
-            AnnihilateVal(PValue(T^.Ptr));
+            AnnihilateVal(T^.Val);
             
          TK_VARI, TK_REFE:
-            Dispose(PStr(T^.Ptr));
+            Dispose(T^.Nam);
             
          TK_AVAL, TK_AREF:
             begin
-               atk:=PArrTk(T^.Ptr); Dispose(PStr(atk^.Ptr)); 
-               For C:=Low(atk^.Ind) to High(atk^.Ind) do FreeToken(atk^.Ind[C]);
-               {SetLength(atk^.Ind, 0);} Dispose(atk)
+               Dispose(T^.atk^.Nam); 
+               For C:=Low(T^.atk^.Ind) to High(T^.atk^.Ind) do FreeToken(T^.atk^.Ind[C]);
+               {SetLength(T^.atk^.Ind, 0);} Dispose(T^.atk)
             end;
             
          TK_AFLY:
             begin
-               atk:=PArrTk(T^.Ptr); FreeExpr(PExpr(atk^.Ptr)); 
-               For C:=Low(atk^.Ind) to High(atk^.Ind) do FreeToken(atk^.Ind[C]);
-               {SetLength(atk^.Ind, 0);} Dispose(atk)
+               FreeExpr(T^.atk^.Exp); 
+               For C:=Low(T^.atk^.Ind) to High(T^.atk^.Ind) do FreeToken(T^.atk^.Ind[C]);
+               {SetLength(T^.atk^.Ind, 0);} Dispose(T^.atk)
             end;
             
          TK_BADT:

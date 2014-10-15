@@ -3,9 +3,9 @@ For T:=E^.Num downto 0 do
       
       TK_CONS, TK_LITE: begin
          {$IFDEF REF_MODIF}
-            E^.Arg[T]:=CopyVal(PValue(E^.Tok[T]^.Ptr))
+            E^.Arg[T]:=CopyVal(E^.Tok[T]^.Val)
          {$ELSE}
-            E^.Arg[T]:=PValue(E^.Tok[T]^.Ptr)
+            E^.Arg[T]:=E^.Tok[T]^.Val
          {$ENDIF}
       end;
       
@@ -32,12 +32,15 @@ For T:=E^.Num downto 0 do
       {$ENDIF}
       
       TK_AFLY: begin
-         atk := PArrTk(E^.Tok[T]^.Ptr); V:=Eval(RETURN_VALUE_YES, PExpr(atk^.Ptr)); E^.Arg[T]:=V;
-         For I:=Low(atk^.Ind) to High(atk^.Ind) do E^.Arg[T]:=GetArr(E^.Arg[T], atk^.Ind[I], Tp);
+         V:=Eval(RETURN_VALUE_YES, E^.Tok[T]^.atk^.Exp); E^.Arg[T]:=V;
+         
+         For I:=Low(E^.Tok[T]^.atk^.Ind) to High(E^.Tok[T]^.atk^.Ind) do
+            E^.Arg[T]:=GetArr(E^.Arg[T], E^.Tok[T]^.atk^.Ind[I], Tp);
+         
          E^.Arg[T]:=CopyVal(E^.Arg[T]); FreeVal(V)
       end;
       
       TK_EXPR: begin
-         E^.Arg[T]:=Eval(RETURN_VALUE_YES, PExpr(E^.Tok[T]^.Ptr))
+         E^.Arg[T]:=Eval(RETURN_VALUE_YES, E^.Tok[T]^.Exp)
       end
    end;
