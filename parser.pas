@@ -5,27 +5,29 @@ unit parser;
 interface
    uses Stack, FuncInfo, TokExpr, Values;
 
-Type TLineInfo = LongInt; //This will probably become a record when functions get implemented // LOL NOPE
-     TIf = Array[0..2] of TLineInfo;
-     TLoop = Array[0..2] of TLineInfo;
+Type
+   TLineInfo = LongInt; //This will probably become a record when functions get implemented // LOL NOPE
+   TIf = Array[0..2] of TLineInfo;
+   TLoop = Array[0..2] of TLineInfo;
      
-     TConstructType = (CT_IF, CT_WHILE, CT_REPEAT);
-     TConstructInfo = record
-        Typ : TConstructType;
-        Idx : LongWord
-        end;
+   TConstructType = (CT_IF, CT_WHILE, CT_REPEAT);
+   TConstructInfo = record
+      Typ : TConstructType;
+      Idx : LongWord
+   end;
      
-     PConstructStack = ^TConstructStack;
-     TConstructStack = specialize GenericStack<TConstructInfo>;
+   PConstructStack = ^TConstructStack;
+   TConstructStack = specialize GenericStack<TConstructInfo>;
 
-Var IfArr : Array of TIf;
-    RepArr, WhiArr : Array of TLoop;
+Var
+   IfArr : Array of TIf;
+   RepArr, WhiArr : Array of TLoop;
     
-    Func : PFunTrie;
-    Cons : PValTrie;
+   Func : PFunTrie;
+   Cons : PValTrie;
     
-    Pr : Array of TProc;
-    Proc, ExLn : LongWord;
+   Pr : Array of TProc;
+   Proc, ExLn : LongWord;
 
 Procedure Fatal(Const Ln:LongWord;Const Msg:AnsiString;Const ErrCode:LongInt = 255);
 Function MakeExpr(Const ExLo,ExHi,Ln:LongInt; T:LongInt):PExpr;
@@ -33,22 +35,27 @@ Procedure ProcessLine(Const L:AnsiString;Const N:LongWord);
 Procedure ParseFile(Var InputFile:System.Text);
 Procedure ReadFile(Var InputFile:System.Text);
 
+
 implementation
-   uses Math, SysUtils, 
-        Convert, Values_Typecast,
-        Globals, EmptyFunc, CoreFunc
-        {$IFDEF CGI} , Encodings, Functions_stdio {$ENDIF}
-        ;
+   uses  Math, SysUtils, 
+         Convert, Values_Typecast,
+         Globals, EmptyFunc, CoreFunc
+         {$IFDEF CGI} , Encodings, Functions_stdio {$ENDIF}
+         ;
 
-Const PREFIX_VAL = '$';
-      PREFIX_REF = '&';
-      SKIP_BREAK = True;
-      SKIP_CONTINUE = False;
-      INCL_INCLUDE = False;
-      INCL_REQUIRE = True;
+Const
+   PREFIX_VAL = '$';
+   PREFIX_REF = '&';
+   
+   SKIP_BREAK = True;
+   SKIP_CONTINUE = False;
+   
+   INCL_INCLUDE = False;
+   INCL_REQUIRE = True;
 
-Var cstruStack : PConstructStack;
-    mulico:LongWord; {$IFDEF CGI} codemode:LongWord; {$ENDIF}
+Var
+   cstruStack : PConstructStack;
+   mulico:LongWord; {$IFDEF CGI} codemode:LongWord; {$ENDIF}
 
 Procedure Fatal(Const Ln:LongWord;Const Msg:AnsiString;Const ErrCode:LongInt = 255);
    {$IFDEF CGI} Var DTstr:AnsiString; {$ENDIF}
@@ -693,7 +700,7 @@ Procedure ProcessLine(Const L:AnsiString;Const N:LongWord);
       begin
          Len := HiTk + 1 + Len;
          If (Len > LeTk) then begin
-            LeTk := Len + 2; SetLength(Tk,LeTk)
+            LeTk := Len + 4; SetLength(Tk,LeTk)
       end end;
    
    Procedure SetHighToken(Const Content:AnsiString); Inline;
@@ -709,7 +716,7 @@ Procedure ProcessLine(Const L:AnsiString;Const N:LongWord);
          If (Len = 0) then begin 
             // Empty line. If not in codemode, add expression outputting a blank line.
             If (Codemode = 0) then begin 
-               New(Ex); Ex^.Ref := REF_CONST; Ex^.Len := -1;
+               New(Ex); Ex^.Ref := REF_CONST; Ex^.Num := -1;
                SetLength(Ex^.Tok,0); SetLength(Ex^.Arg,0);
                Ex^.Fun := @F_Writeln;
                AddExpr(Ex)

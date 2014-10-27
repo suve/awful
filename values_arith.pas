@@ -108,7 +108,7 @@ Procedure ValSet_ArrDict(Const A,B:PValue);
 
 Type TArithProc = Procedure(Const A,B:PValue);
 
-Procedure ValArith_ArrDict(Proc:TArithProc;A,B:PValue);
+Procedure ValArith_ArrDict(Const Proc:TArithProc; Const A,B:PValue);
    Var EntA:TArray.TEntryArr; EntD:TDict.TEntryArr;
        idx, kI : QInt; kS : AnsiString;
    begin

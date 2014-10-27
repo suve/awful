@@ -515,10 +515,13 @@ Function F_FileSize(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    {$DEFINE DirDelim := '/'}
 {$ENDIF}{$ENDIF}
 
-Type TAnsiStringArr = Array of AnsiString;
-     PAnsiStringArr = ^TAnsiStringArr;
+Type
+   TAnsiStringArr = Array of AnsiString;
+   PAnsiStringArr = ^TAnsiStringArr;
 
-Procedure ListDir(Const Dir,Pat:AnsiString;Const Attr:LongInt;Const Recurse,Slash:Boolean;Const Arr:PAnsiStringArr);
+   TListSwitch = set of (LS_RECURSE, LS_SLASH, LS_SORT);
+
+Procedure ListDir(Const Dir,Pat:AnsiString;Const Attr:LongInt;Const Swi:TListSwitch;Const Arr:PAnsiStringArr);
    Var S:TSearchRec; L:LongInt;
    begin
       L := Length(Arr^); // Remember length
@@ -528,11 +531,11 @@ Procedure ListDir(Const Dir,Pat:AnsiString;Const Attr:LongInt;Const Recurse,Slas
             SetLength(Arr^,L+1);     // Lengthen array
             Arr^[L] := Dir + S.Name; // Save entry
             If ((S.Attr and faDirectory)<>0) then begin // If entry is a directory
-               If (Slash) then Arr^[L] += DirDelim;     // If Slash-switch, add dir-delim at end
-               If (Recurse) then begin // If recurse-switch, list this subdir
-                  ListDir(Dir+S.Name+DirDelim, Pat, Attr, Recurse, Slash, Arr);
+               If (LS_SLASH in Swi) then Arr^[L] += DirDelim; // If Slash-switch, add dir-delim at end
+               If (LS_RECURSE in Swi) then begin // If recurse-switch, list this subdir
+                  ListDir(Dir+S.Name+DirDelim, Pat, Attr, Swi, Arr);
                   L := Length(Arr^) // Save new array length
-                  end
+               end else L += 1 // Not recursing into directory; just do +1 because we just added
             end else L += 1 // Not a directory, just do +1 because we just saved 1 new entry
          Until (FindNext(S) <> 0); // Continue until no more search entries found
       FindClose(S) // Close search
@@ -557,7 +560,7 @@ Procedure Quicksort(Var Arr:TAnsiStringArr);
    begin Quicksort(Arr,Low(Arr),High(Arr)) end;
 
 Function F_DirList(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   Var Dir,Pat,sA:AnsiString; Attr,C : LongInt; Recurse, Sort, Slash : Boolean;
+   Var Dir,Pat,sA:AnsiString; Attr,C : LongInt; Swi:TListSwitch;
        StrArr : TAnsiStringArr;
    begin
       // No retval expected, bail out early
@@ -566,8 +569,7 @@ Function F_DirList(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
       If (Length(Arg^) = 0) then Exit(NilVal());
       
       // Set up default attributes
-      Pat := '*'; Attr := faReadOnly;
-      Recurse := False; Sort:=False; Slash := False;
+      Pat := '*'; Attr := faReadOnly; Swi := [];
       
       If (Length(Arg^) > 1) then begin
          Pat := ValAsStr(Arg^[1]); // Read pattern from arg1
@@ -578,9 +580,9 @@ Function F_DirList(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
                'd': Attr := Attr or faDirectory;
                'w': Attr := Attr and (Not faReadOnly);
                'h': Attr := Attr or faHidden;
-               'r': Recurse := True;
-               's': Sort := True;
-               '/': Slash := True;
+               'r': Include(Swi,LS_RECURSE);
+               's': Include(Swi,LS_SORT);
+               '/': Include(Swi,LS_SLASH);
       end end end;
       
       // Get dir from arg0 and make sure the DirDelim is at path end
@@ -589,8 +591,8 @@ Function F_DirList(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
          If (Dir[Length(Dir)]<>DirDelim) then Dir += DirDelim;
       
       // List the directory and sort if required
-      ListDir(Dir,Pat,Attr,Recurse,Slash,@StrArr);
-      If (Sort) then Quicksort(StrArr);
+      ListDir(Dir,Pat,Attr,Swi,@StrArr);
+      If (LS_SORT in Swi) then Quicksort(StrArr);
       
       // Create result value
       Result := EmptyVal(VT_ARR);

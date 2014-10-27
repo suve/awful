@@ -152,14 +152,14 @@ Function F_stdin_BufferPush(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
          For C:=Low(Arg^) to High(Arg^) do begin
             If (Length(stdinBuffer) > 0) and (stdinBuffer[Length(stdinBuffer)]<>#32) then stdinBuffer += #32;
             Case Arg^[C]^.Typ of
-               VT_BOO: stdinBuffer += SysUtils.BoolToStr(PBool(Arg^[C]^.Ptr)^);
-               VT_BIN: stdinBuffer += Convert.BinToStr(PQInt(Arg^[C]^.Ptr)^);
-               VT_OCT: stdinBuffer += Convert.OctToStr(PQInt(Arg^[C]^.Ptr)^);
-               VT_INT: stdinBuffer += Convert.IntToStr(PQInt(Arg^[C]^.Ptr)^);
-               VT_HEX: stdinBuffer += Convert.HexToStr(PQInt(Arg^[C]^.Ptr)^);
-               VT_FLO: stdinBuffer += Convert.FloatToStr(PFloat(Arg^[C]^.Ptr)^);
-               VT_STR: stdinBuffer += PStr(Arg^[C]^.Ptr)^;
-               VT_UTF: stdinBuffer += PUTF(Arg^[C]^.Ptr)^.ToAnsiString();
+               VT_BOO: stdinBuffer += SysUtils.BoolToStr(Arg^[C]^.Boo^);
+               VT_BIN: stdinBuffer += Convert.BinToStr(Arg^[C]^.Int^);
+               VT_OCT: stdinBuffer += Convert.OctToStr(Arg^[C]^.Int^);
+               VT_INT: stdinBuffer += Convert.IntToStr(Arg^[C]^.Int^);
+               VT_HEX: stdinBuffer += Convert.HexToStr(Arg^[C]^.Int^);
+               VT_FLO: stdinBuffer += Convert.FloatToStr(Arg^[C]^.Flo^);
+               VT_STR: stdinBuffer += Arg^[C]^.Str^;
+               VT_UTF: stdinBuffer += Arg^[C]^.Utf^.ToAnsiString();
             end;
             If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
          end;

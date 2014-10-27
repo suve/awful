@@ -1,5 +1,5 @@
-== _awful_
-
+awful
+---------------
 An ugly, general purpose script language, with an interpreter written in Object Pascal.
 Licensed under zlib with acknowledgement (see LICENSE.txt).
 
@@ -27,8 +27,9 @@ Building
 To compile, you are going to need Free Pascal Compiler 2.6.2 or newer.
 _awful_ does not use any additional libraries and should successfully compile using just what's bundled with the compiler.
 
-To build, just run make. I add `make clean` there because FPC sometimes crashes when it tries to recompile a file 
-that is identical source-wise, but just has different compiler symbols defined at time of build. 
+To build, just run make. I add `make clean` there because the code uses quite a lot of conditional compiling based on
+whether making a normal/cgi release, and FPC does not really recognize a file needs to be recompiled because 
+the compile-time symbols have changed.
 ```
 cd awful
 make
