@@ -17,7 +17,8 @@ const
               {$IFDEF FCGI}+'-fcgi'{$ENDIF}
               ;
 
-   dtf_def = 'yyyy"-"mm"-"dd" "hh":"nn';
+   dtf_def_fpc = 'yyyy"-"mm"-"dd" "hh":"nn'; // default format for FPC's DateTimeToString()
+   dtf_def_yuk = 'Y-M-D H:I';                // default format for awful's dt_ToString()
 
 Var
    GLOB_MS:Comp;  GLOB_dt:TDateTime;
