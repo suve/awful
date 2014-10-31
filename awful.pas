@@ -80,7 +80,10 @@ Procedure AnalyseParams();
             end else
             If (ParamNow = '--version') then begin
                Writeln(FULLNAME,' v.',VERSION,' (rev. ',VREVISION,')');
-               Writeln('Built by ',{$I %USER%},' at ',{$I %HOSTNAME%},' on ',BuildNum(),
+               Writeln(
+                  'Built by ', {$IFDEF WINDOWS} {$I %USERNAME%} {$ELSE} {$I %USER%} {$ENDIF},
+                  ' at ', {$IFDEF WINDOWS} {$I %COMPUTERNAME%} {$ELSE} {$I %HOSTNAME%} {$ENDIF},
+                  ' on ',BuildNum(),
                   {$IFDEF FPC}' using FPC ',{$I %FPCVERSION%},{$ENDIF}
                   '.');
                Writeln('--- svgames.pl ---');

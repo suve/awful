@@ -17,6 +17,7 @@ Function F_fork(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_SetPrecision(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_HexCase(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
+Function F_exec(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_getenv(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 Function F_sizeof(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
@@ -24,9 +25,9 @@ Function F_typeof(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 
 implementation
-   uses  SysUtils, Math,
+   uses  SysUtils, StrUtils, Math, Process, Classes,
          EmptyFunc, CoreFunc, Globals,
-         Convert, Values_Typecast;
+         Convert, StringUtils, Values_Typecast;
 
 Procedure Register(Const FT:PFunTrie);
    begin
@@ -43,6 +44,7 @@ Procedure Register(Const FT:PFunTrie);
       FT^.SetVal('hex-case',MkFunc(@F_HexCase));
       // Stuff
       FT^.SetVal('fork',MkFunc(@F_fork));
+      FT^.SetVal('exec',MkFunc(@F_exec));
       FT^.SetVal('getenv',MkFunc(@F_getenv))
    end;
    
@@ -175,7 +177,7 @@ Function F_fork(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    end;
 
 Function F_random(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   Var C:LongWord; FH,FL:TFloat; IH,IL:QInt; Typ:TValueType; Ch:Char;
+   Var C:LongWord; FH,FL:TFloat; IH,IL:QInt; Typ:Values.TValueType;
    begin
       If (Not DoReturn) then Exit(F_(False, Arg));
       
@@ -207,7 +209,10 @@ Function F_random(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
             // Cast both args to int
             IL := ValAsInt(Arg^[0]);
             IH := ValAsInt(Arg^[1]);
+            
+            // Ensure type is numeric
             Typ := Arg^[0]^.Typ;
+            If (Not (Typ in [VT_INT, VT_HEX, VT_BIN, VT_OCT])) then Typ := VT_INT;
             
             // Free args
             For C:=1 downto 0 do If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
@@ -221,47 +226,127 @@ Function F_random(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
       end else // Check if one or zero args
       If (Length(Arg^) = 1) then begin
          
-         // First arg is string
+         // If arg is ascii/utf string, return random char from string
          If (Arg^[0]^.Typ = VT_STR) then begin
             
-            // If string is empty, return empty string
-            If (Length(Arg^[0]^.Str^) = 0) then begin
-               If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
-               Exit(NewVal(VT_STR,''))
-            end;
+            // If emptystring, return emptystring; otherwise, extract random character from string
+            If (Length(Arg^[0]^.Str^) > 0) 
+               then Result := NewVal(VT_STR, Arg^[0]^.Str^[1 + Random(Length(Arg^[0]^.Str^))])
+               else Result := EmptyVal(VT_STR) 
             
-            // Extract random character from string
-            Ch:=Arg^[0]^.Str^[1 + Random(Length(Arg^[0]^.Str^))];
+         end else If(Arg^[0]^.Typ = VT_UTF) then begin
             
-            // Free arg
-            If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
+            // If emptystring, return emptystring; otherwise, extract random codepoint from string
+            If (Arg^[0]^.Utf^.Len > 0) 
+               then Result := NewVal(VT_UTF, Arg^[0]^.Utf^[1 + Random(Arg^[0]^.Utf^.Len)])
+               else Result := EmptyVal(VT_UTF) 
             
-            // Return value
-            Exit(NewVal(VT_STR,Ch))
-            
-         end else begin // First arg <> string
+         end else begin // First arg <> string, treat it as number
             
             // Generate random number based on arg typecasted to int
             IH := Random(ValAsInt(Arg^[0]));
+            
+            // Ensure return type is numeric
             Typ := Arg^[0]^.Typ;
+            If (Not (Typ in [VT_INT, VT_HEX, VT_BIN, VT_OCT])) then Typ := VT_INT;
             
-            // Free arg
-            If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
-            
-            // Return value
-            Exit(NewVal(Typ, IH))
-         end 
+            Result := NewVal(Typ, IH)
+         end;
+         
+         If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]); // Free arg
+         Exit(Result) // Return value
+         
       end else // 0 args
          Exit(NewVal(VT_FLO,System.Random())) // Return random float in  [0.0, 1.0) range
    end;
 
+Function F_exec(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   Var expath: AnsiString; exargs : Array of AnsiString;
+       outstr: AnsiString; outarr : Array of AnsiString; outsucc : Boolean;
+       C : LongInt; AEA:TArr.TEntryArr; DEA:TDict.TEntryArr; StringList:TStringList;
+   begin
+      // If no args provided, bail out (and free args)
+      If(Length(Arg^) = 0) then Exit(F_(DoReturn, Arg));
+      
+      // If more than 1 arg provided, extract options from arg1
+      If(Length(Arg^) > 1) then begin
+         Case(Arg^[1]^.Typ) of
+         
+            VT_ARR: begin // array - just throw contents into an FPC string array
+               SetLength(exargs, Arg^[1]^.Arr^.Count);
+               If (Arg^[1]^.Arr^.Count > 0) then begin
+                  AEA := Arg^[1]^.Arr^.ToArray();
+                  For C:=0 to (Arg^[1]^.Arr^.Count - 1) do
+                     exargs[C] := ValAsStr(AEA[C].Val)
+            end end;
+            
+            VT_DIC: begin // dict - just throw contents into an FPC string array
+               SetLength(exargs, Arg^[1]^.Dic^.Count);
+               If (Arg^[1]^.Dic^.Count > 0) then begin
+                  DEA := Arg^[1]^.Dic^.ToArray();
+                  For C:=0 to (Arg^[1]^.Dic^.Count - 1) do
+                     exargs[C] := ValAsStr(DEA[C].Val)
+            end end;
+            
+            else begin
+               expath := Trim(ValAsStr(Arg^[1])); // get arg1 stringcast and trim whitespace
+               If (Length(expath) > 0) then begin // Check length - if 0, no need to go through the hassle
+               
+                  StringList := TStringList.Create();           // Create FPC TStringList class instance
+                  CommandToList(ValAsStr(Arg^[1]), StringList); // Breakup arg0 stringcast into StringList
+                  
+                  // Set exargs length to StringList item count and hurl StringList items into exargs
+                  SetLength(exargs, StringList.Count);
+                  If (StringList.Count > 0) then
+                     For C:=0 to (StringList.Count - 1) do
+                        exargs[C] := StringList[C];
+                  
+                  StringList.Destroy() // Free StringList instance
+               end else
+                  SetLength(exargs, 0) // string was expty, set array length to 0
+            end
+         end
+      end else
+         SetLength(exargs, 0); // Only arg0 provided, set exargs length to 0
+      
+      expath := ValAsStr(Arg^[0]); // Get executable path from arg0 stringcast
+      F_(False, Arg);              // Free args
+      
+      outstr := '';
+      outsucc := RunCommand(expath, exargs, outstr); 
+      
+      If(Not DoReturn) then Exit(NIL); // If no retval expected, return NIL straight away
+      SetLength(exargs, 0);            // Set exargs length back to 0 to free some memory
+      
+      // Allocate result array and set succ/fail flag into index 0
+      Result := EmptyVal(VT_ARR);
+      Result^.Arr^.SetVal(0, NewVal(VT_INT, BoolToInt(Not OutSucc)));
+      
+      // Explode output string on newlines and hurl seperate lines into result array
+      outarr := ExplodeString(outstr, System.LineEnding);
+      For C:=0 to High(outarr) do
+         Result^.Arr^.SetVal(QInt(C)+1, NewVal(VT_STR, outarr[C]))
+   end;
+
 Function F_getenv(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   Var C,EqPos:LongInt; env:AnsiString;
    begin
       If (Not DoReturn) then Exit(F_(False, Arg));
-      If (Length(Arg^) = 0) then Exit(EmptyVal(VT_STR));
       
-      Result := NewVal(VT_STR, GetEnvironmentVariable(ValAsStr(Arg^[0])));
-      F_(False, Arg)
+      If (Length(Arg^) > 0) then begin
+         // If any args present, get envvar name from arg0 and put envvar value into result
+         Result := NewVal(VT_STR, GetEnvironmentVariable(ValAsStr(Arg^[0])));
+         // Go through args and free if needed
+         For C:=0 to High(Arg^) do If(Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
+      end else begin
+         // No args - return a dict containing all environment vars
+         Result := EmptyVal(VT_DIC);
+         For C:=1 to GetEnvironmentVariableCount() do begin
+            env := GetEnvironmentString(C); // Get C-th "var=val" string
+            EqPos := PosEx('=', env, 2);    // On Windows, some envvar names start with =, so start looking for = from char 2
+            Result^.Dic^.SetVal(Copy(env,1,EqPos-1), NewVal(VT_STR, Copy(env,EqPos+1,Length(env)))) // Put varval into dict under varname key
+         end
+      end
    end;
 
 Function F_sizeof(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
@@ -286,6 +371,7 @@ Function F_sizeof(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
             'arr': Result := NewVal(VT_INT, 8 * SizeOf(TArray));
           'array': Result := NewVal(VT_INT, 8 * SizeOf(TArray));
            'dict': Result := NewVal(VT_INT, 8 * SizeOf(TDict));
+           'file': Result := NewVal(VT_INT, 8 * SizeOf(TFileHandle));
              else  Result := NewVal(VT_INT, 0)
       end;
       F_(False, Arg) // Free args before leaving

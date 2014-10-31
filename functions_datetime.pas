@@ -265,14 +265,14 @@ Function dt_ToString(Const dt:TDateTime;Const Format:AnsiString):AnsiString;
             // Day
             'd': Result += IntToStr(Day);
             'D': Result += IntToStr(Day,2);
-            'a': Result += ShortDayNames[DoW];
-            'A': Result += LongDayNames[DoW];
+            'a': Result += FormatSettings.ShortDayNames[DoW];
+            'A': Result += FormatSettings.LongDayNames[DoW];
             
             // Month
             'm': Result += IntToStr(Mon);
             'M': Result += IntToStr(Mon,2);
-            'o': Result += ShortMonthNames[Mon];
-            'O': Result += LongMonthNames[Mon];
+            'o': Result += FormatSettings.ShortMonthNames[Mon];
+            'O': Result += FormatSettings.LongMonthNames[Mon];
             
             // Year
             'y': Result += IntToStr(Year mod 100, 2);

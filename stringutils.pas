@@ -38,7 +38,7 @@ Function ExplodeString(Const Str, Delim:AnsiString):AnsiStringArray;
          SetLength(Result, Idx+1);
          Result[Idx] := Copy(Str,Offset,StrLen)
       end else
-      If(Str[StrLen-DelLen+1..StrLen] = Delim) then begin
+      If(RightStr(Str, DelLen) = Delim) then begin
          SetLength(Result, Idx+1);
          Result[Idx] := ''
       end
