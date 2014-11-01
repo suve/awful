@@ -43,7 +43,7 @@ Function F_Compare(Const DoReturn:Boolean; Const Arg:PArrPVal; Const CompareFunc
       
       // If less than two args provided, free arg0 (if necessary) and return FALSE
       If (Length(Arg^) < 2) then begin
-         If ((Length(Arg^) = 1) and (Arg^[0]^.Lev >= CurLev)) then FreeVal(Arg^[0]);
+         If (Length(Arg^) = 1) then FreeIfTemp(Arg^[0]);
          Exit(NewVal(VT_BOO, False))
       end;
       
@@ -60,13 +60,13 @@ Function F_Compare(Const DoReturn:Boolean; Const Arg:PArrPVal; Const CompareFunc
          If (Not R) then Break;
          
          // Free F-arg if needed
-         If (Arg^[F]^.Lev >= CurLev) then FreeVal(Arg^[F]);
+         FreeIfTemp(Arg^[F]);
          F -= 1
       end;
       
       // Free remaining args, if necessary
       For C:=F downto 0 do
-         If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
+         FreeIfTemp(Arg^[C]);
       
       // Return value
       Exit(NewVal(VT_BOO, R))

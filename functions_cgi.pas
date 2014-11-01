@@ -308,7 +308,7 @@ Function F_ArrIs(Var Arr:TKeyValArr; Const DoReturn:Boolean; Const Arg:PArrPVal)
          // If argC not found in Arr, set retbool to false
          If (Not ArrSet(Arr, ValAsStr(Arg^[C]))) then B:=False;
          // Free argC if needed
-         If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
+         FreeIfTemp(Arg^[C])
          end;
       Exit(NewVal(VT_BOO,B))
    end;

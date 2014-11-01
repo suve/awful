@@ -24,7 +24,6 @@ begin
                   Sum += __CAST_FUNC__ (DEA[I].Val)
          end end;
          
-         // Free arg if needed
-         If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
+         FreeIfTemp(Arg^[C])
       end;
    Exit(NewVal(__AWFUL_TYPE__, Sum))

@@ -37,7 +37,7 @@ Function F_Not(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
       // More than one arg, free them if needed
       If (Length(Arg^) > 1) then 
          For C:=High(Arg^) downto 1 do
-            If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
+            FreeIfTemp(Arg^[C]);
       
       // If returning a value, get NOT of arg0; else, set result to NIL
       If (DoReturn)
@@ -45,7 +45,7 @@ Function F_Not(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
          else Result := NIL;
       
       // Be so kind and free arg0 if needed
-      If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0])
+      FreeIfTemp(Arg^[0])
    end;
 
 Type TBitwiseFunc = Function(Const A,B:PValue):PValue;
@@ -63,7 +63,7 @@ Function F_Bitwise(Const DoReturn:Boolean; Const Arg:PArrPVal; Const Bitwise:TBi
          Result := Bitwise(Arg^[C-1], Arg^[C]); 
          
          // Free argC if needed
-         If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
+         FreeIfTemp(Arg^[C]);
          
          // Insert result of bitwise operation into argC.
          // It will thus become the second argument for the next bitwise op.
@@ -71,7 +71,7 @@ Function F_Bitwise(Const DoReturn:Boolean; Const Arg:PArrPVal; Const Bitwise:TBi
       end;
       
       // Free arg0, since it wasn't freed by the above loop
-      If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0])
+      FreeIfTemp(Arg^[0])
    end;
 
 Function F_And(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;

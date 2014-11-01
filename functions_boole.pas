@@ -38,7 +38,7 @@ Function F_Not(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
       // Free all the excessive args
       If (Length(Arg^)>1) then 
           For C:=High(Arg^) downto 1 do
-             If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
+             FreeIfTemp(Arg^[C]);
       
       // Create result value
       If (Arg^[0]^.Typ = VT_BOO)
@@ -46,7 +46,7 @@ Function F_Not(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
          else Result := NewVal(VT_BOO, Not ValAsBoo(Arg^[0]));
       
       // Free arg0 if needed
-      If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0])
+      FreeIfTemp(Arg^[0])
    end;
 
 Type TBooleanFunc = Function(Const A,B:Boolean):Boolean;
@@ -74,7 +74,7 @@ Function F_Boolean(Const DoReturn:Boolean; Const Arg:PArrPVal; Const BoolFunc:TB
                else Result^.Boo^ := BoolFunc(Result^.Boo^, ValAsBoo(Arg^[C]));
             
             // Free arg if needed
-            If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
+            FreeIfTemp(Arg^[C])
          end;
    end;
 
@@ -104,7 +104,7 @@ Function F_Impl(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
          else p:=ValAsBoo(Arg^[C]);
       
       // Free arg if needed
-      If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
+      FreeIfTemp(Arg^[C]);
       
       // Go through rest of args and perform implications on the way
       For C:=High(Arg^)-1 downto Low(Arg^) do begin
@@ -113,7 +113,7 @@ Function F_Impl(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
             then p:=Arg^[C]^.Boo^
             else p:=ValAsBoo(Arg^[C]);
          p := (not p) or q;
-         If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
+         FreeIfTemp(Arg^[C])
       end;
       
       // Return value

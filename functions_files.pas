@@ -201,7 +201,7 @@ Function F_feof(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
                   Res := Res and Nao
                end;
          // Free arg if needed
-         If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
+         FreeIfTemp(Arg^[C])
          end;
       If (DoReturn) then Exit(NewVal(VT_BOO,Res))
                     else Exit(NIL)
@@ -225,7 +225,7 @@ Function F_fclose(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
                   If (IOResult() = 0) then Num += 1
                end;
          // Free arg if needed
-         If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
+         FreeIfTemp(Arg^[C])
          end;
       If (DoReturn) then Exit(NewVal(VT_INT, Num))
                     else Exit(NIL)
@@ -242,13 +242,13 @@ Function F_readfile(Const DoReturn:Boolean; Const Arg:PArrPVal; Const DoTrim:Boo
       
       // Get file handle from arg0 and free arg0 if needed
       H := PFileHandle(Arg^[0]^.Ptr);
-      If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
+      FreeIfTemp(Arg^[0]);
       
       // Go through rest of args and fill them with values
       For C:=1 to High(Arg^) do begin 
          P := FillBuffer(H^.Fil, @H^.Buf, DoTrim);
          FillVar(Arg^[C], @H^.Buf, P);
-         If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
+         FreeIfTemp(Arg^[C])
       end;
       If (DoReturn) then Exit(NilVal()) else Exit(NIL)
    end;
@@ -386,7 +386,7 @@ Function F_DirAction(Const DoReturn:Boolean; Const Arg:PArrPVal; Const Func:TUti
       If (Length(Arg^)>0) then
          For C:=0 to High(Arg^) do begin                      // Go through all args
             If (Func(ValAsStr(Arg^[0]))) then Num += 1;       // Perform action and increase counter on success
-            If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]) // Free arg if required
+            FreeIfTemp(Arg^[C]) // Free arg if required
          end;
       
       If (DoReturn)

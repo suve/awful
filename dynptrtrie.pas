@@ -311,7 +311,10 @@ Procedure GenericDynPtrTrie.FreeNode(Const N:PNode);
          N^.Cnt:=0
       end;
       
-      If (N^.Val <> NIL) then Self.Vals -= 1
+      If (N^.Val <> NIL) then begin
+         N^.Val := NIL;
+         Self.Vals -= 1
+      end
    end;
 
 Procedure GenericDynPtrTrie.FreeNode(Const N:PNode;Const Proc:TDisposeProc);
@@ -333,7 +336,8 @@ Procedure GenericDynPtrTrie.FreeNode(Const N:PNode;Const Proc:TDisposeProc);
       end;
 
       If (N^.Val <> NIL) then begin
-         Proc(N^.Val); Self.Vals-=1
+         Proc(N^.Val); N^.Val := NIL;
+         Self.Vals-=1
       end
    end;
 

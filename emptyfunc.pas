@@ -30,7 +30,7 @@ Function F_(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin
       If (Length(Arg^) > 0) then
          For C:=Low(Arg^) to High(Arg^) do
-            If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
+            FreeIfTemp(Arg^[C]);
 
       If (DoReturn) then Exit(NilVal) else Exit(NIL)
    end;

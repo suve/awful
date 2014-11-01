@@ -142,7 +142,7 @@ Function F_sqrt(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
       // If more than one arg provided, free them
       If (Length(Arg^)>1) then
          For C:=High(Arg^) downto 1 do
-            If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
+            FreeIfTemp(Arg^[C]);
       
       // If arg0 is float, get sqrt of float
       If (Arg^[0]^.Typ = VT_FLO) then begin
@@ -155,7 +155,7 @@ Function F_sqrt(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
          else F:=Sqrt(ValAsFlo(Arg^[0]));
       
       // Free arg0 if needed and return value
-      If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
+      FreeIfTemp(Arg^[0]);
       Exit(NewVal(VT_FLO,F))
    end;
 
@@ -179,13 +179,13 @@ Function F_log(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
             else Number:=Ln(ValAsFlo(Arg^[0]));
          
          // Free arg0 if needed and return value
-         If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
+         FreeIfTemp(Arg^[0]);
          Exit(NewVal(VT_FLO, Number))
       end;
       
       // If more than two args have been provided, free them
       For C:=2 to High(Arg^) do
-          If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
+          FreeIfTemp(Arg^[C]);
       
       For C:=0 to 1 do begin
          Base := Number; // When C=1 this will transfer Number to Base
@@ -199,7 +199,7 @@ Function F_log(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
          // Otherwise put typecast-to-float into Number
             else Number:=ValAsFlo(Arg^[C]);
          // Free argC if needed
-         If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
+         FreeIfTemp(Arg^[C])
       end;
       
       // Return Base-based logarithm of Number (duh!)

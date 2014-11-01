@@ -53,7 +53,7 @@ Function F_Ticks(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin
       If (Length(Arg^)>0) then
          For C:=Low(Arg^) to High(Arg^) do
-            If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
+            FreeIfTemp(Arg^[C]);
       
       If (Not DoReturn) then Exit(NIL);
       
@@ -66,7 +66,7 @@ Function F_RunTicks(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin
       If (Length(Arg^)>0) then
          For C:=Low(Arg^) to High(Arg^) do
-            If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
+            FreeIfTemp(Arg^[C]);
       
       If (Not DoReturn) then Exit(NIL);
       
@@ -84,7 +84,7 @@ Function F_Sleep(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
       else begin
          If (Length(Arg^)>1) then
             For C:=High(Arg^) downto 1 do
-               If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
+               FreeIfTemp(Arg^[C]);
          
          If (Arg^[0]^.Typ >= VT_INT) and (Arg^[0]^.Typ <= VT_BIN)
             then Dur:=PQInt(Arg^[0]^.Ptr)^ else
@@ -92,7 +92,7 @@ Function F_Sleep(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
             then Dur:=Trunc(1000*PFloat(Arg^[0]^.Ptr)^)
             else Dur:=ValAsInt(Arg^[0]);
          
-         If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0])
+         FreeIfTemp(Arg^[0])
       end;
       
       SysUtils.Sleep(Dur);
@@ -145,18 +145,17 @@ Function F_fork(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
       If (Length(Arg^)=0) then Exit(NewVal(VT_BOO,False));
       
       If (Length(Arg^)>3) then For C:=High(Arg^) downto 3 do
-         If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
+         FreeIfTemp(Arg^[C]);
       
       If (Arg^[0]^.Typ = VT_BOO)
          then R:=Arg^[0]^.Boo^
          else R:=ValAsBoo(Arg^[0]);
-      If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
+      FreeIfTemp(Arg^[0]);
       
       If (R) then begin
          If (Length(Arg^)=1) then Exit(NewVal(VT_BOO,True));
          
-         If (Length(Arg^)>2) then
-            If (Arg^[2]^.Lev >= CurLev) then FreeVal(Arg^[2]);
+         If (Length(Arg^)>2) then FreeIfTemp(Arg^[2]);
          
          If (Arg^[1]^.Lev >= CurLev)
             then Exit(Arg^[1])
@@ -165,7 +164,7 @@ Function F_fork(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
       end else begin
          If (Length(Arg^)<3) then begin
             If (Length(Arg^)=2) then
-               If (Arg^[1]^.Lev >= CurLev) then FreeVal(Arg^[1]);
+               FreeIfTemp(Arg^[1]);
             
             Exit(NewVal(VT_BOO,False))
           end;
@@ -184,7 +183,7 @@ Function F_random(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
       // More than two args, free dat shit
       If (Length(Arg^)>2) then
          For C:=High(Arg^) downto 2 do
-            If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
+            FreeIfTemp(Arg^[C]);
       
       // Two or more args
       If (Length(Arg^) >= 2) then begin
@@ -197,7 +196,7 @@ Function F_random(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
             FH := ValAsFlo(Arg^[1]);
             
             // Free args
-            For C:=1 downto 0 do If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
+            For C:=1 downto 0 do FreeIfTemp(Arg^[C]);
             
             // Check if second arg is bigger and exit with random value in range
             If (FH >= FL)
@@ -215,7 +214,7 @@ Function F_random(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
             If (Not (Typ in [VT_INT, VT_HEX, VT_BIN, VT_OCT])) then Typ := VT_INT;
             
             // Free args
-            For C:=1 downto 0 do If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
+            For C:=1 downto 0 do FreeIfTemp(Arg^[C]);
             
             // Check if second arg is bigger and exit with random value in range
             If (IH >= IL)
@@ -253,7 +252,7 @@ Function F_random(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
             Result := NewVal(Typ, IH)
          end;
          
-         If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]); // Free arg
+         FreeIfTemp(Arg^[0]); // Free arg
          Exit(Result) // Return value
          
       end else // 0 args
@@ -337,7 +336,7 @@ Function F_getenv(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
          // If any args present, get envvar name from arg0 and put envvar value into result
          Result := NewVal(VT_STR, GetEnvironmentVariable(ValAsStr(Arg^[0])));
          // Go through args and free if needed
-         For C:=0 to High(Arg^) do If(Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
+         For C:=0 to High(Arg^) do FreeIfTemp(Arg^[C])
       end else begin
          // No args - return a dict containing all environment vars
          Result := EmptyVal(VT_DIC);

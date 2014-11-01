@@ -83,7 +83,7 @@ Function F_array(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
          For C:=Low(Arg^) to High(Arg^) do begin
             
             // Check if arg is temporary value
-            If (Arg^[C]^.Lev >= CurLev)
+            If (IsTempVal(Arg^[C]))
                then V:=Arg^[C]           // If yes, reuse
                else V:=CopyVal(Arg^[C]); // Otherwise, make a copy
             
@@ -111,12 +111,12 @@ Function F_dict(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
                   then Key:=Arg^[C]^.Str^
                   else Key:=ValAsStr(Arg^[C]);
                   
-               If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
+               FreeIfTemp(Arg^[C])
                
             end else begin
                
                // Second arg in pair contains value to be inserted
-               If (Arg^[C]^.Lev >= CurLev)
+               If (IsTempVal(Arg^[C]))
                   then V:=Arg^[C]
                   else V:=CopyVal(Arg^[C]);
                
@@ -141,7 +141,7 @@ Function F_dict(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
             
             // Insert NIL at key
             Result^.Dic^.SetVal(Key, NilVal())
-            end;
+         end;
       end
    end;
 
@@ -162,7 +162,7 @@ Function F_array_count(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
             If (Arg^[C]^.Typ = VT_DIC) then R += Arg^[C]^.Dic^.Count;
             
             // Free arg if needed
-            If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
+            FreeIfTemp(Arg^[C])
          end;
       // Return value
       Exit(NewVal(VT_INT,R))
@@ -185,7 +185,7 @@ Function F_array_empty(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
             If (Arg^[C]^.Typ = VT_DIC) then B:=(B and Arg^[C]^.Dic^.Empty);
             
             // Free arg if needed
-            If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
+            FreeIfTemp(Arg^[C])
          end;
       // Return value
       Exit(NewVal(VT_BOO,B))
@@ -203,35 +203,28 @@ Function F_dict_nextkey(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
       // More than two args - uncecessary. Free them.
       If (Length(Arg^) >= 3) then
          For C:=High(Arg^) downto 2 do
-             If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
+            FreeIfTemp(Arg^[C]);
       
       // Check if second arg is provided.
       If (Length(Arg^)>=2) then begin
          
-         // If yes, extract key from arg
+         // If yes, extract key from arg and free if needed
          If (Arg^[1]^.Typ = VT_STR)
             then K:=Arg^[1]^.Str^
             else K:=ValAsStr(Arg^[1]);
-            
-         // Free arg if needed
-         If (Arg^[1]^.Lev >= CurLev) then FreeVal(Arg^[1])
+         FreeIfTemp(Arg^[1])
          
       end else K:=''; // No second arg, default value to ''
       
       // First arg is not a dictionary - free if necessary and return NIL
       If (Arg^[0]^.Typ <> VT_DIC) then begin
-         If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
+         FreeIfTemp(Arg^[0]);
          Exit(NilVal())
       end;
       
-      // Get next key from dict
-      K:=Arg^[0]^.Dic^.NextKey(K);
-      
-      // Free dict if needed
-      If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
-      
-      // Return value
-      Exit(NewVal(VT_STR,K))
+      K:=Arg^[0]^.Dic^.NextKey(K); // Get next key from dict
+      FreeIfTemp(Arg^[0]);         // Free dict if needed
+      Exit(NewVal(VT_STR,K))       // Return value
    end;
 
 Function F_dict_keys(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
@@ -243,63 +236,70 @@ Function F_dict_keys(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
       Result := EmptyVal(VT_ARR); I:=0;
       If (Length(Arg^)>0) then
          For C:=Low(Arg^) to High(Arg^) do begin
+            
+            // Check if argC is a dictionary
             If (Arg^[C]^.Typ = VT_DIC) then
+               // Check if argC dictionary is not empty
                If (Not Arg^[C]^.Dic^.Empty()) then begin
+               
+                  // Obtain a native array of entries and push keys into result array
                   DEA := Arg^[C]^.Dic^.ToArray();
                   For D:=Low(DEA) to High(DEA) do begin
                      Result^.Arr^.SetVal(I, NewVal(VT_STR, DEA[D].Key));
                      I += 1
                   end
                end;
-            If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
+            FreeIfTemp(Arg^[C])
          end
    end;
 
 Function F_dict_values(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var C,D,I:LongWord; DEA:TDict.TEntryArr;
    begin
-      // Not returning a value? Bail out early
+      // Not returning a value = bail out early
       If (Not DoReturn) then Exit(F_(False, Arg));
       
       Result := EmptyVal(VT_ARR); I:=0;
       If (Length(Arg^)>0) then
          For C:=Low(Arg^) to High(Arg^) do begin
+            
+            // Check if argC is a dictionary
             If (Arg^[C]^.Typ = VT_DIC) then
+               // Check if argC dictionary is not empty
                If (Not Arg^[C]^.Dic^.Empty()) then begin
+               
+                  // Obtain a native array of entries and push val-copies into result array
                   DEA := Arg^[C]^.Dic^.ToArray();
                   For D:=Low(DEA) to High(DEA) do begin
                      Result^.Arr^.SetVal(I, CopyVal(DEA[D].Val));
                      I += 1
                   end
                end;
-            If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
+            FreeIfTemp(Arg^[C])
          end
    end;
 
 Function F_array_flush(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   Var C, I, R : LongWord;
-       AEA:TArray.TEntryArr; DEA:TDict.TEntryArr;
+   Var C, R : LongWord;
    begin
       R := 0; // Initial removed indices count = 0
       If (Length(Arg^)>0) then
          For C:=High(Arg^) downto Low(Arg^) do begin
          
             If (Arg^[C]^.Typ = VT_ARR) then begin
-               If (Not Arg^[C]^.Arr^.Empty()) then begin
-                  AEA:=Arg^[C]^.Arr^.ToArray(); Arg^[C]^.Arr^.Purge(); R += Length(AEA);
-                  For I:=Low(AEA) to High(AEA) do
-                     If (AEA[I].Val^.Lev >= CurLev) then FreeVal(AEA[I].Val)
+               If (Not Arg^[C]^.Arr^.Empty) then begin
+                  R += Arg^[C]^.Arr^.Count; 
+                  Arg^[C]^.Arr^.Purge(@FreeIfTemp)
                end
             
             end else
             If (Arg^[C]^.Typ = VT_DIC) then begin
-               If (Not Arg^[C]^.Dic^.Empty()) then begin
-                  DEA:=Arg^[C]^.Dic^.ToArray(); Arg^[C]^.Dic^.Purge(); R += Length(DEA);
-                  For I:=Low(DEA) to High(DEA) do
-                     If (DEA[I].Val^.Lev >= CurLev) then FreeVal(DEA[I].Val)
+               If (Not Arg^[C]^.Dic^.Empty) then begin
+                  R += Arg^[C]^.Dic^.Count;
+                  Arg^[C]^.Dic^.Purge(@FreeIfTemp)
             end end;
             
-            If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
+            FreeIfTemp(Arg^[C])
          end;
       
       If (DoReturn)
@@ -319,7 +319,7 @@ Function F_array_contains(Const DoReturn:Boolean; Const Arg:PArrPVal; Const Cmpr
          F_(False, Arg); Exit(NewVal(VT_BOO, False))
       end;
       
-      // Create an array descripting whether haystacks contains needles and fill it with FALSEs
+      // Create an array descripting whether haystack contains needles and fill it with FALSEs
       SetLength(Cont, Length(Arg^));
       For C:=1 to High(Arg^) do Cont[C]:=False;
       
@@ -392,10 +392,10 @@ Function F_array_qsort(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
                   Ent := Arg^[C]^.Arr^.ToArray(); // Get entry array
                   Swp += qsort(Ent,0,Cnt-1);      // Perform quicksort
                   
-                  For I:=0 to (Cnt-1) do                // Go through all entries
+                  For I:=0 to (Cnt-1) do                         // Go through all entries
                      Arg^[C]^.Arr^.SetVal(Ent[I].Key,Ent[I].Val) // Insert I-th lowest value at I-th lowest key
                end end;
-            If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
+            FreeIfTemp(Arg^[C])
          end;
       
       If (DoReturn)

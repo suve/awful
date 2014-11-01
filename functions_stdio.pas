@@ -111,7 +111,7 @@ Function F_stdio(Const DoReturn:Boolean; Const Arg:PArrPVal; Const DoTrim:Boolea
       For C:=Low(Arg^) to High(Arg^) do begin 
          P := FillBuffer(Input, @stdinBuffer, DoTrim);
          FillVar(Arg^[C], @stdinBuffer, P);
-         If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
+         FreeIfTemp(Arg^[C])
       end;
       If (DoReturn) then Exit(NilVal()) else Exit(NIL)
    end;
@@ -161,7 +161,7 @@ Function F_stdin_BufferPush(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
                VT_STR: stdinBuffer += Arg^[C]^.Str^;
                VT_UTF: stdinBuffer += Arg^[C]^.Utf^.ToAnsiString();
             end;
-            If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
+            FreeIfTemp(Arg^[C])
          end;
       If (DoReturn) then Exit(NilVal()) else Exit(NIL)
    end;

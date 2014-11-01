@@ -99,7 +99,12 @@ Function NewVal(Const T:TValueType; Const V:TBool):PValue;
 Function NewVal(Const T:TValueType; Const V:TStr):PValue;
 Function NewVal(Const T:TValueType):PValue;
 
-Function Exv(DoReturn:Boolean):PValue; Inline;
+Function  IsTempVal(Const V:PValue):Boolean; Inline;
+Procedure FreeIfTemp(Const V:PValue); Inline;
+Procedure DestroyIfTemp(Const V:PValue); Inline;
+Procedure AnnihilateIfTemp(Const V:PValue); Inline;
+
+Function  Exv(Const DoReturn:Boolean):PValue; Inline;
 
 Procedure SpareVars_Prepare();
 Procedure SpareVars_Destroy();
@@ -146,56 +151,6 @@ Function NilVal():PValue;
       Result:=CreateVal(VT_NIL); Result^.Ptr:=NIL; Result^.Lev:=CurLev
    end;
 
-Type TValProc = Procedure(Const V:PValue);
-
-Procedure INLINE_FreeArr(Const Val:PValue;Proc:TValProc); Inline;
-   Var AEA:TArray.TEntryArr; C:LongWord;
-   begin
-      If (Not Val^.Arr^.Empty()) then begin
-         AEA := Val^.Arr^.ToArray(); Val^.Arr^.Purge();
-         For C:=Low(AEA) to High(AEA) do
-             If (AEA[C].Val^.Lev >= CurLev) then Proc(AEA[C].Val)
-   end end;
-
-Procedure INLINE_FreeDict(Const Val:PValue;Proc:TValProc); Inline;
-   Var DEA:TDict.TEntryArr; C:LongWord;
-   begin
-      If (Not Val^.Dic^.Empty()) then begin
-         DEA := Val^.Dic^.ToArray(); Val^.Dic^.Purge();
-         For C:=Low(DEA) to High(DEA) do
-             If (DEA[C].Val^.Lev >= CurLev) then Proc(DEA[C].Val)
-   end end;
-
-Procedure FreeVal_Arr(Const Val:PValue);
-   begin INLINE_FreeArr(Val,@FreeVal) end;
-
-Procedure FreeVal_Dict(Const Val:PValue);
-   begin INLINE_FreeDict(Val,@FreeVal) end;
-
-Procedure DestroyVal_Arr(Const Val:PValue);
-   begin
-      INLINE_FreeArr(Val,@FreeVal); 
-      Dispose(PArr(Val^.Ptr), Destroy())
-   end;
-
-Procedure DestroyVal_Dict(Const Val:PValue);
-   begin
-      INLINE_FreeDict(Val,@FreeVal); 
-      Dispose(PDict(Val^.Ptr), Destroy())
-   end;
-
-Procedure AnnihilateVal_Arr(Const Val:PValue);
-   begin
-      INLINE_FreeArr(Val,@AnnihilateVal); 
-      Dispose(PArr(Val^.Ptr), Destroy())
-   end;
-
-Procedure AnnihilateVal_Dict(Const Val:PValue);
-   begin
-      INLINE_FreeDict(Val,@AnnihilateVal); 
-      Dispose(PDict(Val^.Ptr), Destroy())
-   end;
-
 Procedure DestroyVal_INLINE(Const Val:PValue); Inline;
    begin
       Case Val^.Typ of
@@ -206,8 +161,8 @@ Procedure DestroyVal_INLINE(Const Val:PValue); Inline;
          VT_BOO: Dispose(Val^.Boo);
          VT_STR: Dispose(Val^.Str);
          VT_UTF: Dispose(Val^.Utf, Destroy());
-         VT_ARR: begin FreeVal_Arr(Val);  Dispose(Val^.Arr, Destroy())  end;
-         VT_DIC: begin FreeVal_Dict(Val); Dispose(Val^.Dic, Destroy()) end;
+         VT_ARR: begin Val^.Arr^.Purge(@FreeIfTemp); Dispose(Val^.Arr, Destroy()) end;
+         VT_DIC: begin Val^.Dic^.Purge(@FreeIfTemp); Dispose(Val^.Dic, Destroy()) end;
       end;
       Dispose(Val)
    end;
@@ -219,8 +174,10 @@ Procedure FreeVal(Const Val:PValue);
    begin
       If (SpareVars[Val^.Typ].Num < SpareVarsPerType) then begin
          
-         If (Val^.Typ = VT_ARR) then FreeVal_Arr(Val) else
-         If (Val^.Typ = VT_DIC) then FreeVal_Dict(Val);
+         Case (Val^.Typ) of
+            VT_ARR: Val^.Arr^.Purge(@FreeIfTemp);
+            VT_DIC: Val^.Dic^.Purge(@FreeIfTemp)
+         end;
          
          SpareVars[Val^.Typ].Num += 1;
          SpareVars[Val^.Typ].Arr[SpareVars[Val^.Typ].Num] := Val
@@ -238,8 +195,8 @@ Procedure AnnihilateVal(Const Val:PValue);
          VT_BOO: Dispose(Val^.Boo);
          VT_STR: Dispose(Val^.Str);
          VT_UTF: Dispose(Val^.Utf, Destroy());
-         VT_ARR: AnnihilateVal_Arr(Val); 
-         VT_DIC: AnnihilateVal_Dict(Val);
+         VT_ARR: begin Val^.Arr^.Purge(@AnnihilateIfTemp); Dispose(Val^.Arr, Destroy()) end;
+         VT_DIC: begin Val^.Dic^.Purge(@AnnihilateIfTemp); Dispose(Val^.Dic, Destroy()) end;
       end;
       Dispose(Val)
    end;
@@ -365,17 +322,17 @@ Function NewVal(Const T:TValueType; Const V:Pointer):PValue;
 
 Function NewVal(Const T:TValueType; Const V:TFloat):PValue;
    begin
-      Result:=CreateVal(T); Result^.Lev:=CurLev; PFloat(Result^.Ptr)^:=V
+      Result:=CreateVal(T); Result^.Lev:=CurLev; Result^.Flo^:=V
    end;
 
 Function NewVal(Const T:TValueType; Const V:Int64):PValue;
    begin
-      Result:=CreateVal(T); Result^.Lev:=CurLev; PQInt(Result^.Ptr)^:=V
+      Result:=CreateVal(T); Result^.Lev:=CurLev; Result^.Int^:=V
    end;
 
 Function NewVal(Const T:TValueType; Const V:TBool):PValue;
    begin
-      Result:=CreateVal(T); Result^.Lev:=CurLev; PBool(Result^.Ptr)^:=V
+      Result:=CreateVal(T); Result^.Lev:=CurLev; Result^.Boo^:=V
    end;
 
 Function NewVal(Const T:TValueType; Const V:TStr):PValue;
@@ -388,10 +345,22 @@ Function NewVal(Const T:TValueType; Const V:TStr):PValue;
 
 Function NewVal(Const T:TValueType):PValue;
    begin 
-      Result:=CreateVal(T); Result^.Lev:=CurLev; 
+      Result:=CreateVal(T); Result^.Lev:=CurLev
    end;
 
-Function Exv(DoReturn:Boolean):PValue; Inline;
+Function IsTempVal(Const V:PValue):Boolean; Inline;
+   begin Exit(V^.Lev >= CurLev) end;
+
+Procedure FreeIfTemp(Const V:PValue); Inline;
+   begin If(V^.Lev >= CurLev) then FreeVal(V) end;
+
+Procedure DestroyIfTemp(Const V:PValue); Inline;
+   begin If(V^.Lev >= CurLev) then DestroyVal(V) end;
+
+Procedure AnnihilateIfTemp(Const V:PValue); Inline;
+   begin If(V^.Lev >= CurLev) then AnnihilateVal(V) end;
+
+Function Exv(Const DoReturn:Boolean):PValue; Inline;
    begin If (DoReturn) then Exit(NilVal()) else Exit(NIL) end;
 
 Procedure SpareVars_Prepare();

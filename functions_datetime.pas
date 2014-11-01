@@ -335,7 +335,7 @@ Function F_DateTime_String(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
                Format := ValAsStr(Arg^[0]);
                dt := SysUtils.Now()
             end;
-            If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0])
+            FreeIfTemp(Arg^[0])
          end;
          
          // 2 or more args

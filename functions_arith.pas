@@ -47,23 +47,21 @@ Function F_Arith(Const DoReturn:Boolean; Const Arg:PArrPVal; Const Arith:TArithP
       If (Length(Arg^)>1) then
          For C:=High(Arg^) downto 1 do begin
             Arith(Arg^[C-1],Arg^[C]);
-            If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
+            FreeIfTemp(Arg^[C])
          end;
       
       // Check if we should return value
       If (DoReturn) then begin
          
          // Check if leftmost arg was a temporary value.
-         If (Arg^[0]^.Lev >= CurLev)
+         If (IsTempVal(Arg^[0]))
             then Exit(Arg^[0])          // If yes, reuse it.
             else Exit(CopyVal(Arg^[0])) // Otherwise, return a temporary copy.
          
       end else begin 
          
-         // Not returning a value. Check if leftmost arg should be freed.
-         If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
-         
-         // Return nothing
+         // Not returning a value. Free leftmost arg if needed and leave
+         FreeIfTemp(Arg^[0]);
          Exit(NIL)
       end
    end;

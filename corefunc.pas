@@ -156,7 +156,7 @@ Function Eval(Const Ret:Boolean; Const E:PExpr):PValue;
             else Result:=NilVal()
       end;
    
-   Var T:LongWord; V:PValue; I:LongWord; Tp:TValueType;
+   Var T,I:LongInt; V:PValue; Tp:TValueType;
    begin
       If (E^.Num >= 0) then begin
          If (E^.Ref = REF_CONST) then begin
@@ -199,7 +199,7 @@ Function F_If(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
                then R := (R) and (Arg^[C]^.Boo^)
                else R := (R) and (ValAsBoo(Arg^[C]));
             
-            If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
+            FreeIfTemp(Arg^[C])
          end
       end else
          R:=False;
@@ -213,7 +213,7 @@ Function F_Else(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin
       If (Length(Arg^)>1) then
          For C:=High(Arg^) downto 1 do
-            If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
+            FreeIfTemp(Arg^[C]);
 
       ExLn:=IfArr[Arg^[0]^.Int^][2];
       Exit(NIL)
@@ -230,7 +230,7 @@ Function F_While(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
                then R := (R) and (Arg^[C]^.Boo^)
                else R := (R) and (ValAsBoo(Arg^[C]));
          
-            If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
+            FreeIfTemp(Arg^[C])
          end
       end else
          R:=False;
@@ -244,7 +244,7 @@ Function F_Done(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin
       If (Length(Arg^)>1) then
          For C:=High(Arg^) downto 1 do
-            If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]); 
+            FreeIfTemp(Arg^[C]); 
 
       ExLn:=WhiArr[Arg^[0]^.Int^][1];
       Exit(NIL)
@@ -261,7 +261,7 @@ Function F_Until(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
                then R := (R) and (Arg^[C]^.Boo^)
                else R := (R) and (ValAsBoo(Arg^[C]));
          
-            If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C])
+            FreeIfTemp(Arg^[C])
          end
       end else
          R:=False;
@@ -303,10 +303,10 @@ Function F_Return(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin
       If (Length(Arg^)>1) then
          For C:=Low(Arg^)+1 to High(Arg^) do
-            If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
+            FreeIfTemp(Arg^[C]);
 
       If (Length(Arg^)>0) then begin
-         If (Arg^[0]^.Lev >= CurLev)
+         If (IsTempVal(Arg^[0]))
             then R:=Arg^[0]
             else R:=CopyVal(Arg^[0])
       end else
@@ -321,7 +321,7 @@ Function F_Exit(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin
       If (Length(Arg^)>0) then
          For C:=Low(Arg^) to High(Arg^) do
-            If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]);
+            FreeIfTemp(Arg^[C]);
 
       ExLn:=Pr[Proc].Num; DoExit:=True;
       Exit(NIL)
@@ -380,8 +380,7 @@ Function F_AutoCall(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
       // Decrease runlevel and free args if needed
       CurLev -= 1;
       For A:=0 to (FCal[FLev].NumA-1) do
-         If (FCal[FLev].Args[A]^.Lev >= CurLev) then
-            FreeVal(FCal[FLev].Args[A]);
+         FreeIfTemp(FCal[FLev].Args[A]);
       
       FLev -= 1; // Deacrease function call level
       
@@ -422,7 +421,7 @@ Function F_Call(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
       
       S:=ValAsStr(Arg^[0]);
       If (Length(S)>0) and (S[1]=':') then Delete(S,1,1);
-      If (Arg^[0]^.Lev >= CurLev) then FreeVal(Arg^[0]);
+      FreeIfTemp(Arg^[0]);
       
       FPtr := Func^.GetVal(S);
       If (FPtr = NIL) then begin

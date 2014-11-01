@@ -226,7 +226,7 @@ Procedure GenericNumPtrTrie.FreeNode(Const N:PNode; Const D:LongWord; Const Proc
       end else begin
          For I:=NXTMIN to NXTMAX do
             If (N^.Nxt[I]<>NIL) then begin
-               Proc(Tp(N^.Nxt));
+               Proc(N^.Nxt[I]);
                N^.Nxt[I]:=NIL; Self.Vals -= 1
             end
       end;

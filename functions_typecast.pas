@@ -83,14 +83,14 @@ Function F_Typecast(Const DoReturn:Boolean;   Const Arg:PArrPVal;
       // Go through args. If level >= CurLev, it's a temporary arg - free it right away.
       // Otherwise, get a typecast value and swap the internal pointers. Free temp var.
       For C:=High(Arg^) downto (Low(Arg^)+1) do
-         If (Arg^[C]^.Lev >= CurLev) then FreeVal(Arg^[C]) else
+         If (IsTempVal(Arg^[C])) then FreeVal(Arg^[C]) else
          If (Arg^[C]^.Typ <> ValType) then begin
             V:=Typecast(Arg^[C]); 
             SwapPtrs(Arg^[C],V); FreeVal(V)
          end;
       
-      // If arg0 leve >= CurLev, it's a temporary var - try to reuse it
-      If (Arg^[0]^.Lev >= CurLev) then begin
+      // If arg0 is a temporary var, try to reuse it
+      If (IsTempVal(Arg^[0])) then begin
       
          // No retval expected, free arg0 and gtfo
          If (Not DoReturn) then begin
