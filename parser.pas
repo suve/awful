@@ -22,7 +22,7 @@ Type
 Var
    IfArr : Array of TIf;
    RepArr, WhiArr : Array of TLoop;
-    
+   
    Func : PFunTrie;
    Cons : PValTrie;
     
@@ -89,15 +89,20 @@ Procedure Fatal(Const Ln:LongWord;Const Msg:AnsiString;Const ErrCode:LongInt = 2
 Procedure Error(Const Ln:LongWord;Const Msg:AnsiString); Inline;
    begin Writeln(StdErr,YukName,'(',Ln,'): Error: ',Msg) end;
 
+Function FileNumberToName(Const Fi:LongInt):AnsiString;
+   begin
+      If(Fi = 0)
+         then Result := ScriptName
+         else Result := FileIncludes[Fi].Name 
+   end;
+
 Procedure DupeFuncFatal(Const Ln:LongWord; Const Name:AnsiString);
    Var Fn : PFuncInfo;
    begin
    Fn := Func^.GetVal(Name);
-   If (Fn^.Usr) then begin
-      If (Pr[Fn^.uid].Fil = 0)
-         then Fatal(Ln,'duplicate function name "'+Name+'", originally declared in '+ScriptName+' on line '+IntToStr(Pr[Fn^.uid].Lin)+'.') 
-         else Fatal(Ln,'duplicate function name "'+Name+'", originally declared in '+FileIncludes[Pr[Fn^.uid].Fil].Name+' on line '+IntToStr(Pr[Fn^.uid].Lin)+'.')
-      end else Fatal(Ln,'function name "'+Name+'" collides with built-in function.')
+   If (Fn^.Usr)
+      then Fatal(Ln,'duplicate function name "'+Name+'", originally declared in '+FileNumberToName(Pr[Fn^.uid].Fil)+' on line '+IntToStr(Pr[Fn^.uid].Lin)+'.')
+      else Fatal(Ln,'function name "'+Name+'" collides with built-in function.')
    end;
 
 Procedure cstruFatal(Const Ln:LongWord);
@@ -223,6 +228,14 @@ Function MakeExpr(Const ExLo,ExHi,Ln:LongInt; T:LongInt):PExpr;
       end;
    
    Function NewToken(Const Typ:TValueType;Const Val:Int64):PToken;
+      Var Tok:PToken; 
+      begin
+      New(Tok); Tok^.Typ := TK_LITE; Tok^.Ptr := NewVal(Typ,Val); 
+      PValue(Tok^.Ptr)^.Lev := 0;
+      Exit(Tok)
+      end;
+   
+   Function NewToken(Const Typ:TValueType;Const Val:AnsiString):PToken;
       Var Tok:PToken; 
       begin
       New(Tok); Tok^.Typ := TK_LITE; Tok^.Ptr := NewVal(Typ,Val); 
@@ -409,9 +422,35 @@ Function MakeExpr(Const ExLo,ExHi,Ln:LongInt; T:LongInt):PExpr;
       FPtr := @FuncInfo_Until
       end;
    
+   Function TokenToValue(Const tkIdx:LongInt):PValue;
+      begin
+      If (Tk[tkIdx][1]='s') then
+         Result:=NewVal(VT_STR,Copy(Tk[tkIdx],3,Length(Tk[tkIdx])-3)) else
+      If (Tk[tkIdx][1]='u') then
+         Result:=NewVal(VT_UTF,Copy(Tk[tkIdx],3,Length(Tk[tkIdx])-3)) else
+      If (Tk[tkIdx][1]='f') then
+         Result:=NewVal(VT_FLO,StrToReal(Copy(Tk[tkIdx],2,Length(Tk[tkIdx])))) else
+      If (Tk[tkIdx][1]='l') then
+         Result:=NewVal(VT_BOO,StrToBoolDef(Copy(Tk[tkIdx],2,Length(Tk[tkIdx])),False)) else
+      If (Tk[tkIdx][1]='i') then
+         Result:=NewVal(VT_INT,Convert.StrToInt(Copy(Tk[tkIdx],2,Length(Tk[tkIdx])))) else
+      If (Tk[tkIdx][1]='h') then
+         Result:=NewVal(VT_HEX,Convert.StrToHex(Copy(Tk[tkIdx],2,Length(Tk[tkIdx])))) else
+      If (Tk[tkIdx][1]='o') then
+         Result:=NewVal(VT_OCT,Convert.StrToOct(Copy(Tk[tkIdx],2,Length(Tk[tkIdx])))) else
+      If (Tk[tkIdx][1]='b') then
+         Result:=NewVal(VT_BIN,Convert.StrToBin(Copy(Tk[tkIdx],2,Length(Tk[tkIdx])))) else
+      If (Tk[tkIdx][1]='=') then begin
+         Result:=Cons^.GetVal(Copy(Tk[tkIdx],2,Length(Tk[tkIdx])));
+         If (Result = NIL) then Fatal(Ln,'Unknown const "'+Copy(Tk[tkIdx],2,Length(Tk[tkIdx]))+'".');
+         Result := CopyVal(Result)
+         end else
+         Result := NIL
+      end;
+   
    Procedure Construct_Const();
       begin
-      If (ExLe <> 3) then Fatal(Ln,'Wrong number of arguments passed to !const ('+IntToStr(ExLe)+').');
+      If (ExLe <> 3) then Fatal(Ln,'Wrong number of arguments passed to !const (got '+IntToStr(ExLe-1)+', expected 2).');
       If (Length(Tk[T+1])=0) or (Tk[T+1][1]<>'=')
          then Fatal(Ln,'!const names must start with a "=" character.');
       CName:=Copy(Tk[T+1],2,Length(Tk[T+1]));
@@ -419,28 +458,40 @@ Function MakeExpr(Const ExLo,ExHi,Ln:LongInt; T:LongInt):PExpr;
          then Fatal(Ln,'Redefinition of const "'+CName+'".');
       If (Length(Tk[T+2])=0) or (Not ConstPrefix(Tk[T+2][1]))
          then Fatal(Ln,'Second argument for !const must be either a value literal or another const.');
-      If (Tk[T+2][1]='s') then
-         V:=NewVal(VT_STR,Copy(Tk[T+2],3,Length(Tk[T+2])-3)) else
-      If (Tk[T+2][1]='u') then
-         V:=NewVal(VT_UTF,Copy(Tk[T+2],3,Length(Tk[T+2])-3)) else
-      If (Tk[T+2][1]='f') then
-         V:=NewVal(VT_FLO,StrToReal(Copy(Tk[T+2],2,Length(Tk[T+2])))) else
-      If (Tk[T+2][1]='l') then
-         V:=NewVal(VT_BOO,StrToBoolDef(Copy(Tk[T+2],2,Length(Tk[T+2])),False)) else
-      If (Tk[T+2][1]='i') then
-         V:=NewVal(VT_INT,Convert.StrToInt(Copy(Tk[T+2],2,Length(Tk[T+2])))) else
-      If (Tk[T+2][1]='h') then
-         V:=NewVal(VT_HEX,Convert.StrToHex(Copy(Tk[T+2],2,Length(Tk[T+2])))) else
-      If (Tk[T+2][1]='o') then
-         V:=NewVal(VT_OCT,Convert.StrToOct(Copy(Tk[T+2],2,Length(Tk[T+2])))) else
-      If (Tk[T+2][1]='b') then
-         V:=NewVal(VT_BIN,Convert.StrToBin(Copy(Tk[T+2],2,Length(Tk[T+2])))) else
-      If (Tk[T+2][1]='=') then begin
-         V:=Cons^.GetVal(Copy(Tk[T+2],2,Length(Tk[T+2])));
-         If (V = NIL) then Fatal(Ln,'Unknown const "'+Copy(Tk[T+2],2,Length(Tk[T+2]))+'".');
-         V := CopyVal(V)
-         end;
+      V := TokenToValue(T+2);
       V^.Lev := 0; Cons^.SetVal(CName,V)
+      end;
+   
+   Procedure Construct_Static();
+      begin
+      If (Proc = 0) then Fatal(Ln,'!static can only be used inside functions.');
+      If (ExLe <> 3) then Fatal(Ln,'Wrong number of arguments passed to !static (got '+IntToStr(ExLe-1)+', expected 2).');
+      If (Length(Tk[T+1])=0) or (Not (Tk[T+1][1] in ['$','&']))
+         then Fatal(Ln,'First argument for !static must specify a variable name. ($var or &var)');
+      CName:=Copy(Tk[T+1],2,Length(Tk[T+1]));
+      A := 0; Etk := High(Pr[Proc].Arg);
+      While(A <= Etk) do begin // Check if varname isn't the same as an argname
+         If(CName = Pr[Proc].Arg[A]) then Fatal(Ln,'!static variable name collides with function argument name.');
+         A += 1 end;
+      A := 0; Etk := High(Pr[Proc].Stv);
+      While (A <= Etk) do begin // Check if varname doesn't appear again
+         If(CName = Pr[Proc].Stv[A].Nam) 
+            then Fatal(Ln,'redeclaration of !static variable "'+CName+'" inside function "'+Pr[Proc].Nam+'".');
+         A += 1 end;
+      If (Length(Tk[T+2])=0) or (Not ConstPrefix(Tk[T+2][1]))
+         then Fatal(Ln,'Second argument for !static must be either a value literal or another const.');
+      V := TokenToValue(T+2); V^.Lev := 0;
+      
+      A := Length(Pr[Proc].Stv);
+      SetLength(Pr[Proc].Stv, A + 1);
+      Pr[Proc].Stv[A].Nam := CName;
+      Pr[Proc].Stv[A].Val := V;
+      
+      SetLength(E^.Tok, 1);
+      E^.Tok[0] := NewToken(VT_INT, A);
+      
+      FPtr := @FuncInfo_Static;
+      T += 2
       end;
    
    Procedure Construct_Fun();
@@ -458,8 +509,10 @@ Function MakeExpr(Const ExLo,ExHi,Ln:LongInt; T:LongInt):PExpr;
          then DupeFuncFatal(Ln,CName);
       SetLength(Pr,Length(Pr)+1);
       Proc:=High(Pr); ExLn:=0;
+      Pr[Proc].Nam := CName;
       Pr[Proc].Fil := Length(FileIncludes); Pr[Proc].Lin := Ln;
       Pr[Proc].Num := 0; SetLength(Pr[Proc].Exp,0);
+      SetLength(Pr[Proc].Stv, 0);
       SetLength(Pr[Proc].Arg, ExLe - 2); A := 0;
       Func^.SetVal(CName,MkFunc(Proc)); T+=2;
       While (T < ExLe) do begin
@@ -492,16 +545,17 @@ Function MakeExpr(Const ExLo,ExHi,Ln:LongInt; T:LongInt):PExpr;
       
       If (ExLe > 1) then begin
          If (ExLe > 2) then Fatal(Ln,cstruName+' accepts at most one parameter.');
-         DepStr := Copy(Tk[1], 2, Length(Tk[T]));
-         If (Tk[1][1]='s') then Dep := Convert.StrToInt(Copy(DepStr,2,Length(DepStr)-2)) else
-         If (Tk[1][1]='u') then Dep := Convert.StrToInt(Copy(DepStr,2,Length(DepStr)-2)) else
-         If (Tk[1][1]='i') then Dep := Convert.StrToInt(DepStr) else
-         If (Tk[1][1]='h') then Dep := Convert.StrToHex(DepStr) else
-         If (Tk[1][1]='o') then Dep := Convert.StrToOct(DepStr) else
-         If (Tk[1][1]='b') then Dep := Convert.StrToBin(DepStr) else
-         If (Tk[1][1]='f') then Dep := Trunc(Convert.StrToReal(DepStr)) else
-         If (Tk[1][1]='l') then Dep := BoolToInt(StrToBoolDef(DepStr,False)) else
-         If (Tk[1][1]='=') then begin
+         T := T + 1;
+         DepStr := Copy(Tk[T], 2, Length(Tk[T]));
+         If (Tk[T][1]='s') then Dep := Convert.StrToInt(Copy(DepStr,2,Length(DepStr)-2)) else
+         If (Tk[T][1]='u') then Dep := Convert.StrToInt(Copy(DepStr,2,Length(DepStr)-2)) else
+         If (Tk[T][1]='i') then Dep := Convert.StrToInt(DepStr) else
+         If (Tk[T][1]='h') then Dep := Convert.StrToHex(DepStr) else
+         If (Tk[T][1]='o') then Dep := Convert.StrToOct(DepStr) else
+         If (Tk[T][1]='b') then Dep := Convert.StrToBin(DepStr) else
+         If (Tk[T][1]='f') then Dep := Trunc(Convert.StrToReal(DepStr)) else
+         If (Tk[T][1]='l') then Dep := BoolToInt(StrToBoolDef(DepStr,False)) else
+         If (Tk[T][1]='=') then begin
             Constant := Cons^.GetVal(DepStr);
             If (Constant = NIL) then Fatal(Ln,'Unknown constant "'+DepStr+'".');
             Dep := ValAsInt(Constant)
@@ -620,6 +674,8 @@ Function MakeExpr(Const ExLo,ExHi,Ln:LongInt; T:LongInt):PExpr;
          Construct_Skip(SKIP_BREAK);
       '!continue':
          Construct_Skip(SKIP_CONTINUE);
+      '!static':
+         Construct_Static();
       '!const': begin
          Construct_Const();
          Dispose(E); Exit(NIL)
@@ -972,11 +1028,12 @@ Procedure ProcessLine(Const L:AnsiString;Const N:LongWord);
             {$ENDIF}
             
             // If not in string literal and 's' or 'u' encountered, we just came across a string literal
-            If (Str = STR_MAYBE) and ((L[P]='s') or (L[P]='u')) then begin
-               Str:=STR_START; Utf:=(L[P] = 'u') // Mark string-search and set UTF flag
-            end else
-               Str:=STR_NOPE // Mark string-search as "we are inside token, 's' and 'u' are not string literal initializers"
-               
+            If (Str = STR_MAYBE) then begin
+               If ((L[P]='s') or (L[P]='u')) then begin
+                  Str:=STR_START; Utf:=(L[P] = 'u') // Mark string-search and set UTF flag
+               end else
+                  Str:=STR_NOPE // Mark string-search as "we are inside token, 's' and 'u' are not string literal initializers"
+            end            
          end else // Str if not STR_NONE
          
          // We have just encountered string prefix and are looking for delimiter

@@ -9,7 +9,8 @@ Type
    TCallState = record
       Vars : PValTrie;
       Args : Array of PValue;
-      NumA : LongInt
+      NumA : LongInt;
+      Stat : Array of Boolean
    end;
 
 Var
@@ -17,7 +18,7 @@ Var
    FLev : LongInt;
    DoExit : Boolean;
 
-   FuncInfo_AutoCall,
+   FuncInfo_AutoCall, FuncInfo_Static,
    FuncInfo_If, FuncInfo_Else,
    FuncInfo_Break, FuncInfo_Continue,
    FuncInfo_While, FuncInfo_Done, FuncInfo_Until : TFuncInfo;
@@ -51,8 +52,12 @@ Function F_ParamArr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_ParamCnt(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_ParamStr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
+Function F_static(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+
+
 implementation
    uses SysUtils, Globals, Parser, EmptyFunc, Values_Typecast;
+
 
 Procedure Register(Const FT:PFunTrie);
    begin
@@ -74,7 +79,8 @@ Procedure Register(Const FT:PFunTrie);
       SetFuncInfo(FuncInfo_Done    , @F_Done    , REF_CONST);
       SetFuncInfo(FuncInfo_Until   , @F_Until   , REF_CONST);
       SetFuncInfo(FuncInfo_Break   , @F_Break   , REF_CONST);
-      SetFuncInfo(FuncInfo_Continue, @F_Continue, REF_CONST)
+      SetFuncInfo(FuncInfo_Continue, @F_Continue, REF_CONST);
+      SetFuncInfo(FuncInfo_Static  , @F_Static  , REF_CONST)
    end;
 
 Function Eval(Const Ret:Boolean; Const E:PExpr):PValue;
@@ -367,12 +373,21 @@ Function F_AutoCall(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
          FCal[FLev].Vars^.SetVal(Pr[Proc].Arg[A],NilVal())
       end; 
       
+      // Mark static variables as not yet included into function varpool
+      Want := Length(Pr[Proc].Stv);
+      If (Length(FCal[FLev].Stat) < Want) then SetLength(FCal[FLev].Stat, Want); // Make sure there is enough space
+      For A:=0 to (Want-1) do FCal[FLev].Stat[A] := False;
+      
       // Run the proper function
       R:=RunFunc(Proc);
       
       // Remove params from vartie
       If (Length(Pr[Proc].Arg)>0) then
          For A:=0 to (H-1) do FCal[FLev].Vars^.RemVal(Pr[Proc].Arg[A]);
+      
+      // Remove included static vars from vartie
+      For A:=0 to (Want-1) do
+         If(FCal[FLev].Stat[A]) then FCal[FLev].Vars^.RemVal(Pr[Proc].Stv[A].Nam);
       
       // Remove user-defined vars from trie
       FCal[FLev].Vars^.Purge(@FreeVal);
@@ -499,6 +514,28 @@ Function F_ParamStr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
          else Result := NilVal();
       
       F_(False, Arg)
+   end;
+
+Function F_static(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   begin
+      // Check if staticvar already in varpool. If yes, bail out.
+      If (FCal[FLev].Stat[Arg^[0]^.Int^]) then Exit(NIL);
+      
+      (* Check if $varname already used. If yes, free underlying PValue.           *
+       * The parser makes sure that static var names do not collide with argnames, *
+       * so if $varname is already used, it must be used by a local var.           *)
+      Result := FCal[FLev].Vars^.GetVal(Pr[Proc].Stv[Arg^[0]^.Int^].Nam);
+      If(Result <> NIL) then FreeVal(Result);
+      
+      // Insert !static var into vartrie (will override previous val, if needed)
+      FCal[FLev].Vars^.SetVal(
+         Pr[Proc].Stv[Arg^[0]^.Int^].Nam,
+         Pr[Proc].Stv[Arg^[0]^.Int^].Val
+      );
+      
+      // Mark staticvar as imported into varpool
+      FCal[FLev].Stat[Arg^[0]^.Int^] := True;
+      Result := NIL
    end;
 
 end.

@@ -4,13 +4,13 @@ program awful;
 
 uses
    SysUtils,
-     
+   
    FuncInfo, TokExpr, Values,
-     
+   
    Globals, Parser,
-     
+   
    EmptyFunc, CoreFunc, Functions,
-     
+   
    Functions_Arith,     Functions_ArrDict,
    Functions_Bitwise,   Functions_Boole,
    Functions_CGI,       Functions_Compare,

@@ -17,7 +17,7 @@ Type
    PExpr = ^TExpr;
    PToken = ^TToken;
    Array_PExpr = Array of PExpr;
-     
+   
    PArrTk = ^TArrTk;
    TArrTk = record
       Ind : Array of PToken; // Array of indexing tokens
@@ -31,7 +31,7 @@ Type
          TK_BADT:
             (Ptr : Pointer); // For compatibility
    end;
-     
+    
    TToken = record
       Case Typ : TTokenType of
          TK_EXPR:
@@ -45,8 +45,8 @@ Type
          TK_BADT: // Unused
             (Ptr : Pointer); // Left for compatibility
    end;
-     
-    TExpr = record
+   
+   TExpr = record
       //Lin : LongWord;      // Line number
       Fun : TBuiltIn;        // Pointer to built-in func
       Ref : Boolean;         // Reference-modifying?
@@ -54,13 +54,20 @@ Type
       Tok : Array of PToken; // Array of tokens in expression
       Arg : Array of PValue  // Array of arguments to pass to function
    end;
-     
+   
+   TStaticVar = record
+      Nam : AnsiString; // Variable name
+      Val : PValue      // Variable value
+   end;
+   
    TProc = record
+      Nam : AnsiString;          // Function name
       Fil : LongWord;            // File number
       Lin : LongWord;            // Line number
       Num : LongWord;            // Number of expressions
       Exp : Array of PExpr;      // Array of expressions
       Arg : Array of AnsiString; // Argument name array
+      Stv : Array of TStaticVar  // Static-vars array
    end;
 
 Procedure FreeToken(Const T:PToken);
@@ -122,7 +129,10 @@ Procedure FreeProc(Var P:TProc);
       If (Length(P.Exp)>0) then
          For C:=Low(P.Exp) to High(P.Exp) do
             FreeExpr(P.Exp[C]);
-      {SetLength(P.Exp, 0); SetLength(P.Arg, 0)}
+      If (Length(P.Stv)>0) then
+         For C:=Low(P.Stv) to High(P.Stv) do
+            AnnihilateVal(P.Stv[C].Val);
+      {SetLength(P.Exp, 0); SetLength(P.Arg, 0); SetLength(P.Stv, 0);}
    end;
 
 end.
