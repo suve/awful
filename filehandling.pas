@@ -14,7 +14,7 @@ Procedure WriteFile(Var F:Text; Const Arg:PArrPVal; Idx:LongInt);
 
 
 implementation
-   uses SysUtils, Convert;
+   uses SysUtils, Convert, Values_Typecast;
 
 Function FillBuffer(Var TheFile:Text; Const Buff:PStr; Const Trim:Boolean):LongWord;
    Var P:LongWord;
@@ -101,6 +101,9 @@ Procedure WriteFile(Var F:Text; Const Arg:PArrPVal; Idx:LongInt);
                
                VT_UTF:
                   Arg^[Idx]^.Utf^.Print(F);
+               
+               VT_CHR:
+                  Write(F, GetRefdChar(Arg^[Idx]^.Chr));
                
                VT_ARR:
                   Write(F, 'array(',Arg^[Idx]^.Arr^.Count,')');

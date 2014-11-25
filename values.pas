@@ -17,22 +17,13 @@ Type
       VT_BOO,
       VT_INT, VT_HEX, VT_OCT, VT_BIN,
       VT_FLO,
-      VT_STR, VT_UTF,
+      VT_STR, VT_UTF, VT_CHR,
       VT_ARR, VT_DIC,
       VT_FIL
    );
 
 Const
    VT_LOG = VT_BOO; VT_DICT = VT_DIC;
-
-Type
-   PFileHandle = ^TFileHandle;
-   TFileHandle = record
-      Fil : System.Text;
-      arw : Char;
-      Pth : AnsiString;
-      Buf : AnsiString
-   end;
 
 Type
    PValue = ^TValue;
@@ -43,7 +34,21 @@ Type
    PFloat = ^TFloat;
    PArray = ^TArray;
    PDict = ^TDict;
-     
+   PCharRef = ^TCharRef;
+   PFileHandle = ^TFileHandle;
+   
+   TFileHandle = record
+      Fil : System.Text;
+      arw : Char;
+      Pth : AnsiString;
+      Buf : AnsiString
+   end;
+
+   TCharRef = record
+      Val : PValue;
+      Idx : LongInt
+   end;
+
    TValue = record
       Lev : LongWord;
       Case Typ : TValueType of
@@ -53,12 +58,12 @@ Type
          VT_FLO: (Flo : PFloat);
          VT_STR: (Str : PStr);
          VT_UTF: (Utf : PUTF);
+         VT_CHR: (Chr : PCharRef);
          VT_ARR: (Arr : PArray);
          VT_DIC: (Dic : PDict);
          VT_FIL: (Fil : PFileHandle)
    end;
-     
-     
+   
    QInt = Int64;
    TStr = AnsiString;
    TUTF = TUTF8String;
@@ -74,7 +79,7 @@ Type
    
    TArrPVal = Array of PValue;
    PArrPVal = ^TArrPVal;
-   
+// --- type
 
 Procedure FreeVal(Const Val:PValue);
 Procedure DestroyVal(Const Val:PValue);
@@ -111,6 +116,7 @@ Procedure SpareVars_Destroy();
 
 
 implementation
+   uses Values_Typecast;
 
 Const
    SpareVarsPerType = SizeOf(NativeInt)*8;
@@ -140,6 +146,7 @@ Function CreateVal(Const T:TValueType):PValue;
             VT_FLO: New(Result^.Flo);
             VT_BOO: New(Result^.Boo);
             VT_STR: New(Result^.Str);
+            VT_CHR: New(Result^.Chr);
             VT_UTF: New(Result^.Utf, Create());
             VT_ARR: New(Result^.Arr, Create());
             VT_DIC: New(Result^.Dic, Create());
@@ -161,6 +168,7 @@ Procedure DestroyVal_INLINE(Const Val:PValue); Inline;
          VT_BOO: Dispose(Val^.Boo);
          VT_STR: Dispose(Val^.Str);
          VT_UTF: Dispose(Val^.Utf, Destroy());
+         VT_CHR: Dispose(Val^.Chr);
          VT_ARR: begin Val^.Arr^.Purge(@FreeIfTemp); Dispose(Val^.Arr, Destroy()) end;
          VT_DIC: begin Val^.Dic^.Purge(@FreeIfTemp); Dispose(Val^.Dic, Destroy()) end;
       end;
@@ -195,6 +203,7 @@ Procedure AnnihilateVal(Const Val:PValue);
          VT_BOO: Dispose(Val^.Boo);
          VT_STR: Dispose(Val^.Str);
          VT_UTF: Dispose(Val^.Utf, Destroy());
+         VT_CHR: Dispose(Val^.Chr);
          VT_ARR: begin Val^.Arr^.Purge(@AnnihilateIfTemp); Dispose(Val^.Arr, Destroy()) end;
          VT_DIC: begin Val^.Dic^.Purge(@AnnihilateIfTemp); Dispose(Val^.Dic, Destroy()) end;
       end;
@@ -213,6 +222,10 @@ Function EmptyVal(Const T:TValueType):PValue;
             Result^.Str^:='';
          VT_UTF:
             Result^.Utf^.Clear();
+         VT_CHR:
+            begin // Disallow creating VT_CHR
+               FreeVal(Result); Result := EmptyVal(VT_STR)
+            end;
          VT_BOO:
             Result^.Boo^:=False;
          VT_FIL:
@@ -259,6 +272,16 @@ Function  CopyVal(Const V:PValue;Const Lv:LongWord):PValue;
             Result^.Str^ := V^.Str^;
          VT_UTF:
             Result^.Utf^.SetTo(V^.Utf);
+         VT_CHR:
+            begin (* Do not copy the VT_CHR.                                          *
+                   * Instead, make a VT_STR/VT_UTF and put the referenched char inside. *)
+               FreeVal(Result);
+               If(V^.Chr^.Val^.Typ = VT_UTF)
+                  then Result := NewVal(VT_UTF, GetRefdChar(V))
+                  else Result := NewVal(VT_STR, GetRefdChar(V));
+               Result^.Lev:=Lv;
+               FreeIfTemp(V)
+            end;
          VT_BOO:
             Result^.Boo^ := V^.Boo^;
          VT_ARR:
@@ -337,10 +360,14 @@ Function NewVal(Const T:TValueType; Const V:TBool):PValue;
 
 Function NewVal(Const T:TValueType; Const V:TStr):PValue;
    begin
-      Result:=CreateVal(T); Result^.Lev:=CurLev;
-      If (T = VT_STR)
-         then Result^.Str^:=V
-         else Result^.Utf^.SetTo(V);
+      If (T = VT_UTF) then begin
+         Result:=CreateVal(VT_UTF); 
+         Result^.Utf^.SetTo(V)
+      end else begin
+         Result:=CreateVal(VT_STR); 
+         Result^.Str^:=V
+      end;
+      Result^.Lev:=CurLev;
    end;
 
 Function NewVal(Const T:TValueType):PValue;

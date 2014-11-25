@@ -12,6 +12,9 @@ Function F_And(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_Xor(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_Or(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
+Function F_Shl(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_Shr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+
 Function F_ExtractBits(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 
@@ -20,10 +23,12 @@ implementation
 
 Procedure Register(Const FT:PFunTrie);
    begin
-      FT^.SetVal('bwnot',MkFunc(@F_not));    FT^.SetVal('b!',MkFunc(@F_Not));
-      FT^.SetVal('bwand',MkFunc(@F_and));    FT^.SetVal('b&',MkFunc(@F_and));
-      FT^.SetVal('bwxor',MkFunc(@F_xor));    FT^.SetVal('b^',MkFunc(@F_xor));
-      FT^.SetVal('bwor' ,MkFunc(@F_or));     FT^.SetVal('b?',MkFunc(@F_or));
+      FT^.SetVal('bwnot',MkFunc(@F_not));    FT^.SetVal('b!' ,MkFunc(@F_Not));
+      FT^.SetVal('bwand',MkFunc(@F_and));    FT^.SetVal('b&' ,MkFunc(@F_and));
+      FT^.SetVal('bwxor',MkFunc(@F_xor));    FT^.SetVal('b^' ,MkFunc(@F_xor));
+      FT^.SetVal('bwor' ,MkFunc(@F_or));     FT^.SetVal('b?' ,MkFunc(@F_or));
+      FT^.SetVal('shl'  ,MkFunc(@F_shl));    FT^.SetVal('b<<',MkFunc(@F_shl));
+      FT^.SetVal('shr'  ,MkFunc(@F_shr));    FT^.SetVal('b>>',MkFunc(@F_shr));
       FT^.SetVal('extract-bits' ,MkFunc(@F_ExtractBits))
    end;
 
@@ -83,6 +88,11 @@ Function F_Xor(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_Or(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_Bitwise(DoReturn, Arg, @ValOr)) end;
 
+Function F_Shl(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   begin Exit(F_Bitwise(DoReturn, Arg, @ValShl)) end;
+
+Function F_Shr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   begin Exit(F_Bitwise(DoReturn, Arg, @ValShr)) end;
 
 Function F_ExtractBits(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var B,OffB,OffA:LongWord; 

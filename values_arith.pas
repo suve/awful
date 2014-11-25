@@ -14,7 +14,7 @@ Procedure ValMod(Const A,B:PValue);
 Procedure ValPow(Const A,B:PValue);
 
 implementation
-   uses SysUtils, Math, Convert;
+   uses SysUtils, Math, Convert, Values_Typecast;
 
 Procedure ValSet_ArrDict(Const A,B:PValue);
    Var AEntA,BEntA:TArray.TEntryArr;
@@ -167,6 +167,46 @@ Procedure ValArith_ArrDict(Const Proc:TArithProc; Const A,B:PValue);
       end end
    end end;
 
+Procedure ValSet_Chr(Const Ch:PCharRef;Const V:PValue);
+   Var Len : LongInt; Nstr:TStr;
+   begin
+      // Index 0 is always invalid
+      If(Ch^.Idx = 0) then Exit;
+      
+      // Retrieve referenced value stringlen (or abort if not a string)
+      If(Ch^.Val^.Typ = VT_STR)
+         then Len := Length(Ch^.Val^.Str^)
+      else If(Ch^.Val^.Typ = VT_UTF)
+         then Len := Ch^.Val^.Utf^.Len
+      else Exit;
+      
+      // Check if index within bounds
+      If(Ch^.Idx > 0) then begin
+         If(Ch^.Idx > Len) then Exit;
+         Len := Ch^.Idx
+      end else begin
+         Len := Len + 1 + Ch^.Idx;
+         If(Len < 1) then Exit
+      end;
+      
+      // Modify referenced character
+      If(Ch^.Val^.Typ = VT_STR) then begin
+         Nstr := ValAsStr(V);
+         If(Length(Nstr) > 0)
+            then Ch^.Val^.Str^[Len] := Nstr[1]
+      end else begin
+         // For UTF-8 strings, we want to copy whole codepoint istead of just first byte
+         If(V^.Typ = VT_UTF) then begin
+            If(V^.Utf^.Len > 0)
+               then Ch^.Val^.Utf^.Char[Len] := V^.Utf^.Char[Len]
+         end else begin
+            Nstr := ValAsStr(V);
+            If(Length(Nstr) > 0)
+               then Ch^.Val^.Utf^.Char[Len] := Nstr[1]
+         end
+      end
+   end;
+
 Procedure ValSet(Const A,B:PValue);
    begin
    Case (A^.Typ) of
@@ -180,6 +220,8 @@ Procedure ValSet(Const A,B:PValue);
                A^.Int^:=StrToNum(B^.Str^,A^.Typ);
             VT_UTF:
                A^.Int^:=B^.Utf^.ToInt(IntBase(A^.Typ));
+            VT_CHR:
+               A^.Int^:=StrToNum(GetRefdChar(B^.Chr),A^.Typ);
             VT_ARR:
                A^.Int^:=PArray(B^.Ptr)^.Count;
             VT_DIC:
@@ -199,6 +241,8 @@ Procedure ValSet(Const A,B:PValue);
                A^.Flo^:=StrToReal(B^.Str^);
             VT_UTF:
                A^.Flo^:=B^.Utf^.ToFloat();
+            VT_CHR:
+               A^.Flo^:=StrToReal(GetRefdChar(B^.Chr));
             VT_ARR:
                A^.Flo^:=B^.Arr^.Count;
             VT_DIC:
@@ -224,6 +268,8 @@ Procedure ValSet(Const A,B:PValue);
                A^.Str^:=B^.Str^;
             VT_UTF:
                A^.Str^:=B^.Utf^.ToAnsiString();
+            VT_CHR:
+               A^.Str^:=GetRefdChar(B^.Chr);
             VT_ARR:
                A^.Str^:=IntToStr(B^.Arr^.Count);
             VT_DIC:
@@ -249,6 +295,8 @@ Procedure ValSet(Const A,B:PValue);
                A^.Utf^.SetTo(B^.Str^);
             VT_UTF:
                A^.Utf^.SetTo(B^.Utf);
+            VT_CHR:
+               A^.Utf^.SetTo(GetRefdChar(B^.Chr));
             VT_ARR:
                A^.Utf^.SetTo(IntToStr(B^.Arr^.Count));
             VT_DIC:
@@ -258,6 +306,7 @@ Procedure ValSet(Const A,B:PValue);
             else
                A^.Utf^.Clear()
          end;
+      VT_CHR: ValSet_Chr(A^.Chr,B);
       VT_BOO: 
          Case (B^.Typ) of 
             VT_INT .. VT_BIN: 
@@ -268,6 +317,8 @@ Procedure ValSet(Const A,B:PValue);
                A^.Boo^:=StrToBoolDef(B^.Str^,FALSE);
             VT_UTF:
                A^.Boo^:=StrToBoolDef(B^.Utf^.ToAnsiString(),FALSE);
+            VT_CHR:
+               A^.Boo^:=StrToBoolDef(GetRefdChar(B^.Chr),FALSE);
             VT_ARR:
                A^.Boo^:=(Not B^.Arr^.Empty);
             VT_DIC:
@@ -297,6 +348,8 @@ Procedure ValAdd(Const A,B:PValue);
                A^.Int^+=StrToNum(B^.Str^,A^.Typ);
             VT_UTF:
                A^.Int^+=B^.Utf^.ToInt(IntBase(A^.Typ));
+            VT_CHR:
+               A^.Int^+=StrToNum(GetRefdChar(B^.Chr),A^.Typ);
             VT_BOO:
                If B^.Boo^ then A^.Int^+=1;
             VT_ARR:
@@ -314,6 +367,8 @@ Procedure ValAdd(Const A,B:PValue);
                A^.Flo^+=StrToReal(B^.Str^);
             VT_UTF:
                A^.Flo^+=B^.Utf^.ToFloat();
+            VT_CHR:
+               A^.Flo^+=StrToReal(GetRefdChar(B^.Chr));
             VT_BOO:
                If B^.Boo^ then A^.Flo^+=1;
             VT_ARR:
@@ -337,6 +392,8 @@ Procedure ValAdd(Const A,B:PValue);
                A^.Str^+=B^.Str^;
             VT_UTF:
                A^.Str^+=B^.Utf^.ToAnsiString();
+            VT_CHR:
+               A^.Str^+=GetRefdChar(B^.Chr);
             VT_BOO:
                If B^.Boo^ then A^.Str^+='TRUE' else A^.Str^+='FALSE'
          end;
@@ -356,6 +413,8 @@ Procedure ValAdd(Const A,B:PValue);
                A^.Utf^.Append(B^.Str^);
             VT_UTF:
                A^.Utf^.Append(B^.Utf);
+            VT_CHR:
+               A^.Utf^.Append(GetRefdChar(B^.Chr));
             VT_ARR:
                A^.Utf^.Append(IntToStr(B^.Arr^.Count));
             VT_DIC:
@@ -373,6 +432,8 @@ Procedure ValAdd(Const A,B:PValue);
                A^.Boo^:=A^.Boo^ or StrToBoolDef(B^.Str^,FALSE);
             VT_UTF:
                A^.Boo^:=A^.Boo^ or StrToBoolDef(B^.Utf^.ToAnsiString(),FALSE);
+            VT_CHR:
+               A^.Boo^:=A^.Boo^ or StrToBoolDef(GetRefdChar(B^.Chr),FALSE);
             VT_BOO:
                A^.Boo^:=A^.Boo^ or B^.Boo^;
             VT_ARR:
@@ -398,6 +459,8 @@ Procedure ValSub(Const A,B:PValue);
                A^.Int^-=StrToNum(B^.Str^,A^.Typ);
             VT_UTF:
                A^.Int^-=B^.Utf^.ToInt(IntBase(A^.Typ));
+            VT_CHR:
+               A^.Int^-=StrToNum(GetRefdChar(B^.Chr),A^.Typ);
             VT_BOO:
                If B^.Boo^ then A^.Int^-=1;
             VT_ARR:
@@ -415,6 +478,8 @@ Procedure ValSub(Const A,B:PValue);
                A^.Flo^-=StrToReal(B^.Str^);
             VT_UTF:
                A^.Flo^-=B^.Utf^.ToFloat();
+            VT_CHR:
+               A^.Flo^-=StrToReal(GetRefdChar(B^.Chr));
             VT_BOO:
                If B^.Boo^ then A^.Flo^-=1;
             VT_ARR:
@@ -432,6 +497,8 @@ Procedure ValSub(Const A,B:PValue);
                A^.Boo^:=A^.Boo^ xor StrToBoolDef(B^.Str^,FALSE);
             VT_UTF:
                A^.Boo^:=A^.Boo^ xor StrToBoolDef(B^.Utf^.ToAnsiString,FALSE);
+            VT_CHR:
+               A^.Boo^:=A^.Boo^ xor StrToBoolDef(GetRefdChar(B^.Chr),FALSE);
             VT_BOO:
                A^.Boo^:=A^.Boo^ xor B^.Boo^;
             VT_ARR:
@@ -458,6 +525,8 @@ Procedure ValMul(Const A,B:PValue);
                A^.Int^*=StrToNum(B^.Str^,A^.Typ);
             VT_UTF:
                A^.Int^*=B^.Utf^.ToInt(IntBase(A^.Typ));
+            VT_CHR:
+               A^.Int^*=StrToNum(GetRefdChar(B^.Chr),A^.Typ);
             VT_BOO:
                If (Not B^.Boo^) then A^.Int^:=0;
             VT_ARR:
@@ -477,6 +546,8 @@ Procedure ValMul(Const A,B:PValue);
                A^.Flo^*=StrToReal(B^.Str^);
             VT_UTF:
                A^.Flo^*=B^.Utf^.ToFloat();
+            VT_CHR:
+               A^.Flo^*=StrToReal(GetRefdChar(B^.Chr));
             VT_BOO:
                If (Not B^.Boo^) then A^.Flo^:=0.0;
             VT_ARR:
@@ -496,6 +567,8 @@ Procedure ValMul(Const A,B:PValue);
             VT_STR:
                Exit();
             VT_UTF:
+               Exit();
+            VT_CHR:
                Exit();
             VT_BOO:
                T:=BoolToInt(B^.Boo^);
@@ -521,6 +594,8 @@ Procedure ValMul(Const A,B:PValue);
                Exit();
             VT_UTF:
                Exit();
+            VT_CHR:
+               Exit();
             VT_BOO:
                T:=BoolToInt(B^.Boo^);
             VT_ARR:
@@ -543,6 +618,8 @@ Procedure ValMul(Const A,B:PValue);
                A^.Boo^:=A^.Boo^ and StrToBoolDef(B^.Str^,FALSE);
             VT_UTF:
                A^.Boo^:=A^.Boo^ and StrToBoolDef(B^.Utf^.ToAnsiString,FALSE);
+            VT_CHR:
+               A^.Boo^:=A^.Boo^ and StrToBoolDef(GetRefdChar(B^.Chr),FALSE);
             VT_BOO:
                A^.Boo^:=A^.Boo^ and B^.Boo^;
             VT_ARR:
@@ -561,59 +638,89 @@ Procedure ValDiv(Const A,B:PValue);
    Case (A^.Typ) of
       VT_INT .. VT_BIN:
          Case (B^.Typ) of
+            
             VT_INT .. VT_BIN: 
-               If (B^.Int^<>0) then A^.Int^:=A^.Int^ div B^.Int^
-                               else A^.Int^:=0;
+               If (B^.Int^<>0)
+                  then A^.Int^:=A^.Int^ div B^.Int^
+                  else A^.Int^:=0;
+            
             VT_FLO:
-               If (B^.Flo^<>0.0) then A^.Int^:=Trunc(A^.Int^/B^.Flo^)
-                                else A^.Int^:=0;
-            VT_STR:
-               begin
+               If (B^.Flo^<>0.0)
+                  then A^.Int^:=Trunc(A^.Int^/B^.Flo^)
+                  else A^.Int^:=0;
+            
+            VT_STR: begin
                tI:=StrToNum(B^.Str^,A^.Typ);
                If (tI<>0) then A^.Int^:=(A^.Int^ div tI) else A^.Int^:=0
-               end;
-            VT_UTF:
-               begin
+            end;
+            
+            VT_UTF: begin
                tI:=B^.Utf^.ToInt(IntBase(A^.Typ));
                If (tI<>0) then A^.Int^:=(A^.Int^ div tI) else A^.Int^:=0
-               end;
+            end;
+            
+            VT_CHR: begin
+               tI:=StrToNum(GetRefdChar(B^.Chr),A^.Typ);
+               If (tI<>0) then A^.Int^:=(A^.Int^ div tI) else A^.Int^:=0
+            end;
+            
             VT_BOO:
                If (Not B^.Boo^) then A^.Int^:=0;
+               
             VT_ARR:
-               If (Not B^.Arr^.Empty) then A^.Int^:=A^.Int^ div B^.Arr^.Count
-                                      else A^.Int^:=0;
+               If (Not B^.Arr^.Empty)
+                  then A^.Int^:=A^.Int^ div B^.Arr^.Count
+                  else A^.Int^:=0;
+            
             VT_DIC:
-               If (Not B^.Dic^.Empty) then A^.Int^:=A^.Int^ div B^.Dic^.Count
-                                      else A^.Int^:=0;
+               If (Not B^.Dic^.Empty)
+                  then A^.Int^:=A^.Int^ div B^.Dic^.Count
+                  else A^.Int^:=0;
+            
             else
                A^.Int^:=0
          end;
       VT_FLO:
          Case (B^.Typ) of
+         
             VT_INT .. VT_BIN: 
-               If (B^.Int^<>0) then A^.Flo^/=B^.Int^
-                               else A^.Flo^:=0.0;
+               If (B^.Int^<>0)
+                  then A^.Flo^/=B^.Int^
+                  else A^.Flo^:=0.0;
+            
             VT_FLO:
-               If (B^.Flo^<>0.0) then A^.Flo^/=B^.Flo^
-                                 else A^.Flo^:=0.0;
-            VT_STR:
-               begin
+               If (B^.Flo^<>0.0)
+                  then A^.Flo^/=B^.Flo^
+                  else A^.Flo^:=0.0;
+            
+            VT_STR: begin
                tF:=StrToReal(B^.Str^);
                If (tF<>0.0) then A^.Flo^/=tF else A^.Flo^:=0.0
-               end;
-            VT_UTF:
-               begin
+            end;
+            
+            VT_UTF: begin
                tF:=B^.Utf^.ToFloat();
                If (tF<>0.0) then A^.Flo^/=tF else A^.Flo^:=0.0
-               end;
+            end;
+            
+            VT_CHR: begin
+               tF:=StrToReal(GetRefdChar(B^.Chr));
+               If (tF<>0.0) then A^.Flo^/=tF else A^.Flo^:=0.0
+            end;
+            
             VT_BOO:
                If (Not B^.Boo^) then A^.Flo^:=0.0;
+            
             VT_ARR:
-               If (Not B^.Arr^.Empty) then A^.Flo^/=B^.Arr^.Count
-                                      else A^.Flo^:=0;
+               If (Not B^.Arr^.Empty)
+                  then A^.Flo^/=B^.Arr^.Count
+                  else A^.Flo^:=0;
+            
             VT_DIC:
-               If (Not B^.Dic^.Empty) then A^.Flo^/=B^.Dic^.Count
-                                      else A^.Flo^:=0;
+               If (Not B^.Dic^.Empty)
+                  then A^.Flo^/=B^.Dic^.Count
+                   else A^.Flo^:=0;
+            
             else
                A^.Flo^:=0.0
          end;
@@ -627,6 +734,8 @@ Procedure ValDiv(Const A,B:PValue);
                A^.Boo^:=A^.Boo^ xor StrToBoolDef(B^.Str^,FALSE);
             VT_UTF:
                A^.Boo^:=A^.Boo^ xor StrToBoolDef(B^.Utf^.ToAnsiString(),FALSE);
+            VT_CHR:
+               A^.Boo^:=A^.Boo^ xor StrToBoolDef(GetRefdChar(B^.Chr),FALSE);
             VT_BOO:
                A^.Boo^:=A^.Boo^ xor B^.Boo^;
             VT_ARR:
@@ -657,12 +766,17 @@ Procedure ValMod(Const A,B:PValue);
                tI:=StrToNum(B^.Str^,A^.Typ);
                If (tI <> 0) then A^.Int^:=A^.Int^ mod tI
                             else A^.Int^:=0
-               end;
+            end;
             VT_UTF: begin
                tI:=B^.Utf^.ToInt(IntBase(A^.Typ));
                If (tI <> 0) then A^.Int^:=A^.Int^ mod tI
                             else A^.Int^:=0
-               end;
+            end;
+            VT_CHR: begin
+               tI:=StrToNum(GetRefdChar(B^.Chr),A^.Typ);
+               If (tI <> 0) then A^.Int^:=A^.Int^ mod tI
+                            else A^.Int^:=0
+            end;
             VT_ARR:
                If (Not B^.Arr^.Empty)
                   then A^.Int^:=A^.Int^ mod B^.Arr^.Count
@@ -684,18 +798,21 @@ Procedure ValMod(Const A,B:PValue);
                If (B^.Flo^ <> 0.0)
                   then A^.Flo^:=A^.Flo^ - (Trunc(A^.Flo^ / B^.Flo^)*B^.Flo^)
                   else A^.Flo^:=0.0;
-            VT_STR:
-               begin
+            VT_STR: begin
                tF:=StrToReal(B^.Str^);
                If (tF <> 0.0) then A^.Flo^:=A^.Flo^ - (Trunc(A^.Flo^ / tF) * tF)
                               else A^.Flo^:=0.0
-               end;
-            VT_UTF:
-               begin
+            end;
+            VT_UTF: begin
                tF:=B^.Utf^.ToFloat();
                If (tF <> 0.0) then A^.Flo^:=A^.Flo^ - (Trunc(A^.Flo^ / tF) * tF)
                               else A^.Flo^:=0.0
-               end;
+            end;
+            VT_CHR: begin
+               tF:=StrToReal(GetRefdChar(B^.Chr));
+               If (tF <> 0.0) then A^.Flo^:=A^.Flo^ - (Trunc(A^.Flo^ / tF) * tF)
+                              else A^.Flo^:=0.0
+            end;
             VT_ARR:
                If (Not B^.Arr^.Empty)
                   then A^.Flo^:=A^.Flo^ - (Trunc(A^.Flo^ / B^.Arr^.Count)*B^.Arr^.Count)
@@ -725,6 +842,8 @@ Procedure ValPow(Const A,B:PValue);
                A^.Int^:=Trunc(IntPower(A^.Int^, StrToNum(B^.Str^,A^.Typ)));
             VT_UTF:
                A^.Int^:=Trunc(IntPower(A^.Int^, B^.Utf^.ToInt(IntBase(A^.Typ))));
+            VT_CHR:
+               A^.Int^:=Trunc(IntPower(A^.Int^, StrToNum(GetRefdChar(B^.Chr),A^.Typ)));
             VT_BOO:
                If (Not B^.Boo^) then A^.Int^:=1;
             VT_ARR:
@@ -744,6 +863,8 @@ Procedure ValPow(Const A,B:PValue);
                A^.Flo^:=Power(A^.Flo^, StrToReal(B^.Str^));
             VT_UTF:
                A^.Flo^:=Power(A^.Flo^, B^.Utf^.ToFloat());
+            VT_CHR:
+               A^.Flo^:=Power(A^.Flo^, StrToReal(GetRefdChar(B^.Chr)));
             VT_BOO:
                If (Not B^.Boo^) then A^.Flo^:=1.0;
             VT_ARR:

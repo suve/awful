@@ -21,18 +21,20 @@ Procedure Register(Const FT:PFunTrie);
       SetFuncInfo(FuncInfo_NIL, @F_, REF_CONST)
    end;
 
-(* Empty function that does nothing apart from freeing its argument.         *
- * If return value is needed, returns NilVal.                                *
+(* Empty function that does nothing apart from freeing its arguments.        *
+ * If return value is needed, returns NilVal().                              *
  *                                                                           *
  * Used quite often by other functions to free args without much keytapping. *)
 Function F_(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   Var C:LongWord;
+   Var C:LongInt;
    begin
-      If (Length(Arg^) > 0) then
-         For C:=Low(Arg^) to High(Arg^) do
-            FreeIfTemp(Arg^[C]);
-
-      If (DoReturn) then Exit(NilVal) else Exit(NIL)
+      (* Low index is always 0, so no need for Low(Arg^).                       *
+       * For empty arrays, High() is returned as -1.                            *
+       * While this would cause an infinite loop when using unsigned variables, *
+       * using a signed counter will prevent entering the loop for empty arrs.  *)
+      For C:=0 to High(Arg^) do FreeIfTemp(Arg^[C]);
+      
+      If (DoReturn) then Exit(NilVal()) else Exit(NIL)
    end;
 
 end.

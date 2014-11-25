@@ -3,7 +3,21 @@ unit values_typecast;
 {$INCLUDE defines.inc}
 
 interface
-   uses Values;
+   uses UnicodeStrings, Values;
+
+Function IsType(Const V:PValue;Const T:TValueType):Boolean; Inline;
+Function IsNil(Const V:PValue):Boolean; Inline;
+Function IsBin(Const V:PValue):Boolean; Inline;
+Function IsOct(Const V:PValue):Boolean; Inline;
+Function IsInt(Const V:PValue):Boolean; Inline;
+Function IsHex(Const V:PValue):Boolean; Inline;
+Function IsFlo(Const V:PValue):Boolean; Inline;
+Function IsBoo(Const V:PValue):Boolean; Inline;
+Function IsStr(Const V:PValue):Boolean; Inline;
+Function IsUtf(Const V:PValue):Boolean; Inline;
+Function IsArr(Const V:PValue):Boolean; Inline;
+Function IsDic(Const V:PValue):Boolean; Inline;
+Function IsFil(Const V:PValue):Boolean; Inline;
 
 Function ValAsBin(Const V:PValue):QInt;
 Function ValAsOct(Const V:PValue):QInt;
@@ -22,9 +36,52 @@ Function ValToBoo(Const V:PValue):PValue;
 Function ValToStr(Const V:PValue):PValue;
 Function ValToUTF(Const V:PValue):PValue;
 
+Function GetRefdChar(Const CR:PCharRef):TUTF8Char;
+Function GetRefdChar(Const V:PValue):TUTF8Char; Inline;
+
 
 implementation
    uses SysUtils, Convert;
+
+
+Function IsType(Const V:PValue;Const T:TValueType):Boolean; Inline;
+   begin Exit(V^.Typ = T) end;
+
+Function IsNil(Const V:PValue):Boolean; Inline;
+   begin Exit(V^.Typ = VT_NIL) end;
+
+Function IsBin(Const V:PValue):Boolean; Inline;
+   begin Exit(V^.Typ = VT_BIN) end;
+
+Function IsOct(Const V:PValue):Boolean; Inline;
+   begin Exit(V^.Typ = VT_OCT) end;
+
+Function IsInt(Const V:PValue):Boolean; Inline;
+   begin Exit(V^.Typ = VT_INT) end;
+
+Function IsHex(Const V:PValue):Boolean; Inline;
+   begin Exit(V^.Typ = VT_HEX) end;
+
+Function IsFlo(Const V:PValue):Boolean; Inline;
+   begin Exit(V^.Typ = VT_FLO) end;
+
+Function IsBoo(Const V:PValue):Boolean; Inline;
+   begin Exit(V^.Typ = VT_BOO) end;
+
+Function IsStr(Const V:PValue):Boolean; Inline;
+   begin Exit(V^.Typ = VT_STR) end;
+
+Function IsUtf(Const V:PValue):Boolean; Inline;
+   begin Exit(V^.Typ = VT_UTF) end;
+
+Function IsArr(Const V:PValue):Boolean; Inline;
+   begin Exit(V^.Typ = VT_ARR) end;
+
+Function IsDic(Const V:PValue):Boolean; Inline;
+   begin Exit(V^.Typ = VT_DIC) end;
+
+Function IsFil(Const V:PValue):Boolean; Inline;
+   begin Exit(V^.Typ = VT_FIL) end;
 
 Function ValAsInt(Const V:PValue):QInt;
    begin
@@ -44,6 +101,9 @@ Function ValAsInt(Const V:PValue):QInt;
          
          VT_UTF:
             Exit(V^.Utf^.ToInt(10));
+         
+         VT_CHR:
+            Exit(StrToInt(GetRefdChar(V^.Chr)));
          
          VT_ARR:
             Exit(V^.Arr^.Count);
@@ -76,6 +136,9 @@ Function ValAsHex(Const V:PValue):QInt;
             
          VT_UTF: 
             Exit(V^.Utf^.ToInt(16));
+         
+         VT_CHR:
+            Exit(StrToHex(GetRefdChar(V^.Chr)));
             
          VT_ARR: 
             Exit(V^.Arr^.Count);
@@ -109,6 +172,9 @@ Function ValAsOct(Const V:PValue):QInt;
          VT_UTF:
             Exit(V^.Utf^.ToInt(8));
          
+         VT_CHR:
+            Exit(StrToOct(GetRefdChar(V^.Chr)));
+         
          VT_ARR:
             Exit(V^.Arr^.Count);
          
@@ -140,6 +206,9 @@ Function ValAsBin(Const V:PValue):QInt;
          
          VT_UTF: 
             Exit(V^.Utf^.ToInt(2));
+         
+         VT_CHR:
+            Exit(StrToBin(GetRefdChar(V^.Chr)));
          
          VT_ARR: 
             Exit(V^.Arr^.Count);
@@ -173,6 +242,9 @@ Function ValAsFlo(Const V:PValue):TFloat;
          VT_UTF: 
             Exit(V^.Utf^.ToFloat());
          
+         VT_CHR:
+            Exit(StrToReal(GetRefdChar(V^.Chr)));
+         
          VT_ARR: 
             Exit(V^.Arr^.Count);
          
@@ -204,6 +276,9 @@ Function ValAsBoo(Const V:PValue):TBool;
          
          VT_UTF: 
             Exit(StrToBoolDef(V^.Utf^.ToAnsiString,FALSE));
+         
+         VT_CHR:
+            Exit(StrToBoolDef(GetRefdChar(V^.Chr), FALSE));
          
          VT_ARR: 
             Exit(Not V^.Arr^.Empty());
@@ -247,6 +322,9 @@ Function ValAsStr(Const V:PValue):TStr;
          
          VT_UTF: 
             Exit(V^.Utf^.ToAnsiString);
+         
+         VT_CHR:
+            Exit(GetRefdChar(V^.Chr));
          
          VT_ARR:
             Exit('array('+IntToStr(V^.Arr^.Count)+')');
@@ -308,5 +386,32 @@ Function ValToUTF(Const V:PValue):PValue;
       Result:=CreateVal(VT_UTF); Result^.Lev:=CurLev;
       Result^.Utf^.SetTo(ValAsStr(V))
    end;
+
+Function GetRefdChar(Const CR:PCharRef):TUTF8Char;
+   begin
+      If(CR^.Idx = 0) then Exit('');
+      If(CR^.Val^.Typ = VT_STR) then begin
+         If(CR^.Idx > 0) then begin
+            If(CR^.Idx > Length(CR^.Val^.Str^)) then Exit('');
+            Exit(CR^.Val^.Str^[CR^.Idx])
+         end else begin
+            If(-CR^.Idx > Length(CR^.Val^.Str^)) then Exit('');
+            Exit(CR^.Val^.Str^[Length(CR^.Val^.Str^) + 1 + CR^.Idx])
+         end
+      end else
+      If(CR^.Val^.Typ = VT_UTF) then begin
+         If(CR^.Idx > 0) then begin
+            If(CR^.Idx > CR^.Val^.Utf^.Len) then Exit('');
+            Exit(CR^.Val^.Utf^.Char[CR^.Idx])
+         end else begin
+            If(-CR^.Idx > CR^.Val^.Utf^.Len) then Exit('');
+            Exit(CR^.Val^.Utf^.Char[CR^.Val^.Utf^.Len + 1 + CR^.Idx])
+         end
+      end else
+         Exit('')
+   end;
+
+Function GetRefdChar(Const V:PValue):TUTF8Char; Inline;
+   begin Exit(GetRefdChar(V^.Chr)) end;
 
 end.

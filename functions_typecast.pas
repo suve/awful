@@ -143,11 +143,15 @@ Type
    TValueTypeSet = Set of TValueType;
 
 Function F_isType(Const DoReturn:Boolean; Const Arg:PArrPVal; Const Tp:TValueTypeSet):PValue;
+   Var C:LongInt;
    begin
       If (Not DoReturn) then Exit(F_(False, Arg));
       If (Length(Arg^) > 0) then begin
-         Result := NewVal(VT_BOO, (Arg^[0]^.Typ in Tp));
-         F_(False, Arg)
+         Result := NewVal(VT_BOO, True);
+         For C:=Low(Arg^) to High(Arg^) do begin
+            Result^.Boo^ := Result^.Boo^ and (Arg^[C]^.Typ in Tp);
+            FreeIfTemp(Arg^[C])
+         end
       end else
          Result := NewVal(VT_BOO, False)
    end;

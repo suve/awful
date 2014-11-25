@@ -6,12 +6,17 @@ interface
    uses Values;
 
 Function ValNot(Const V:PValue):PValue;
+
 Function ValAnd(Const A,B:PValue):PValue;
 Function ValXor(Const A,B:PValue):PValue;
 Function ValOr(Const A,B:PValue):PValue;
 
+Function ValShl(Const A,B:PValue):PValue;
+Function ValShr(Const A,B:PValue):PValue;
+
+
 implementation
-   uses Convert, SysUtils;
+   uses Convert, SysUtils, Values_Typecast;
 
 Function ValNot(Const V:PValue):PValue;
    Var C:LongWord;
@@ -77,6 +82,30 @@ Function ValOr(Const A,B:PValue):PValue;
    
    {$INCLUDE values_bitwise-bitfunc.inc }
    
+   {$UNDEF __BITWISE__ }
+   {$UNDEF __BITFUNC__ }
+   end;
+
+Function ValShl(Const A,B:PValue):PValue;
+   {$DEFINE __BITFUNC__ := Values_Bitwise.ValShl }
+   {$DEFINE __BITWISE__ := shl }
+   {$DEFINE BOOL_FROM_INT}
+   
+   {$INCLUDE values_bitwise-bitfunc.inc }
+   
+   {$UNDEF BOOL_FROM_INT}
+   {$UNDEF __BITWISE__ }
+   {$UNDEF __BITFUNC__ }
+   end;
+
+Function ValShr(Const A,B:PValue):PValue;
+   {$DEFINE __BITFUNC__ := Values_Bitwise.ValShr }
+   {$DEFINE __BITWISE__ := shr }
+   {$DEFINE BOOL_FROM_INT}
+   
+   {$INCLUDE values_bitwise-bitfunc.inc }
+   
+   {$UNDEF BOOL_FROM_INT}
    {$UNDEF __BITWISE__ }
    {$UNDEF __BITFUNC__ }
    end;

@@ -100,66 +100,80 @@ Function Eval(Const Ret:Boolean; Const E:PExpr):PValue;
    Function GetArr(Const ArrV:PValue; Const Index:PToken; Const Typ:TValueType):PValue;
       Var C:LongWord; Fly:PValue; KeyStr : TStr; KeyInt : QInt;
       begin
-         If (ArrV^.Typ = VT_ARR) or (ArrV^.Typ = VT_DIC) then begin
-            Case (Index^.Typ) of
-               TK_EXPR:
-                  Result := Eval(RETURN_VALUE_YES, Index^.Exp);
-               
-               TK_CONS, TK_LITE:
-                  Result := Index^.Val;
-               
-               TK_VARI, TK_REFE:
-                  Result := GetVar(Index^.Nam, VT_INT);
-               
-               TK_AREF, TK_AVAL: begin
-                  Result:=GetVar(Index^.atk^.Nam, VT_INT);
-                  For C:=Low(Index^.atk^.Ind) to High(Index^.atk^.Ind) do
-                     Result:=GetArr(Result, Index^.atk^.Ind[C], VT_INT)
-               end;
-               
-               TK_AFLY: begin
-                  Fly:=Eval(RETURN_VALUE_YES, Index^.atk^.Exp);
-                  
-                  Result:=Fly;
-                  For C:=Low(Index^.atk^.Ind) to High(Index^.atk^.Ind) do
-                     Result:=GetArr(Result, Index^.atk^.Ind[C], Typ);
-                  
-                  Result:=CopyVal(Result);
-                  FreeVal(Fly)
-               end;
+         // Calculate the expression/token inside [brackets]
+         Case (Index^.Typ) of
+            TK_EXPR:
+               Result := Eval(RETURN_VALUE_YES, Index^.Exp);
+            
+            TK_CONS, TK_LITE:
+               Result := Index^.Val;
+            
+            TK_VARI, TK_REFE:
+               Result := GetVar(Index^.Nam, VT_INT);
+            
+            TK_AREF, TK_AVAL: begin
+               Result:=GetVar(Index^.atk^.Nam, VT_INT);
+               For C:=Low(Index^.atk^.Ind) to High(Index^.atk^.Ind) do
+                  Result:=GetArr(Result, Index^.atk^.Ind[C], VT_INT)
             end;
             
-            If (ArrV^.Typ = VT_ARR) then begin
-               If (Result^.Typ >= VT_INT) and (Result^.Typ <= VT_BIN)
-                  then KeyInt:=Result^.Int^
-                  else KeyInt:=ValAsInt(Result); 
-                  
-               If (Index^.Typ = TK_EXPR) then FreeVal(Result);
+            TK_AFLY: begin
+               Fly:=Eval(RETURN_VALUE_YES, Index^.atk^.Exp);
                
-               Result:=ArrV^.Arr^.GetVal(KeyInt);
-               If (Result = NIL) then begin
-                  Result:=EmptyVal(Typ); Result^.Lev := ArrV^.Lev;
-                  ArrV^.Arr^.SetVal(KeyInt, Result)
-               end
+               Result:=Fly;
+               For C:=Low(Index^.atk^.Ind) to High(Index^.atk^.Ind) do
+                  Result:=GetArr(Result, Index^.atk^.Ind[C], Typ);
                
-            end else begin
+               Result:=CopyVal(Result);
+               FreeVal(Fly)
+            end;
+         end;
+         
+         // Index ArrV - extract value from array (or insert new at unused key)
+         If (ArrV^.Typ = VT_ARR) then begin
+         
+            KeyInt:=ValAsInt(Result);
+            If (Index^.Typ = TK_EXPR) then FreeVal(Result);
             
-               If (Result^.Typ = VT_STR)
-                  then KeyStr:=Result^.Str^
-                  else KeyStr:=ValAsStr(Result); 
-                  
-               If (Index^.Typ = TK_EXPR) then FreeVal(Result);
-               
-               Result:=ArrV^.Dic^.GetVal(KeyStr);
-               If (Result = NIL) then begin
-                  Result:=EmptyVal(Typ); Result^.Lev := ArrV^.Lev;
-                  ArrV^.Dic^.SetVal(KeyStr, Result)
-               end
+            Result:=ArrV^.Arr^.GetVal(KeyInt);
+            If (Result = NIL) then begin
+               Result:=EmptyVal(Typ); Result^.Lev := ArrV^.Lev;
+               ArrV^.Arr^.SetVal(KeyInt, Result)
             end
+            
          end else
-         If (ArrV^.Typ = VT_NIL)
-            then Result:=ArrV
-            else Result:=NilVal()
+         // Index ArrV - extract value from dict (or insert new at unused key)
+         If(ArrV^.Typ = VT_DIC) then begin
+         
+            KeyStr:=ValAsStr(Result); 
+            If (Index^.Typ = TK_EXPR) then FreeVal(Result);
+            
+            Result:=ArrV^.Dic^.GetVal(KeyStr);
+            If (Result = NIL) then begin
+               Result:=EmptyVal(Typ); Result^.Lev := ArrV^.Lev;
+               ArrV^.Dic^.SetVal(KeyStr, Result)
+            end
+         
+         end else
+         // Index ArrV - create a string character reference
+         If(ArrV^.Typ in [VT_STR, VT_UTF]) then begin
+            
+            KeyInt:=ValAsInt(Result);
+            If (Index^.Typ = TK_EXPR) then FreeVal(Result);
+            
+            Result:=CreateVal(VT_CHR);
+            Result^.Lev := CurLev;
+            Result^.Chr^.Val := ArrV;
+            Result^.Chr^.Idx := KeyInt
+            
+         end else begin
+         // Value cannot be indexed. Free index PValue and return NilVal
+            If (Index^.Typ = TK_EXPR) then FreeVal(Result);
+            
+            If (ArrV^.Typ = VT_NIL)
+               then Result:=ArrV
+               else Result:=NilVal()
+         end
       end;
    
    Var T,I:LongInt; V:PValue; Tp:TValueType;

@@ -18,6 +18,7 @@ Function F_SetPrecision(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_HexCase(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 Function F_exec(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_const(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_getenv(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 Function F_sizeof(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
@@ -26,7 +27,7 @@ Function F_typeof(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 implementation
    uses  SysUtils, StrUtils, Math, Process, Classes,
-         EmptyFunc, CoreFunc, Globals,
+         EmptyFunc, CoreFunc, Globals, Parser,
          Convert, StringUtils, Values_Typecast;
 
 Procedure Register(Const FT:PFunTrie);
@@ -45,6 +46,7 @@ Procedure Register(Const FT:PFunTrie);
       // Stuff
       FT^.SetVal('fork',MkFunc(@F_fork));
       FT^.SetVal('exec',MkFunc(@F_exec));
+      FT^.SetVal('const',MkFunc(@F_const));
       FT^.SetVal('getenv',MkFunc(@F_getenv))
    end;
    
@@ -348,6 +350,25 @@ Function F_getenv(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
       end
    end;
 
+Function F_const(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   Var C:LongInt; DEA:TDict.TEntryArr;
+   begin
+      If (Not DoReturn) then Exit(F_(False, Arg));
+      
+      If (Length(Arg^) > 0) then begin
+         Result := Parser.Cons^.GetVal(ValAsStr(Arg^[0]));
+         If (Result <> NIL)
+            then Result := CopyVal(Result)
+            else Result := NilVal();
+         F_(False, Arg)
+      end else begin
+         Result := EmptyVal(VT_DIC);
+         DEA := Parser.Cons^.ToArray();
+         For C:=Low(DEA) to High(DEA) do
+            Result^.Dic^.SetVal(DEA[C].Key, CopyVal(DEA[C].Val))
+      end
+   end;
+
 Function F_sizeof(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin
       If (Not DoReturn) then Exit(F_(False, Arg));
@@ -366,12 +387,13 @@ Function F_sizeof(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
          'string': Result := NewVal(VT_INT, 8 * SizeOf(TStr));
            'utf8': Result := NewVal(VT_INT, 8 * SizeOf(TUTF));
           'utf-8': Result := NewVal(VT_INT, 8 * SizeOf(TUTF));
+         'chrref': Result := NewVal(VT_INT, 8 * SizeOf(TCharRef));
            'bool': Result := NewVal(VT_INT, 8 * SizeOf(TBool));
             'arr': Result := NewVal(VT_INT, 8 * SizeOf(TArray));
           'array': Result := NewVal(VT_INT, 8 * SizeOf(TArray));
            'dict': Result := NewVal(VT_INT, 8 * SizeOf(TDict));
            'file': Result := NewVal(VT_INT, 8 * SizeOf(TFileHandle));
-             else  Result := NewVal(VT_INT, 0)
+              else Result := NewVal(VT_INT, 0)
       end;
       F_(False, Arg) // Free args before leaving
    end;
@@ -392,6 +414,7 @@ Function F_typeof(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
          VT_FLO: Result := NewVal(VT_STR, 'float' );
          VT_STR: Result := NewVal(VT_STR, 'string');
          VT_UTF: Result := NewVal(VT_STR, 'utf8'  );
+         VT_CHR: Result := NewVal(VT_STR, 'chrref');
          VT_ARR: Result := NewVal(VT_STR, 'array' );
          VT_DIC: Result := NewVal(VT_STR, 'dict'  );
          VT_FIL: Result := NewVal(VT_STR, 'file'  );
