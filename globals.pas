@@ -11,7 +11,8 @@ const
    VBUGFX = '6-dev';
    VREVISION = 42;
    VERSION = VMAJOR + '.' + VMINOR + '.' + VBUGFX;
-      
+   GIT_COMMIT = {$INCLUDE gitsha.inc};
+   
    FULLNAME = 'awful'
               {$IFDEF  CGI}+'-cgi' {$ENDIF}
               {$IFDEF FCGI}+'-fcgi'{$ENDIF}

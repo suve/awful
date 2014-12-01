@@ -592,7 +592,7 @@ Function F_DirList(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
       
       // List the directory and sort if required
       ListDir(Dir,Pat,Attr,Swi,@StrArr);
-      If (LS_SORT in Swi) then Quicksort(StrArr);
+      If (LS_SORT in Swi) and (Length(StrArr) > 0) then Quicksort(StrArr);
       
       // Create result value
       Result := EmptyVal(VT_ARR);

@@ -4,10 +4,12 @@ GPROF = -vewnh -gl -pg
 
 normal:
 	echo $(DEFINES) > defines.inc
+	echo "'`git rev-parse HEAD`'" > gitsha.inc
 	fpc $(FLAGS) awful.pas   
 
 cgi:
 	echo $(DEFINES) '{$$DEFINE CGI}' > defines.inc
+	echo "'`git rev-parse HEAD`'" > gitsha.inc
 	fpc $(FLAGS) awful.pas -o'awful-cgi'
 
 gprof: 

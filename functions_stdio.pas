@@ -10,6 +10,7 @@ Procedure Register(Const FT:PFunTrie);
 {$IFDEF CGI}
 Procedure CGI_Write(Const Text:AnsiString);
 Procedure CGI_Writeln(Const Text:AnsiString);
+Procedure CGI_EnsureHeaders();
 {$ENDIF}
 
 Function F_Write(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
@@ -86,6 +87,11 @@ Procedure CGI_Writeln(Const Text:AnsiString);
    begin
       If (Not WasOutput) then PrintHeaders();
       Writeln(StdOut, Text) 
+   end;
+
+Procedure CGI_EnsureHeaders();
+   begin
+      If (Not WasOutput) then PrintHeaders()
    end;
 {$ENDIF}
 

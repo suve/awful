@@ -22,6 +22,7 @@ Function DecodeJSON(Const JSONstring:AnsiString):PValue;
 implementation
    uses
       SysUtils, JSONparser, fpJSON,
+      Values_Typecast,
       Convert, 
       Functions_Strings;
 
@@ -251,6 +252,9 @@ Function EncodeJSON(Const V:PValue):AnsiString;
       
       VT_UTF:
          Result := '"'+StringToJSONString(V^.Utf^.ToAnsiString())+'"';
+      
+      VT_CHR:
+         Result := '"'+StringToJSONString(GetRefdChar(V^.Chr))+'"';
       
       VT_BOO:
          If (V^.Boo^)

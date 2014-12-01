@@ -156,7 +156,8 @@ Procedure RunScript();
       {$ENDIF}
       
       CurLev := 0;
-      R:=RunFunc(0); If (R<>NIL) then FreeVal(R)
+      R:=RunFunc(0); If (R<>NIL) then AnnihilateVal(R)
+      {$IFDEF CGI} ; CGI_EnsureHeaders() {$ENDIF}
    end;
 
 Procedure Cleanup();

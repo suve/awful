@@ -14,7 +14,7 @@ Procedure WriteFile(Var F:Text; Const Arg:PArrPVal; Idx:LongInt);
 
 
 implementation
-   uses SysUtils, Convert, Values_Typecast;
+   uses SysUtils, Convert, Values_Arith, Values_Typecast;
 
 Function FillBuffer(Var TheFile:Text; Const Buff:PStr; Const Trim:Boolean):LongWord;
    Var P:LongWord;
@@ -31,6 +31,15 @@ Function FillBuffer(Var TheFile:Text; Const Buff:PStr; Const Trim:Boolean):LongW
       If (P > 0)
          then Exit(P-1)
          else Exit(Length(Buff^))
+   end;
+
+Procedure FillCharRef(Const V:PValue; Const Buff : PStr; Const Pos : LongWord);
+   Var TmpVal: PValue;
+   begin
+      If(Not (V^.Chr^.Val^.Typ in [VT_STR, VT_UTF])) then Exit();
+      TmpVal := NewVal(VT_STR, Buff^[1..Pos]);
+      ValSet(V, TmpVal);
+      FreeVal(TmpVal)
    end;
 
 Procedure FillVar(Const V:PValue; Const Buff : PStr; Const Pos : LongWord);
@@ -59,6 +68,9 @@ Procedure FillVar(Const V:PValue; Const Buff : PStr; Const Pos : LongWord);
          
          VT_UTF:
             V^.Utf^.SetTo(Buff^[1..Pos]);
+         
+         VT_CHR:
+            FillCharRef(V, Buff, Pos);
       end;
       Delete(Buff^, 1, Pos+1)
    end;

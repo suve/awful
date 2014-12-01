@@ -587,7 +587,7 @@ Function MakeExpr(Const ExLo,ExHi,Ln:LongInt; T:LongInt):PExpr;
    Procedure Construct_Include(Const Req:Boolean);
       Var FileName,Construct:AnsiString; Constant:PValue; F:System.Text;
           OldName, OldPath, OldDir : AnsiString; FiIn:LongWord;
-          OldNameCons, OldPathCons : PValue;
+          OldNameCons, OldPathCons : PValue; {$IFDEF CGI}OldCodemode:LongWord;{$ENDIF}
       begin
       If (Req) then Construct := '!require' else Construct := '!include';
       FileName := Copy(Tk[T], 2, Length(Tk[T]));
@@ -632,8 +632,12 @@ Function MakeExpr(Const ExLo,ExHi,Ln:LongInt; T:LongInt):PExpr;
       Constant := NewVal(VT_STR, YukPath); Constant^.Lev := 0; Cons^.SetVal('FILE-PATH', Constant);
       FileIncludes[FiIn].Cons[1] := Constant;
       
+      {$IFDEF CGI} OldCodemode := codemode; codemode := 0; {$ENDIF}
+      
       ParseFile(F);
       Close(F);
+      
+      {$IFDEF CGI} codemode := OldCodemode; {$ENDIF}
       
       Cons^.SetVal('FILE-NAME', OldNameCons); YukName := OldName;
       Cons^.SetVal('FILE-PATH', OldPathCons); YukPath := OldPath;
@@ -1151,6 +1155,7 @@ Procedure ReadFile(Var InputFile:System.Text);
       V:=NewVal(VT_BOO,__ISCGI__);   V^.Lev := 0; Cons^.SetVal('AWFUL-CGI',V);
       V:=NewVal(VT_STR,ParamStr(0)); V^.Lev := 0; Cons^.SetVal('AWFUL-PATH',V);
       V:=NewVal(VT_STR,BuildNum());  V^.Lev := 0; Cons^.SetVal('AWFUL-BUILD',V);
+      V:=NewVal(VT_STR,GIT_COMMIT);  V^.Lev := 0; Cons^.SetVal('AWFUL-COMMIT',V);
       V:=NewVal(VT_STR,VERSION);     V^.Lev := 0; Cons^.SetVal('AWFUL-VERSION',V);
       V:=NewVal(VT_INT,VREVISION);   V^.Lev := 0; Cons^.SetVal('AWFUL-REVISION',V);
       PTV:=EmptyVal(VT_INT);       PTV^.Lev := 0; Cons^.SetVal('AWFUL-PARSETIME',PTV);

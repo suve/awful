@@ -14,8 +14,9 @@ Function ValGe(Const A,B:PValue):Boolean;
 Function ValLt(Const A,B:PValue):Boolean;
 Function ValLe(Const A,B:PValue):Boolean;
 
+
 implementation
-   uses SysUtils, Convert;
+   uses SysUtils, Convert, Values_Typecast;
 
 Type TCompareFunc = Function(Const A,B:PValue):Boolean;
 
@@ -29,6 +30,14 @@ Function CompareDicts(Const A,B:PDict; Const CompFunc:TCompareFunc):Boolean;
    {$DEFINE __TYPE__ := TDict }
    {$INCLUDE values_compare-arrdict.inc}
    {$UNDEF __TYPE__ }
+   end;
+
+Function CompareCharRefs(Const A,B:PValue):Boolean;
+   begin
+      If(A^.Chr^.Val^.Typ <> B^.Typ) then Exit(False);
+      If(B^.Typ = VT_STR)
+         then Exit(GetRefdChar(A^.Chr) = B^.Str^)
+         else Exit(B^.Utf^.Equals(GetRefdChar(A^.Chr)))
    end;
 
 Function ValSeq(Const A,B:PValue):Boolean;
@@ -46,6 +55,9 @@ Function ValSeq(Const A,B:PValue):Boolean;
          
          VT_UTF:
             Exit(A^.Utf^.Compare(B^.Utf) = 0);
+         
+         VT_CHR:
+            Exit(CompareCharRefs(A,B));
          
          VT_BOO:
             Exit(A^.Boo^ = B^.Boo^);
@@ -86,6 +98,9 @@ Function ValEq(Const A,B:PValue):Boolean;
                VT_UTF:
                   Exit(A^.Int^ = B^.Utf^.ToInt(IntBase(A^.Typ)));
                
+               VT_CHR:
+                  Exit(A^.Int^ = StrToNum(GetRefdChar(B^.Chr), A^.Typ));
+               
                VT_BOO:
                   Exit(A^.Int^ = BoolToInt(B^.Boo^));
             end;
@@ -103,6 +118,9 @@ Function ValEq(Const A,B:PValue):Boolean;
                
                VT_UTF:
                   Exit(A^.Flo^ = B^.Utf^.ToFloat());
+               
+               VT_CHR:
+                  Exit(A^.Flo^ = StrToReal(GetRefdChar(B^.Chr)));
                
                VT_BOO:
                   Exit(Trunc(A^.Flo^) = BoolToInt(B^.Boo^));
@@ -122,8 +140,32 @@ Function ValEq(Const A,B:PValue):Boolean;
                VT_UTF:
                   Exit(B^.Utf^.Equals(A^.Str^));
                
+               VT_CHR:
+                  Exit(A^.Str^ = GetRefdChar(B^.Chr));
+               
                VT_BOO:
                   Exit(StrToBoolDef(A^.Str^,FALSE) = B^.Boo^);
+            end;
+         
+         VT_CHR:
+            Case  (B^.Typ) of
+               VT_INT .. VT_BIN:
+                  Exit(StrToNum(GetRefdChar(A^.Chr),B^.Typ) = B^.Int^);
+               
+               VT_FLO:
+                  Exit(StrToReal(GetRefdChar(A^.Chr)) = B^.Flo^);
+               
+               VT_STR:
+                  Exit(GetRefdChar(A^.Chr) = B^.Str^);
+               
+               VT_UTF:
+                  Exit(B^.Utf^.Equals(GetRefdChar(A^.Chr)));
+               
+               VT_CHR:
+                  Exit(GetRefdChar(A^.Chr) = GetRefdChar(B^.Chr));
+               
+               VT_BOO:
+                  Exit(StrToBoolDef(GetRefdChar(A^.Chr),FALSE) = B^.Boo^);
             end;
          
          VT_UTF:
@@ -139,6 +181,9 @@ Function ValEq(Const A,B:PValue):Boolean;
                
                VT_UTF:
                   Exit(A^.Utf^.Equals(B^.Utf));
+               
+               VT_CHR:
+                  Exit(A^.Utf^.Equals(GetRefdChar(B^.Chr)));
                
                VT_BOO:
                   Exit(StrToBoolDef(A^.Utf^.ToAnsiString(),FALSE) = B^.Boo^);
@@ -157,6 +202,9 @@ Function ValEq(Const A,B:PValue):Boolean;
                
                VT_UTF:
                   Exit(A^.Boo^ = StrToBoolDef(B^.Utf^.ToAnsiString(),FALSE));
+               
+               VT_CHR:
+                  Exit(A^.Boo^ = StrToBoolDef(GetRefdChar(B^.Chr),FALSE));
                
                VT_BOO:
                   Exit(A^.Boo^ = B^.Boo^);
