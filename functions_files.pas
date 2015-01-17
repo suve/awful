@@ -318,6 +318,16 @@ Function F_fwriteln(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Type TUtilStringFunc = Function(Const Str:AnsiString):AnsiString;
 Type TUtilBoolFunc = Function(Const Str:AnsiString):Boolean;
 
+Function MyExtractName(Const Str:AnsiString):AnsiString;
+   Var L:LongInt;
+   begin
+      L := Length(Str);
+      If(L = 0) then Exit('');
+      If(Str[L] in ['/','\'])
+         then Result := ExtractFileName(Copy(Str,1,L))
+         else Result := ExtractFileName(Str)
+   end;
+
 Function F_FileUtils(Const DoReturn:Boolean; Const Arg:PArrPVal; Const Func:TUtilStringFunc):PValue; 
    begin
       // No retval expected means nothing to do
@@ -333,7 +343,7 @@ Function F_FileUtils(Const DoReturn:Boolean; Const Arg:PArrPVal; Const Func:TUti
    end;
 
 Function F_FileExtractName(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_FileUtils(DoReturn, Arg, @ExtractFileName)) end;
+   begin Exit(F_FileUtils(DoReturn, Arg, @MyExtractName)) end;
 
 Function F_FileExtractPath(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_FileUtils(DoReturn, Arg, @ExtractFilePath)) end;
@@ -456,7 +466,7 @@ Function F_FileWriteContents(Const DoReturn:Boolean;Const Arg:PArrPVal;Const For
       Content := ValAsStr(Arg^[1]);
       F_(False, Arg); // Free args, no longer need them around
       
-      If (Not DirectoryExists(DirPath)) then
+      If(DirPath <> '') and (Not DirectoryExists(DirPath)) then
          // If ForceDirs is on, attempt to create directories
          If (Not ForceDirs) or (Not ForceDirectories(DirPath)) then begin
             // Fail because directory doesn't exist and failed to create it
@@ -516,52 +526,79 @@ Function F_FileSize(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 {$ENDIF}{$ENDIF}
 
 Type
-   TAnsiStringArr = Array of AnsiString;
-   PAnsiStringArr = ^TAnsiStringArr;
+   TDirEntry = record
+      Path : AnsiString;
+      IsDir : Boolean
+   end;
+   
+   PDirEntryArr = ^TDirEntryArr;
+   TDirEntryArr = Array of TDirEntry;
 
-   TListSwitch = set of (LS_RECURSE, LS_SLASH, LS_SORT);
+   TListSwitch = set of (LS_RECURSE, LS_SLASH, LS_SORT, LS_GROUP);
 
-Procedure ListDir(Const Dir,Pat:AnsiString;Const Attr:LongInt;Const Swi:TListSwitch;Const Arr:PAnsiStringArr);
-   Var S:TSearchRec; L:LongInt;
+Const LIST_RESIZE_STEP = 32;
+
+Procedure ListDir(Const Dir,Pat:AnsiString;Const Attr:LongInt;Const Swi:TListSwitch;Const Arr:PDirEntryArr;Var Idx:LongInt);
+   Var S:TSearchRec; Len:LongInt;
    begin
-      L := Length(Arr^); // Remember length
+      Len := Length(Arr^); // Remember length
       If (FindFirst(Dir+Pat,Attr,S) = 0) then // Start search
          Repeat
+            // Omit '.' and '..'
             If (S.Name = '.') or (S.Name = '..') then Continue; 
-            SetLength(Arr^,L+1);     // Lengthen array
-            Arr^[L] := Dir + S.Name; // Save entry
-            If ((S.Attr and faDirectory)<>0) then begin // If entry is a directory
-               If (LS_SLASH in Swi) then Arr^[L] += DirDelim; // If Slash-switch, add dir-delim at end
-               If (LS_RECURSE in Swi) then begin // If recurse-switch, list this subdir
-                  ListDir(Dir+S.Name+DirDelim, Pat, Attr, Swi, Arr);
-                  L := Length(Arr^) // Save new array length
-               end else L += 1 // Not recursing into directory; just do +1 because we just added
-            end else L += 1 // Not a directory, just do +1 because we just saved 1 new entry
+            
+            // Resize array if needed
+            If (Idx = Len) then begin
+               Len += LIST_RESIZE_STEP;
+               SetLength(Arr^, Len)
+            end;
+            
+            // Save entry and advance array index
+            Arr^[Idx].Path := Dir + S.Name;
+            Arr^[Idx].IsDir := ((S.Attr and faDirectory) = faDirectory);
+            Idx += 1;
+            
+            // If entry is a directory and recurse-switch is active, list subdir
+            If (Arr^[Idx-1].isDir) and (LS_RECURSE in Swi) then begin 
+               ListDir(Dir+S.Name+DirDelim, Pat, Attr, Swi, Arr, Idx);
+               Len := Length(Arr^) // Save new array length (could be changed by subdir listing)
+            end
          Until (FindNext(S) <> 0); // Continue until no more search entries found
       FindClose(S) // Close search
    end;
 
-Procedure Quicksort(Var Arr:TAnsiStringArr;Const Min,Max:LongInt);
-   Var Piv,Pos:LongInt; PivVal : AnsiString;
+Function CompareDirEntries_NoGroup(Const A,B:TDirEntry):Boolean;
+   begin
+      Exit(A.Path > B.Path)
+   end;
+
+Function CompareDirEntries_DoGroup(Const A,B:TDirEntry):Boolean;
+   begin
+      If(Not A.IsDir) and (B.IsDir) then Exit(True);
+      If(A.IsDir) and (Not B.IsDir) then Exit(False);
+      Exit(A.Path > B.Path)
+   end;
+
+Type TDirEntryCompareFunc = Function(Const A,B:TDirEntry):Boolean;
+
+Procedure Quicksort(Var Arr:TDirEntryArr;Const Min,Max:LongInt;Const Cmpr:TDirEntryCompareFunc);
+   Var Piv,Pos:LongInt; PivVal : TDirEntry;
    begin
       Pos := Min; Piv := Max; PivVal := Arr[Piv];
       While (Pos < Piv) do
-         If (Arr[Pos] > PivVal) then begin
+         If (Cmpr(Arr[Pos], PivVal)) then begin
             Arr[Piv] := Arr[Pos];
             Piv -= 1;
             Arr[Pos] := Arr[Piv];
             Arr[Piv] := PivVal
          end else Pos += 1;
-      If ((Pos - Min) > 1) then Quicksort(Arr,Min,Pos-1);
-      If ((Max - Pos) > 1) then Quicksort(Arr,Pos+1,Max)
+      If ((Pos - Min) > 1) then Quicksort(Arr,Min,Pos-1,Cmpr);
+      If ((Max - Pos) > 1) then Quicksort(Arr,Pos+1,Max,Cmpr)
    end;
 
-Procedure Quicksort(Var Arr:TAnsiStringArr);
-   begin Quicksort(Arr,Low(Arr),High(Arr)) end;
-
 Function F_DirList(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   Var Dir,Pat,sA:AnsiString; Attr,C : LongInt; Swi:TListSwitch;
-       StrArr : TAnsiStringArr;
+   Var Dir,Pat,sA:AnsiString; Attr, C, Idx : LongInt; Swi:TListSwitch;
+       ListArr : TDirEntryArr;
    begin
       // No retval expected, bail out early
       If (Not DoReturn) then Exit(F_(False, Arg));
@@ -581,8 +618,9 @@ Function F_DirList(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
                'w': Attr := Attr and (Not faReadOnly);
                'h': Attr := Attr or faHidden;
                'r': Include(Swi,LS_RECURSE);
-               's': Include(Swi,LS_SORT);
+               's': Include(Swi,LS_SORT );
                '/': Include(Swi,LS_SLASH);
+               'g': Include(Swi,LS_GROUP);
       end end end;
       
       // Get dir from arg0 and make sure the DirDelim is at path end
@@ -591,13 +629,22 @@ Function F_DirList(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
          If (Dir[Length(Dir)]<>DirDelim) then Dir += DirDelim;
       
       // List the directory and sort if required
-      ListDir(Dir,Pat,Attr,Swi,@StrArr);
-      If (LS_SORT in Swi) and (Length(StrArr) > 0) then Quicksort(StrArr);
+      Idx := 0;
+      ListDir(Dir,Pat,Attr,Swi,@ListArr,Idx);
+      If(LS_SORT in Swi) and (Idx > 0) then
+         If(LS_GROUP in Swi)
+            then Quicksort(ListArr, 0, Idx-1, @CompareDirEntries_DoGroup)
+            else Quicksort(ListArr, 0, Idx-1, @CompareDirEntries_NoGroup);
+      
+      // If Slash-switch is active, add / at end of every dir
+      If(LS_SLASH in Swi) then
+         For C:=0 to (Idx - 1) do
+            If(ListArr[C].IsDir) then ListArr[C].Path += DirDelim;
       
       // Create result value
       Result := EmptyVal(VT_ARR);
-      For C:=0 to High(StrArr) do
-         Result^.Arr^.SetVal(C,NewVal(VT_STR,StrArr[C]))
+      For C:=0 to (Idx - 1) do
+         Result^.Arr^.SetVal(C,NewVal(VT_STR, ListArr[C].Path))
    end;
 
 {$UNDEF DirDelim}

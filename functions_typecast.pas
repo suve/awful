@@ -27,6 +27,7 @@ Function F_is_arr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_is_dict(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_is_file(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
+Function F_mknil(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_mkint(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_mkhex(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_mkoct(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
@@ -35,6 +36,9 @@ Function F_mkflo(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_mklog(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_mkstr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_mkutf(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_mkarr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_mkdic(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_mkfil(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 
 implementation
@@ -58,6 +62,7 @@ Procedure Register(Const FT:PFunTrie);
       FT^.SetVal('is-dict' ,MkFunc(@F_is_dict  ));
       FT^.SetVal('is-file' ,MkFunc(@F_is_file  ));
       // Typecast
+      FT^.SetVal('mknil',MkFunc(@F_mknil,REF_MODIF));
       FT^.SetVal('mkint',MkFunc(@F_mkint,REF_MODIF));
       FT^.SetVal('mkhex',MkFunc(@F_mkhex,REF_MODIF));
       FT^.SetVal('mkoct',MkFunc(@F_mkoct,REF_MODIF));
@@ -66,6 +71,29 @@ Procedure Register(Const FT:PFunTrie);
       FT^.SetVal('mklog',MkFunc(@F_mklog,REF_MODIF)); FT^.SetVal('mkbool'  ,MkFunc(@F_mklog,REF_MODIF));
       FT^.SetVal('mkstr',MkFunc(@F_mkstr,REF_MODIF)); FT^.SetVal('mkstring',MkFunc(@F_mkstr,REF_MODIF));
       FT^.SetVal('mkutf',MkFunc(@F_mkutf,REF_MODIF)); FT^.SetVal('mkutf8'  ,MkFunc(@F_mkutf,REF_MODIF));
+      FT^.SetVal('mkarr',MkFunc(@F_mkarr,REF_MODIF)); FT^.SetVal('mkarray' ,MkFunc(@F_mkarr,REF_MODIF));
+      FT^.SetVal('mkdic',MkFunc(@F_mkdic,REF_MODIF)); FT^.SetVal('mkdict'  ,MkFunc(@F_mkdic,REF_MODIF));
+      FT^.SetVal('mkfil',MkFunc(@F_mkfil,REF_MODIF)); FT^.SetVal('mkfile'  ,MkFunc(@F_mkfil,REF_MODIF));
+   end;
+
+Function ValToNil(Const V:PValue):PValue;
+   begin
+      Result:=CreateVal(VT_NIL); Result^.Lev:=CurLev
+   end;
+
+Function ValToArr(Const V:PValue):PValue;
+   begin
+      Result:=CreateVal(VT_ARR); Result^.Lev:=CurLev
+   end;
+
+Function ValToDict(Const V:PValue):PValue;
+   begin
+      Result:=CreateVal(VT_DIC); Result^.Lev:=CurLev
+   end;
+
+Function ValToFile(Const V:PValue):PValue;
+   begin
+      Result:=CreateVal(VT_FIL); Result^.Lev:=CurLev
    end;
 
 Type TTypecastFunc = Function(Const V:PValue):PValue;
@@ -115,6 +143,9 @@ Function F_Typecast(Const DoReturn:Boolean;   Const Arg:PArrPVal;
       end
    end;
 
+Function F_mknil(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   begin Exit(F_Typecast(DoReturn, Arg, VT_INT, @ValToNil)) end;
+
 Function F_mkint(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_Typecast(DoReturn, Arg, VT_INT, @ValToInt)) end;
 
@@ -138,6 +169,15 @@ Function F_mkstr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 Function F_mkutf(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_Typecast(DoReturn, Arg, VT_UTF, @ValToUTF)) end;
+
+Function F_mkarr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   begin Exit(F_Typecast(DoReturn, Arg, VT_UTF, @ValToArr)) end;
+
+Function F_mkdic(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   begin Exit(F_Typecast(DoReturn, Arg, VT_UTF, @ValToDict)) end;
+
+Function F_mkfil(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   begin Exit(F_Typecast(DoReturn, Arg, VT_UTF, @ValToFile)) end;
 
 Type
    TValueTypeSet = Set of TValueType;

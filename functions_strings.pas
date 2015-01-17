@@ -24,7 +24,9 @@ Function F_SubStr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 Function F_DelStr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_InsertStr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+
 Function F_ReplaceStr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_ReplaceStrAssoc(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 Function F_ReverseStr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
@@ -73,6 +75,8 @@ Procedure Register(Const FT:PFunTrie);
       FT^.SetVal('str-del',MkFunc(@F_DelStr));
       FT^.SetVal('str-ins',MkFunc(@F_InsertStr));
       FT^.SetVal('str-replace',MkFunc(@F_ReplaceStr));
+      FT^.SetVal('str-replace-dict',MkFunc(@F_ReplaceStrAssoc));
+      FT^.SetVal('str-replace-assoc',MkFunc(@F_ReplaceStrAssoc));
       FT^.SetVal('str-rev',MkFunc(@F_ReverseStr));
 
       // String <- -> Array utils
@@ -428,15 +432,59 @@ Function F_ReplaceStr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
       F_(False, Arg) // Free args before leaving
    end;
 
+Function F_ReplaceStrAssoc(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   Var C:LongWord; DEA : TDict.TEntryArr;
+   begin
+      // If no retval expected, bail out early
+      If (Not DoReturn) then Exit(F_(False, Arg));
+      // If less than two args provided, free args and return emptystring
+      If (Length(Arg^) < 2) then begin
+         F_(False,Arg); Exit(EmptyVal(VT_STR))
+      end;
+      
+      // Check if arg1 is a dictionary. If not, nothing to do here.
+      If(Arg^[1]^.Typ <> VT_DIC) then Exit(F_(True, Arg));
+      
+      // Check if arg0 is a UTF-string. If yes, we want the result to be UTF-string, too.
+      If(Arg^[0]^.Typ = VT_UTF) then begin
+         Result := CopyVal(Arg^[0]);
+         
+         If(Arg^[1]^.Dic^.Count > 0) then begin
+            DEA := Arg^[1]^.Dic^.ToArray();
+            For C:=0 to (Arg^[1]^.Dic^.Count - 1) do
+               If(DEA[C].Val^.Typ = VT_UTF)
+                  then Result^.Utf^.Replace(DEA[C].Key, DEA[C].Val^.Utf)
+                  else Result^.Utf^.Replace(DEA[C].Key, ValAsStr(DEA[C].Val))
+         end
+      end else begin
+         
+         (* arg0 is not a UTF-string. Obtain asciistring-cast to use as result value, *
+          * and perform StringReplace on the PValue string.                           *)
+         Result := ValToStr(Arg^[0]);
+         
+         If(Arg^[1]^.Dic^.Count > 0) then begin
+            DEA := Arg^[1]^.Dic^.ToArray();
+            For C:=0 to (Arg^[1]^.Dic^.Count - 1) do
+               Result^.Str^ := StringReplace(Result^.Str^, DEA[C].Key, ValAsStr(DEA[C].Val), [rfReplaceAll])
+         end
+      end;
+      F_(False, Arg) // Free args before leaving
+   end;
+
 Function F_MakeCharacter(Const DoReturn:Boolean; Const Arg:PArrPVal; Const Func:TChrFunc):PValue;
+   Var C:LongWord;
    begin
       // No retval expected, bail out without doing anything
       If (Not DoReturn) then Exit(F_(False, Arg));
       // No args provided, return nilval
       If (Length(Arg^)=0) then Exit(NilVal());
       
-      Result := NewVal(VT_STR, Func(ValAsInt(Arg^[0])));
-      F_(False, Arg) // Return args before leaving
+      // Create empty string as result. For every arg provided, construct char and append to result.
+      Result := EmptyVal(VT_STR);
+      For C:=Low(Arg^) to High(Arg^) do begin
+         Result^.Str^ += Func(ValAsInt(Arg^[C]));
+         FreeIfTemp(Arg^[C])
+      end
    end;
 
 Function F_MakeOrdinal(Const DoReturn:Boolean; Const Arg:PArrPVal; Const Func:TOrdFunc):PValue;

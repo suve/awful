@@ -13,7 +13,7 @@ uses
    
    Functions_Arith,     Functions_ArrDict,
    Functions_Bitwise,   Functions_Boole,
-   Functions_CGI,       Functions_Compare,
+   Functions_CGI,       Functions_Compare, Functions_Convert,
    Functions_DateTime,  
    Functions_Encodings, 
    Functions_Files,     
@@ -222,6 +222,7 @@ begin // awful_main()
    Functions_Bitwise   . Register(Func);
    Functions_CGI       . Register(Func);
    Functions_Compare   . Register(Func);
+   Functions_Convert   . Register(Func);
    Functions_DateTime  . Register(Func);
    Functions_Encodings . Register(Func);
    Functions_Files     . Register(Func);

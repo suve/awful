@@ -1,4 +1,4 @@
-(* Minimised case list code for converstion of lowercase UTF-8 to their uppercase counterparts. *)
+(* Minified case list code for converstion of lowercase UTF-8 to their uppercase counterparts. *)
 'a'v'A'x'b'v'B'x'c'v'C'x'd'v'D'x'e'v'E'x'f'v'F'x'g'v'G'x'h'v'H'x'i'v'I'x'j'v'J'x'k'v'K'x'l'v'L'x'm'v'M'x'n'v'N'x'o'v'O'x'p'v'P'x'q'v'Q'x'r'v'R'x's'v'S'x't'v'T'x'u'v'U'x'v'v'V'x'w'v'W'x'x'v'X'x'y'v'Y'x
 'z'v'Z'x'à'v'À'x'á'v'Á'x'â'v'Â'x'ã'v'Ã'x'ä'v'Ä'x'å'v'Å'x'æ'v'Æ'x'ç'v'Ç'x'è'v'È'x'é'v'É'x'ê'v'Ê'x'ë'v'Ë'x'ì'v'Ì'x'í'v'Í'x'î'v'Î'x'ï'v'Ï'x'ð'v'Ð'x'ñ'v'Ñ'x'ò'v'Ò'x'ó'v'Ó'x
 'ô'v'Ô'x'õ'v'Õ'x'ö'v'Ö'x'ø'v'Ø'x'ù'v'Ù'x'ú'v'Ú'x'û'v'Û'x'ü'v'Ü'x'ý'v'Ý'x'þ'v'Þ'x'ÿ'v'Ÿ'x'ā'v'Ā'x'ă'v'Ă'x'ą'v'Ą'x'ć'v'Ć'x'ĉ'v'Ĉ'x'ċ'v'Ċ'x'č'v'Č'x'ď'v'Ď'x'đ'v'Đ'x

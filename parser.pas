@@ -1146,6 +1146,8 @@ Procedure ReadFile(Var InputFile:System.Text);
       SpareVars_Prepare();
       
       V:=NilVal(); V^.Lev := 0; Cons^.SetVal('NIL', V);
+      V:=EmptyVal(VT_ARR); V^.Lev := 0; Cons^.SetVal('ARR', V);
+      V:=EmptyVal(VT_DIC); V^.Lev := 0; Cons^.SetVal('DICT', V);
       
       {$IFDEF CGI} V:=NewVal(VT_STR, GetEnvironmentVariable('REQUEST_METHOD')); V^.Lev:=0; Cons^.SetVal('REQUEST-METHOD', V); {$ENDIF}
       

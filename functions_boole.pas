@@ -18,7 +18,7 @@ implementation
    uses EmptyFunc, Values_Typecast;
 
 Procedure Register(Const FT:PFunTrie);
-      begin
+   begin
       FT^.SetVal('not',MkFunc(@F_not));    FT^.SetVal('!',MkFunc(@F_Not));
       FT^.SetVal('and',MkFunc(@F_and));    FT^.SetVal('&&',MkFunc(@F_and));
       FT^.SetVal('xor',MkFunc(@F_xor));    FT^.SetVal('^^',MkFunc(@F_xor));
@@ -55,7 +55,7 @@ Function AND_func(Const A,B:Boolean):Boolean; Inline; begin Result:=A and B end;
 Function XOR_func(Const A,B:Boolean):Boolean; Inline; begin Result:=A xor B end;
 Function OR_func(Const A,B:Boolean):Boolean; Inline; begin Result:=A or B end;
 
-Function F_Boolean(Const DoReturn:Boolean; Const Arg:PArrPVal; Const BoolFunc:TBooleanFunc):PValue;
+Function F_Boolean(Const DoReturn:Boolean; Const Arg:PArrPVal; Const BoolFunc:TBooleanFunc; Const Initial:Boolean):PValue;
    Var C:LongWord;
    begin 
       // If no retval expected, bail out
@@ -64,7 +64,7 @@ Function F_Boolean(Const DoReturn:Boolean; Const Arg:PArrPVal; Const BoolFunc:TB
       // If no args, return FALSE 
       If (Length(Arg^) = 0) then Exit(NewVal(VT_BOO, False));
       
-      Result := NewVal(VT_BOO, True); // Set initial result to TRUE
+      Result := NewVal(VT_BOO, Initial); // Set initial result
       If (Length(Arg^) >= 1) then 
          For C:=High(Arg^) downto Low(Arg^) do begin
             
@@ -79,13 +79,13 @@ Function F_Boolean(Const DoReturn:Boolean; Const Arg:PArrPVal; Const BoolFunc:TB
    end;
 
 Function F_And(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_Boolean(DoReturn, Arg, @AND_func)) end;
+   begin Exit(F_Boolean(DoReturn, Arg, @AND_func, True)) end;
 
 Function F_Xor(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_Boolean(DoReturn, Arg, @XOR_func)) end;
+   begin Exit(F_Boolean(DoReturn, Arg, @XOR_func, False)) end;
 
 Function F_Or(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_Boolean(DoReturn, Arg, @OR_func)) end;
+   begin Exit(F_Boolean(DoReturn, Arg, @OR_func, False)) end;
 
 // Logical implication. Why did I even implement this?
 Function F_Impl(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
