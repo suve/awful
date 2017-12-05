@@ -23,6 +23,7 @@ Function F_GetChar(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_stdin_BufferFlush(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_stdin_BufferClear(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_stdin_BufferPush(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_stdin_eof(Const DoReturn: Boolean; Const Arg:PArrPVal):PValue;
 
 implementation
    uses SysUtils, Convert, 
@@ -40,7 +41,8 @@ Procedure Register(Const FT:PFunTrie);
       FT^.SetVal('getchar', MkFunc(@F_GetChar));
       FT^.SetVal('stdin-flush', MkFunc(@F_stdin_BufferFlush));
       FT^.SetVal('stdin-clear', MkFunc(@F_stdin_BufferClear));
-      FT^.SetVal('stdin-push', MkFunc(@F_stdin_BufferPush))
+      FT^.SetVal('stdin-push', MkFunc(@F_stdin_BufferPush));
+      FT^.SetVal('stdin-eof', MkFunc(@F_stdin_eof))
    end;
 
 {$IFDEF CGI}
@@ -170,6 +172,16 @@ Function F_stdin_BufferPush(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
             FreeIfTemp(Arg^[C])
          end;
       If (DoReturn) then Exit(NilVal()) else Exit(NIL)
+   end;
+
+Function F_stdin_eof(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   Var IsEof: Boolean;
+   begin
+      If (Length(Arg^)>0) then F_(False, Arg);
+      If(DoReturn) then begin
+         IsEof := Eof(System.Input) And (Length(stdinBuffer) = 0);
+         Exit(NewVal(VT_BOO, IsEof))
+      end else Exit(NIL)
    end;
 
 end.
