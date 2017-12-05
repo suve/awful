@@ -328,6 +328,51 @@ Function MyExtractName(Const Str:AnsiString):AnsiString;
          else Result := ExtractFileName(Str)
    end;
 
+Function MyExtractFilePath(Const Str:AnsiString):AnsiString;
+   begin
+      Result := ExtractFilePath(Str)
+   end;
+
+Function MyExtractFileExt(Const Str:AnsiString):AnsiString;
+   begin
+      Result := ExtractFileExt(Str)
+   end;
+
+Function MyExpandFileName(Const Str:AnsiString):AnsiString;
+   begin
+      Result := ExpandFileName(Str)
+   end;
+
+Function MyFileExists(Const Str:AnsiString):Boolean;
+   begin
+      Result := FileExists(Str)
+   end;
+
+Function MyDeleteFile(Const Str:AnsiString):Boolean;
+   begin
+      Result := DeleteFile(Str)
+   end;
+
+Function MyDirectoryExists(Const Str:AnsiString):Boolean;
+   begin
+      Result := DirectoryExists(Str)
+   end;
+
+Function MyCreateDir(Const Str:AnsiString):Boolean;
+   begin
+      Result := CreateDir(Str)
+   end;
+
+Function MyForceDirectories(Const Str:AnsiString):Boolean;
+   begin
+      Result := ForceDirectories(Str)
+   end;
+
+Function MyRemoveDir(Const Str:AnsiString):Boolean;
+   begin
+      Result := RemoveDir(Str)
+   end;
+
 Function F_FileUtils(Const DoReturn:Boolean; Const Arg:PArrPVal; Const Func:TUtilStringFunc):PValue; 
    begin
       // No retval expected means nothing to do
@@ -346,13 +391,13 @@ Function F_FileExtractName(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin Exit(F_FileUtils(DoReturn, Arg, @MyExtractName)) end;
 
 Function F_FileExtractPath(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_FileUtils(DoReturn, Arg, @ExtractFilePath)) end;
+   begin Exit(F_FileUtils(DoReturn, Arg, @MyExtractFilePath)) end;
 
 Function F_FileExtractExt(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_FileUtils(DoReturn, Arg, @ExtractFileExt)) end;
+   begin Exit(F_FileUtils(DoReturn, Arg, @MyExtractFileExt)) end;
 
 Function F_FileExpandName(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_FileUtils(DoReturn, Arg, @ExpandFileName)) end;
+   begin Exit(F_FileUtils(DoReturn, Arg, @MyExpandFileName)) end;
 
 Function F_FileRelativePath(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue; 
    Var RelativeTo:AnsiString;
@@ -405,22 +450,22 @@ Function F_DirAction(Const DoReturn:Boolean; Const Arg:PArrPVal; Const Func:TUti
    end;
 
 Function F_FileExists(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_DirAction(DoReturn, Arg, @FileExists)) end;
+   begin Exit(F_DirAction(DoReturn, Arg, @MyFileExists)) end;
    
 Function F_FileUnlink(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_DirAction(DoReturn, Arg, @DeleteFile)) end;
+   begin Exit(F_DirAction(DoReturn, Arg, @MyDeleteFile)) end;
 
 Function F_DirExists(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_DirAction(DoReturn, Arg, @DirectoryExists)) end;
+   begin Exit(F_DirAction(DoReturn, Arg, @MyDirectoryExists)) end;
 
 Function F_DirCreate(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_DirAction(DoReturn, Arg, @CreateDir)) end;
+   begin Exit(F_DirAction(DoReturn, Arg, @MyCreateDir)) end;
    
 Function F_DirForce(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_DirAction(DoReturn, Arg, @ForceDirectories)) end;
+   begin Exit(F_DirAction(DoReturn, Arg, @MyForceDirectories)) end;
 
 Function F_DirRemove(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   begin Exit(F_DirAction(DoReturn, Arg, @RemoveDir)) end;
+   begin Exit(F_DirAction(DoReturn, Arg, @MyRemoveDir)) end;
 
 Function F_FileGetContents(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var F:File of Char; Ch:Char;
