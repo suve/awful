@@ -1,0 +1,10 @@
+*.a
+*.o
+*.ppu
+*.exe
+
+/awful
+/awful-cgi
+
+/defines.inc
+/gitsha.inc
