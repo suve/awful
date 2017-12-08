@@ -112,10 +112,11 @@ Procedure ValArith_ArrDict(Const Proc:TArithProc; Const A,B:PValue);
    Var EntA:Values.TArray.TEntryArr; EntD:TDict.TEntryArr;
        idx, kI : QInt; kS : AnsiString;
    begin
+   idx := 0;
    Case (A^.Typ) of
    
       VT_ARR: begin
-         EntA := A^.Arr^.ToArray(); idx := 0;
+         EntA := A^.Arr^.ToArray();
          Case (B^.Typ) of
             
             VT_ARR: begin
@@ -160,8 +161,8 @@ Procedure ValArith_ArrDict(Const Proc:TArithProc; Const A,B:PValue);
             end end
             
             else begin
-               While (idx < Length(EntA)) do begin
-                  Proc(EntA[idx].Val, B);
+               While (idx < Length(EntD)) do begin
+                  Proc(EntD[idx].Val, B);
                   idx += 1
             end end
       end end
