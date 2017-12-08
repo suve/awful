@@ -368,6 +368,9 @@ Function F_SysInfo_System(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
       
       // Check Win32XYZ variables and guess system version basing on this info
       If (Win32Platform = 2) then begin
+         If (Win32MajorVersion = 10) then begin
+            If (Win32MinorVersion =  0) then Exit(NewVal(VT_STR,'Windows 10'    )) else
+         end else
          If (Win32MajorVersion = 6) then begin
             If (Win32MinorVersion =  3) then Exit(NewVal(VT_STR,'Windows 8.1'   )) else
             If (Win32MinorVersion =  2) then Exit(NewVal(VT_STR,'Windows 8'     )) else
