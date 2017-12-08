@@ -17,7 +17,7 @@ implementation
    uses SysUtils, Math, Convert, Values_Typecast;
 
 Procedure ValSet_ArrDict(Const A,B:PValue);
-   Var AEntA,BEntA:TArray.TEntryArr;
+   Var AEntA,BEntA:Values.TArray.TEntryArr;
        AEntD,BEntD:TDict.TEntryArr;
        iA, iB, kI : QInt; kS:TStr;
    begin
@@ -109,7 +109,7 @@ Procedure ValSet_ArrDict(Const A,B:PValue);
 Type TArithProc = Procedure(Const A,B:PValue);
 
 Procedure ValArith_ArrDict(Const Proc:TArithProc; Const A,B:PValue);
-   Var EntA:TArray.TEntryArr; EntD:TDict.TEntryArr;
+   Var EntA:Values.TArray.TEntryArr; EntD:TDict.TEntryArr;
        idx, kI : QInt; kS : AnsiString;
    begin
    Case (A^.Typ) of

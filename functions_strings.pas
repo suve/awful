@@ -642,7 +642,7 @@ Function F_Explode(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 Function F_Implode(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    Var Str, Delim : AnsiString; C : LongWord;
-       AEA:TArray.TEntryArr; DEA:TDict.TEntryArr;
+       AEA:Values.TArray.TEntryArr; DEA:TDict.TEntryArr;
    begin
       // No retval expected, leave without doing anything
       If (Not DoReturn) then Exit(F_(False, Arg));

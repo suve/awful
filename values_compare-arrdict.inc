@@ -1,4 +1,4 @@
-Var entA, entB : __TYPE__.TEntryArr;
+Var entA, entB : Values.__TYPE__.TEntryArr;
     idx : LongWord;
 begin
    If (A^.Count <> B^.Count) then Exit(False);
