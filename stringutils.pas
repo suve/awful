@@ -34,7 +34,7 @@ Function ExplodeString(Const Str, Delim:AnsiString):AnsiStringArray;
          Idx += 1;
       end;
       
-      If(Offset < StrLen) then begin
+      If(Offset <= StrLen) then begin
          SetLength(Result, Idx+1);
          Result[Idx] := Copy(Str,Offset,StrLen)
       end else
