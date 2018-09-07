@@ -702,10 +702,10 @@ Function MakeExpr(Const ExLo,ExHi,Ln:LongInt; T:LongInt):PExpr;
          Repeat Construct_Include(INCL_REQUIRE); T += 1 until (T > ExHi);
          Dispose(E); Exit(NIL)
          end;
-      {'!return': begin
+      '!return': begin
          If (Proc = 0) then Fatal(Ln,'!return used in main function.');
-         FPtr:=@F_Return
-         end; }
+         FPtr:=@FuncInfo_Return
+         end;
       else
          Fatal(Ln,'Unknown language construct: "'+Tk[T]+'".')
       end else

@@ -18,7 +18,7 @@ Var
    FLev : LongInt;
    DoExit : Boolean;
 
-   FuncInfo_AutoCall, FuncInfo_Static,
+   FuncInfo_AutoCall, FuncInfo_Return, FuncInfo_Static,
    FuncInfo_If, FuncInfo_Else,
    FuncInfo_Break, FuncInfo_Continue,
    FuncInfo_While, FuncInfo_Done, FuncInfo_Until : TFuncInfo;
@@ -62,7 +62,6 @@ implementation
 Procedure Register(Const FT:PFunTrie);
    begin
       FT^.SetVal('call',MkFunc(@F_Call));
-      FT^.SetVal('return',MkFunc(@F_Return));
       FT^.SetVal('exit',MkFunc(@F_Exit));
       FT^.SetVal('func-args',MkFunc(@F_FuncArgs));
       FT^.SetVal('file-included',MkFunc(@F_FileIncluded));
@@ -73,6 +72,7 @@ Procedure Register(Const FT:PFunTrie);
       FT^.SetVal('param-str',MkFunc(@F_ParamStr));
       
       SetFuncInfo(FuncInfo_AutoCall, @F_AutoCall, REF_MODIF);
+      SetFuncInfo(FuncInfo_Return  , @F_Return  , REF_CONST);
       SetFuncInfo(FuncInfo_If      , @F_If      , REF_CONST);
       SetFuncInfo(FuncInfo_Else    , @F_Else    , REF_CONST);
       SetFuncInfo(FuncInfo_While   , @F_While   , REF_CONST);
