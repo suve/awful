@@ -10,6 +10,7 @@ Type
       Vars : PValTrie;
       Args : Array of PValue;
       NumA : LongInt;
+      Glob : Array of Boolean;
       Stat : Array of Boolean
    end;
 
@@ -18,7 +19,8 @@ Var
    FLev : LongInt;
    DoExit : Boolean;
 
-   FuncInfo_AutoCall, FuncInfo_Return, FuncInfo_Static,
+   FuncInfo_AutoCall, FuncInfo_Return, 
+   FuncInfo_Global, FuncInfo_Static,
    FuncInfo_If, FuncInfo_Else,
    FuncInfo_Break, FuncInfo_Continue,
    FuncInfo_While, FuncInfo_Done, FuncInfo_Until : TFuncInfo;
@@ -52,7 +54,8 @@ Function F_ParamArr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_ParamCnt(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 Function F_ParamStr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
-Function F_static(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_Global(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+Function F_Static(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
 
 
 implementation
@@ -80,6 +83,7 @@ Procedure Register(Const FT:PFunTrie);
       SetFuncInfo(FuncInfo_Until   , @F_Until   , REF_CONST);
       SetFuncInfo(FuncInfo_Break   , @F_Break   , REF_CONST);
       SetFuncInfo(FuncInfo_Continue, @F_Continue, REF_CONST);
+      SetFuncInfo(FuncInfo_Global  , @F_Global  , REF_CONST);
       SetFuncInfo(FuncInfo_Static  , @F_Static  , REF_CONST)
    end;
 
@@ -88,9 +92,6 @@ Function Eval(Const Ret:Boolean; Const E:PExpr):PValue;
    Function GetVar(Const Name:PStr;Const Typ:TValueType):PValue;
       begin
          Result:=FCal[FLev].Vars^.GetVal(Name^);
-         If (Result <> NIL) then Exit();
-         
-         Result:=FCal[0].Vars^.GetVal(Name^);
          If (Result <> NIL) then Exit();
          
          Result:=EmptyVal(Typ); Result^.Lev -= 1;
@@ -348,7 +349,7 @@ Function F_Exit(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    end;
 
 Function F_AutoCall(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
-   Var P,E:LongWord; A,H,Pass,Want:LongInt; R:PValue; 
+   Var P,E:LongWord; A,H,Pass,Want,GlobNum,StatNum:LongInt; R:PValue; 
    begin
       // Save procedure and expression number to restore on exit
       P:=Proc; E:=ExLn;
@@ -387,10 +388,15 @@ Function F_AutoCall(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
          FCal[FLev].Vars^.SetVal(Pr[Proc].Arg[A],NilVal())
       end; 
       
+      // Mark global variables as not yet included into function varpool
+      GlobNum := Length(Pr[Proc].Glo);
+      If (Length(FCal[FLev].Glob) < GlobNum) then SetLength(FCal[FLev].Glob, GlobNum); // Make sure there is enough space
+      For A:=0 to (GlobNum-1) do FCal[FLev].Glob[A] := False;
+      
       // Mark static variables as not yet included into function varpool
-      Want := Length(Pr[Proc].Stv);
-      If (Length(FCal[FLev].Stat) < Want) then SetLength(FCal[FLev].Stat, Want); // Make sure there is enough space
-      For A:=0 to (Want-1) do FCal[FLev].Stat[A] := False;
+      StatNum := Length(Pr[Proc].Stv);
+      If (Length(FCal[FLev].Stat) < StatNum) then SetLength(FCal[FLev].Stat, StatNum); // Make sure there is enough space
+      For A:=0 to (StatNum-1) do FCal[FLev].Stat[A] := False;
       
       // Run the proper function
       R:=RunFunc(Proc);
@@ -399,8 +405,12 @@ Function F_AutoCall(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
       If (Length(Pr[Proc].Arg)>0) then
          For A:=0 to (H-1) do FCal[FLev].Vars^.RemVal(Pr[Proc].Arg[A]);
       
+      // Remove included global vars from vartie
+      For A:=0 to (GlobNum-1) do
+         If(FCal[FLev].Glob[A]) then FCal[FLev].Vars^.RemVal(Pr[Proc].Glo[A]);
+      
       // Remove included static vars from vartie
-      For A:=0 to (Want-1) do
+      For A:=0 to (StatNum-1) do
          If(FCal[FLev].Stat[A]) then FCal[FLev].Vars^.RemVal(Pr[Proc].Stv[A].Nam);
       
       // Remove user-defined vars from trie
@@ -530,14 +540,40 @@ Function F_ParamStr(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
       F_(False, Arg)
    end;
 
+Function F_global(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
+   Var A : LongInt; Loc, Glob: PValue; Name: AnsiString;
+   begin
+      For A:=Low(Arg^) to High(Arg^) do begin
+         Name := Pr[Proc].Glo[Arg^[A]^.Int^];
+         
+         // Check if $varname already used. If yes, free underlying PValue.
+         Loc := FCal[FLev].Vars^.GetVal(Name);
+         If(Loc <> NIL) then FreeIfTemp(Loc);
+         
+         // Grab the global variable from the lowest-level varpool.
+         Glob := FCal[0].Vars^.GetVal(Name);
+         
+         // If there is no global variable with this name, create it (and initialise to NIL)
+         If(Glob = NIL) then begin
+            Glob := NilVal();
+            SetValLev(Glob, 0);
+            
+            FCal[0].Vars^.SetVal(Name, Glob)
+         end;
+         
+         // Insert !global var into vartrie (will override previous val, if needed)
+         FCal[FLev].Vars^.SetVal(Name, Glob);
+         
+         // Mark globalvar as imported into varpool
+         FCal[FLev].Glob[Arg^[A]^.Int^] := True
+      end;
+      
+      Result := NIL
+   end;
+
 Function F_static(Const DoReturn:Boolean; Const Arg:PArrPVal):PValue;
    begin
-      // Check if staticvar already in varpool. If yes, bail out.
-      If (FCal[FLev].Stat[Arg^[0]^.Int^]) then Exit(NIL);
-      
-      (* Check if $varname already used. If yes, free underlying PValue.           *
-       * The parser makes sure that static var names do not collide with argnames, *
-       * so if $varname is already used, it must be used by a local var.           *)
+      // Check if $varname already used. If yes, free underlying PValue.
       Result := FCal[FLev].Vars^.GetVal(Pr[Proc].Stv[Arg^[0]^.Int^].Nam);
       If(Result <> NIL) then FreeVal(Result);
       

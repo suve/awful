@@ -67,7 +67,8 @@ Type
       Num : LongWord;            // Number of expressions
       Exp : Array of PExpr;      // Array of expressions
       Arg : Array of AnsiString; // Argument name array
-      Stv : Array of TStaticVar  // Static-vars array
+      Glo : Array of AnsiString; // Global-vars array
+      Stv : Array of TStaticVar; // Static-vars array
    end;
 
 Procedure FreeToken(Const T:PToken);

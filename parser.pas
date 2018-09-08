@@ -494,6 +494,34 @@ Function MakeExpr(Const ExLo,ExHi,Ln:LongInt; T:LongInt):PExpr;
       T += 2
       end;
    
+   Procedure Construct_Global();
+      Var ti: LongInt;
+      begin
+      If (Proc = 0) then Fatal(Ln,'!global can only be used inside functions.');
+      If (ExLe < 2) then Fatal(Ln,'!global expects at least one argument.');
+      
+      For ti:=T+1 to (ExLe-1) do begin
+         If (Length(Tk[ti])=0) or (Not (Tk[ti][1] in ['$','&']))
+            then Fatal(Ln,'Arguments for !global must specify a variable name. ($var or &var)');
+         
+         CName:=Copy(Tk[Ti],2,Length(Tk[Ti]));
+         A := 0; Etk := High(Pr[Proc].Arg);
+         While(A <= Etk) do begin // Check if varname isn't the same as an argname
+            If(CName = Pr[Proc].Arg[A]) then Fatal(Ln,'!global variable name collides with function argument name.');
+            A += 1 end;
+         
+         // Insert the global-var name to the user-proc definition
+         A := Length(Pr[Proc].Glo);
+         SetLength(Pr[Proc].Glo, A + 1);
+         Pr[Proc].Glo[A] := CName;
+         
+         // Convert the varname token to a "fake" int token.
+         Tk[ti] := 'i' + IntToStr(A)
+         end;
+      
+      FPtr := @FuncInfo_Global
+      end;
+   
    Procedure Construct_Fun();
       begin
       If (Not cstruStack^.Empty) then begin
@@ -680,6 +708,8 @@ Function MakeExpr(Const ExLo,ExHi,Ln:LongInt; T:LongInt):PExpr;
          Construct_Skip(SKIP_CONTINUE);
       '!static':
          Construct_Static();
+      '!global':
+         Construct_Global();
       '!const': begin
          Construct_Const();
          Dispose(E); Exit(NIL)
