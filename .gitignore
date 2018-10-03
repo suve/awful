@@ -2,9 +2,10 @@
 *.o
 *.ppu
 *.exe
+*.geany
 
-/awful
-/awful-cgi
+bin/
+build/
 
-/defines.inc
-/gitsha.inc
+src/defines.inc
+src/gitsha.inc
