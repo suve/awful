@@ -1,0 +1,21 @@
+!fun :global-test
+	!global $var
+	:add &var i1
+	
+	:set &copy &var
+	:add &var i1
+	
+	!return $copy
+!nuf
+
+:set &var i0
+:set &n i0
+!while :lt $n i5
+	:write s'n: ' $n
+	:write s'; var: ' $var
+	:write s'; global: ' :global-test
+	:write s'; var: ' $var
+	:writeln
+	
+	:add &n i1
+!done 

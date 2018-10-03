@@ -1,0 +1,5 @@
+n: 0; var: 0; global: 1; var: 2
+n: 1; var: 2; global: 3; var: 4
+n: 2; var: 4; global: 5; var: 6
+n: 3; var: 6; global: 7; var: 8
+n: 4; var: 8; global: 9; var: 10
