@@ -1,0 +1,18 @@
+!while :not :stdin-eof
+	:set &parts :arr
+	:set &count i0
+	
+	!while i1
+		:set &line s''
+		:readln &line
+		
+		!if :neq $line s'---'
+			:set &parts[$count] $line
+			:add &count i1
+		!else
+			!break
+		!fi
+	!done
+	
+	:writeln :str-implode &parts
+!done
