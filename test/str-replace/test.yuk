@@ -1,0 +1,12 @@
+:set &str s''
+:readln &str 
+
+:writeln $str
+
+!while :not :stdin-eof
+	:set &needle &repl s''
+	:readln &needle &repl
+	
+	:set &str :str-replace $str $needle $repl
+	:writeln $str
+!done
