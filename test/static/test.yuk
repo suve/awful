@@ -1,0 +1,13 @@
+!fun :static-test
+	!static $i i0
+	:add &i i1
+	
+	!return $i
+!nuf
+
+:set &i i1
+:set &n i0
+!while :lt $n i8
+	:writeln s'n: ' $n s'; i: ' $i s'; static: ' :static-test
+	:add &n i1
+!done 
