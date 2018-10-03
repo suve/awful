@@ -2,7 +2,9 @@ DEFINES = '{$$MODE OBJFPC} {$$COPERATORS ON} {$$TYPEDADDRESS ON} {$$INLINE ON} {
 FLAGS += -vewn -Xs -XX -CX -OrG3
 GPROF += -vewnh -gl -pg
 
-.PHONY = src/defines.inc src/gitsha.inc clean install
+TESTS = $(addprefix test/,$(shell ls test/))
+
+.PHONY: clean install test $(TESTS)
 
 bin/awful: build/awful
 	mkdir -p bin/
@@ -34,3 +36,9 @@ install: build/awful build/awful-cgi
 	cp ./build/awful /usr/bin/awful
 	cp ./build/awful-cgi /usr/bin/awful-cgi
 	cp ./awful.man /usr/local/share/man/man1/awful
+
+test/*: bin/awful
+	bin/awful -i "$@/input.txt" -o "$@/result.txt" "$@/test.yuk"
+	diff --ignore-trailing-space "$@/result.txt" "$@/output.txt"
+
+test: $(TESTS)

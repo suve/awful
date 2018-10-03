@@ -1,0 +1,14 @@
+!while :not :stdin-eof
+	:set &str s''
+	:readln &str
+
+	:set &pieces :arr
+	:set &pieces :str-explode $str
+
+	:set &i i0
+	:set &limit :arr-count &pieces
+	!while :lt $i $limit
+		:writeln $i s': ' $pieces[$i]
+		:add &i i1
+	!done
+!done

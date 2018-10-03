@@ -2,8 +2,9 @@ language: minimal
 sudo: enabled
 before_install:
   - sudo apt-get update
-  - sudo apt-get install -y fpc make
+  - sudo apt-get install -y git fpc make
 script:
-  - make
+  - make bin/awful
+  - make test
 notifications:
   email: false
