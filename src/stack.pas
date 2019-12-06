@@ -20,15 +20,19 @@ Type
    ExEmptyStack = class(Exception);
 
    Generic GenericStack<Tp> = STACKTYPE
+      Protected Const
+         NodeSize = 4096;
+         {$DEFINE NodeCapacity := ((NodeSize - SizeOf(Pointer)) div SizeOf(Tp)) }
+      
       Protected Type
          PNode = ^TNode;
          TNode = record
-            Val : Tp;
-            Nxt : PNode
+            Val : Array[0..(NodeCapacity-1)] of Tp;
+            Next : PNode
          end;
          
       Protected Var
-         Ptr : PNode;
+         Head : PNode;
          Size : LongWord;
       
       Public {Method}
@@ -50,50 +54,68 @@ Type
 implementation
 
 Procedure GenericStack.Push(Const Val:Tp);
-   Var N:PNode;
+   Var Offset: LongInt; Node: PNode;
    begin
-      New(N); N^.Val:=Val; N^.Nxt:=Ptr;
-      Ptr:=N; Size+=1
+      Offset := Size mod NodeCapacity;
+      If (Offset = 0) then begin
+         New(Node); Node^.Next:=Head; Head:=Node
+      end;
+
+      Head^.Val[Offset] := Val;
+      Size += 1
    end;
 
 Function  GenericStack.Peek(Depth:LongInt):Tp;
-   Var Node : PNode;
+   Var Node: PNode; HeadSize: LongInt;
    begin
-      Node := Self.Ptr;
+      If (Depth >= Size) then
+         Raise ExEmptyStack.Create('Called GenericStack.Peek(Depth) on a shallow stack!');
+
+      HeadSize := Size mod NodeCapacity;
+      If (Depth < HeadSize) then Exit(Head^.Val[HeadSize - 1 - Depth]);
       
-      While (Depth > 0) and (Node <> NIL) do begin
-         Node := Node^.Nxt;
-         Depth -= 1
+      Node := Self.Head;
+      Depth -= HeadSize;
+      
+      While (Depth >= NodeCapacity) do begin
+         Node := Node^.Next;
+         Depth -= NodeCapacity
       end;
-      
-      If (Node <> NIL)
-         then Exit(Node^.Val)
-         else Raise ExEmptyStack.Create('Called GenericStack.Peek(Depth) on a shallow stack!')
+
+      Exit(Head^.Val[NodeCapacity - 1 - Depth])
    end;
 
 Function  GenericStack.Peek():Tp;
+   Var Offset: LongInt;
    begin
-      If (Ptr<>NIL)
-         then Exit(Ptr^.Val)
-         else Raise ExEmptyStack.Create('Called GenericStack.Peek() on an empty stack!')
+      If (Head = NIL) then
+         Raise ExEmptyStack.Create('Called GenericStack.Peek() on an empty stack!');
+         
+      Offset := (Size - 1) mod NodeCapacity;
+      Exit(Head^.Val[Offset])
    end;
 
 Function  GenericStack.Pop():Tp;
-   Var Val:Tp; Mem:PNode;
+   Var Val:Tp; Mem:PNode; Offset: LongInt;
    begin
-      If (Ptr <> NIL) then begin
-         Mem := Ptr; Ptr := Ptr^.Nxt;
-         Val := Mem^.Val; Dispose(Mem);
-         Size-=1; Exit(Val)
-      end else
-         Raise ExEmptyStack.Create('Called GenericStack.Pop() on an empty stack!')
+      If (Size = 0) then
+         Raise ExEmptyStack.Create('Called GenericStack.Pop() on an empty stack!');
+
+      Size -= 1;
+      Offset := Size mod NodeCapacity;
+      If (Offset > 0) then Exit(Head^.Val[Offset]);
+      
+      Mem := Head; Head := Head^.Next;
+      Val := Mem^.Val[0];
+      Dispose(Mem);
+      Exit(Val)
    end;
 
 Procedure GenericStack.Purge();
    Var Mem:PNode;
    begin
-      While (Ptr <> NIL) do begin
-         Mem := Ptr; Ptr := Ptr^.Nxt;
+      While (Head <> NIL) do begin
+         Mem := Head; Head := Head^.Next;
          Dispose(Mem)
       end;
       Size := 0
@@ -105,7 +127,7 @@ Function GenericStack.Empty():Boolean;
 Constructor GenericStack.Create();
    begin
       {$IFDEF STACK_CLASS} Inherited Create(); {$ENDIF}
-      Ptr:=NIL; Size:=0
+      Head:=NIL; Size:=0
    end;
 
 Destructor  GenericStack.Destroy;
