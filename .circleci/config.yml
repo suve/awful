@@ -1,0 +1,30 @@
+version: 2.1
+executors:
+  fedora:
+    docker:
+      - image: registry.fedoraproject.org/fedora
+    shell: /usr/bin/bash
+
+jobs:
+  build-linux:
+    executor: fedora
+    steps:
+      - run:
+          name: Install dependencies
+          command: >
+            sudo dnf install --assumeyes --setopt=install_weak_deps=False
+            diffutils fpc make
+      - checkout
+      - run:
+          name: Build
+          command: >
+            make -j bin/awful
+      - run:
+          name: Test
+          command: >
+            make test 
+
+workflows:
+  build:
+    jobs:
+      - build-linux
