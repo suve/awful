@@ -3,15 +3,16 @@ FLAGS += -vewn -Xs -XX -CX -OrG3
 GPROF += -vewnh -gl -pg
 
 PREFIX ?= /usr
-DESTDIR ?= 
+DESTDIR ?=
 
+BENCHMARKS = $(addprefix benchmark/,$(shell ls benchmark/))
 TESTS = $(addprefix test/,$(shell ls test/))
 
 
 # -- variables end
 
 
-.PHONY: all clean install test $(TESTS)
+.PHONY: all clean install test $(BENCHMARKS) $(TESTS)
 
 all: build/awful
 
@@ -22,6 +23,8 @@ install: build/awful build/awful-cgi
 	cp ./build/awful "$(DESTDIR)$(PREFIX)/bin/awful"
 	cp ./build/awful-cgi "$(DESTDIR)$(PREFIX)/bin/awful-cgi"
 	cp -p ./awful.man "$(DESTDIR)$(PREFIX)/share/man/man1/awful"
+
+benchmark: $(BENCHMARKS)
 
 test: $(TESTS)
 
@@ -55,3 +58,6 @@ src/gitsha.inc:
 test/*: bin/awful
 	bin/awful -i "$@/input.txt" -o "$@/result.txt" "$@/test.yuk"
 	diff --ignore-trailing-space "$@/result.txt" "$@/output.txt"
+
+benchmark/*: bin/awful
+	/bin/time bin/awful -i "$@/input.txt" -o "/dev/null" "$@/script.yuk" -- "$$(wc -l "$@/input.txt" | cut -f1 '-d ')"

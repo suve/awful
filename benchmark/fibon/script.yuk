@@ -1,0 +1,28 @@
+!const =LIMIT i10000000
+
+!fun :fibon $target
+	!if :eq $target i0
+		!return i0
+	!fi
+
+	!if :le $target i2
+		!return i1
+	!fi
+	
+	:set &prev2 i1
+	:set &prev1 i1
+	:set &current i2
+
+	:set &index i3
+	!while :lt $index $target
+		:set &prev2 $prev1
+		:set &prev1 $current
+		:set &current :add $prev1 $prev2
+
+		:add &index i1
+	!done
+
+	!return $current
+!nuf
+
+:writeln =LIMIT s' -> ' :fibon =LIMIT

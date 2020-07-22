@@ -1,0 +1,37 @@
+!fun :quicksort &array $start $end
+	:set &pivot_value &array[$end]
+	:set &pivot_pos $end
+	:set &pos $start
+
+	!while :neq $pos $pivot_pos
+		!if :gt &array[$pos] $pivot_value
+			:set &array[$pivot_pos] $array[$pos]
+			:set &array[$pos] &array[:sub &pivot_pos i1]
+		!else
+			:add &pos i1
+		!fi
+	!done
+
+	:set &array[$pivot_pos] $pivot_value
+
+	!if :gt (:sub $pos $start) i1
+		:quicksort &array $start (:sub $pos i1)
+	!fi
+
+	!if :gt (:sub $end $pos) i1
+		:quicksort &array (:add $pos i1) $end
+	!fi
+!nuf
+
+
+:set &count i0 :param-str i1
+:set &number i0
+
+:set &a :arr
+:set &idx i0
+!repeat
+	:readln &number
+	:set &a[$idx] $number
+!until :eq $count :add &idx i1
+
+:quicksort &a i0 :sub $count i1

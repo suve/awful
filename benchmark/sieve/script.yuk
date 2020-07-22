@@ -1,0 +1,38 @@
+!const =LIMIT i10000000
+
+!fun :sieve $MAX
+	:set &count i0
+
+	:set &sieve :arr
+	:set &sieve[i0] i0
+	:set &sieve[i1] i0
+
+	:set &idx i2
+	!while :le $idx $MAX
+		:set &sieve[$idx] i1
+		:add &idx i1
+	!done
+
+	# Note: using "$max" instead of "$MAX" here causes the interpeter to crash.
+	# Need to investigate!
+	:set &idx i2
+	!while :le $idx $MAX
+		!if :not &sieve[$idx]
+			:add &idx i1
+			!continue
+		!fi
+
+		:set &multiple :mul i2 $idx
+		!while :le $multiple $MAX
+			:set &sieve[$multiple] i0
+			:add &multiple $idx
+		!done
+
+		:add &count i1
+		:add &idx i1
+	!done
+
+	!return $count
+!nuf
+
+:writeln =LIMIT s' -> ' :sieve =LIMIT

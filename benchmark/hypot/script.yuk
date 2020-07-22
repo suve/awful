@@ -1,0 +1,18 @@
+!const =POS_MIN i-2500
+!const =POS_MAX i+2500
+
+:set &y =POS_MIN
+!repeat
+	:set &x =POS_MIN
+	!repeat
+		!if :or (:eq $x i0 | :eq $y i0)
+			!continue
+		!fi
+
+		# :set &square_x :mul $x $x
+		# :set &square_y :mul $y $y
+		# :set &dist :sqrt :add $square_x $square_y
+
+		:set &dist :hypotenuse $x $y
+	!until :gt (:add &x i1) =POS_MAX
+!until :gt (:add &y i1) =POS_MAX
